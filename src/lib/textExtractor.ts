@@ -13,19 +13,57 @@ export type ExtractedText = {
 
 export type PvaStatus = 'contains' | 'inconclusive' | 'verified-free' | 'needs-verification';
 
-// PVA-related keywords to scan for
+// PVA-related keywords to scan for, organized by category
+export const PVA_KEYWORDS_CATEGORIES = {
+  commonNames: [
+    'pva',
+    'pvoh',
+    'pval',
+    'poly(vinyl alcohol)',
+    'polyvinyl alcohol',
+    'polyvinylalcohol',
+    'polyvinyl alcohol homopolymer',
+    'pva copolymer',
+    'pva resin',
+    'hydrolyzed pva',
+    'partially hydrolyzed pva',
+    'fully hydrolyzed pva',
+    'pva film',
+    'pva sheet',
+    'pva coating'
+  ],
+  chemicalSynonyms: [
+    'cas 9002-89-5',
+    'cas 25213-24-5',
+    'ethenol, homopolymer',
+    'vinyl alcohol polymer',
+    'ethenol, polymer with acetic acid, hydrolyzed',
+    'acetic acid ethenyl ester, polymer with ethenol, hydrolyzed',
+    'pva copolymer with ethylene',
+    'vinyl acetate / vinyl alcohol copolymer'
+  ],
+  inciTerms: [
+    'polyvinyl alcohol',
+    'vinyl alcohol/vinyl acetate copolymer',
+    'polyvinyl acetate',
+    'pvac'
+  ],
+  additional: [
+    'poly vinyl alcohol',
+    'poly-vinyl-alcohol',
+    'pvai',
+    'vinyl alcohol',
+    'ethenol homopolymer',
+    'ethanol homopolymer'
+  ]
+};
+
+// Flattened list of all PVA-related keywords for scanning
 export const PVA_KEYWORDS = [
-  'pva',
-  'polyvinyl alcohol',
-  'poly vinyl alcohol',
-  'poly-vinyl-alcohol',
-  'pvoh',
-  'pvai',
-  'polyvinyl acetate',
-  'vinyl alcohol',
-  'ethenol homopolymer',
-  'ethanol homopolymer',
-  'pvac'
+  ...PVA_KEYWORDS_CATEGORIES.commonNames,
+  ...PVA_KEYWORDS_CATEGORIES.chemicalSynonyms,
+  ...PVA_KEYWORDS_CATEGORIES.inciTerms,
+  ...PVA_KEYWORDS_CATEGORIES.additional
 ];
 
 // Function to extract text from PDF files

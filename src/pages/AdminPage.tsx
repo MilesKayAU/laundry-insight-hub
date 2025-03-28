@@ -23,8 +23,30 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckCircle, XCircle, Eye, Trash, Search, Plus } from "lucide-react";
+import { 
+  CheckCircle, 
+  XCircle, 
+  Eye, 
+  Trash, 
+  Search, 
+  Plus, 
+  PlusCircle 
+} from "lucide-react";
 import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
+import { PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const AdminPage = () => {
   const { toast } = useToast();
@@ -34,9 +56,28 @@ const AdminPage = () => {
   const [approvedProducts, setApprovedProducts] = useState<Product[]>(
     mockProducts.filter(p => p.approved)
   );
-  const [keywords, setKeywords] = useState<string[]>(mockAdminSettings.keywords);
+  
+  // Initialize keyword state from our categorized keywords
+  const [keywordCategories, setKeywordCategories] = useState({
+    commonNames: [...PVA_KEYWORDS_CATEGORIES.commonNames],
+    chemicalSynonyms: [...PVA_KEYWORDS_CATEGORIES.chemicalSynonyms],
+    inciTerms: [...PVA_KEYWORDS_CATEGORIES.inciTerms],
+    additional: [...PVA_KEYWORDS_CATEGORIES.additional]
+  });
+  
   const [newKeyword, setNewKeyword] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("commonNames");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Get all keywords as a flat array for scanning functionality
+  const getAllKeywords = () => {
+    return [
+      ...keywordCategories.commonNames,
+      ...keywordCategories.chemicalSynonyms,
+      ...keywordCategories.inciTerms,
+      ...keywordCategories.additional
+    ];
+  };
 
   const handleApprove = (productId: string) => {
     const productToApprove = pendingProducts.find(p => p.id === productId);
@@ -83,7 +124,8 @@ const AdminPage = () => {
       return;
     }
     
-    if (keywords.includes(newKeyword.trim())) {
+    const allKeywords = getAllKeywords();
+    if (allKeywords.includes(newKeyword.trim().toLowerCase())) {
       toast({
         title: "Duplicate keyword",
         description: "This keyword already exists in the list.",
@@ -92,22 +134,40 @@ const AdminPage = () => {
       return;
     }
     
-    setKeywords([...keywords, newKeyword.trim()]);
+    // Add the keyword to the selected category
+    setKeywordCategories({
+      ...keywordCategories,
+      [selectedCategory]: [...keywordCategories[selectedCategory as keyof typeof keywordCategories], newKeyword.trim().toLowerCase()]
+    });
+    
     setNewKeyword("");
     
     toast({
       title: "Keyword added",
-      description: `"${newKeyword.trim()}" has been added to the keyword list.`,
+      description: `"${newKeyword.trim()}" has been added to the ${getCategoryDisplayName(selectedCategory)} category.`,
     });
   };
 
-  const handleRemoveKeyword = (keyword: string) => {
-    setKeywords(keywords.filter(k => k !== keyword));
+  const handleRemoveKeyword = (keyword: string, category: keyof typeof keywordCategories) => {
+    setKeywordCategories({
+      ...keywordCategories,
+      [category]: keywordCategories[category].filter(k => k !== keyword)
+    });
     
     toast({
       title: "Keyword removed",
       description: `"${keyword}" has been removed from the keyword list.`,
     });
+  };
+
+  const getCategoryDisplayName = (category: string) => {
+    switch(category) {
+      case 'commonNames': return 'Common Names & Abbreviations';
+      case 'chemicalSynonyms': return 'Chemical Synonyms';
+      case 'inciTerms': return 'INCI (Cosmetic Labeling Terms)';
+      case 'additional': return 'Additional Terms';
+      default: return category;
+    }
   };
 
   const filteredApprovedProducts = approvedProducts.filter(product => 
@@ -291,44 +351,146 @@ const AdminPage = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium mb-4">Scan Keywords</h3>
+                <h3 className="text-lg font-medium mb-4">PVA Scan Keywords</h3>
                 <p className="text-sm text-muted-foreground mb-4">
                   These keywords will be used to scan uploaded documents for PVA-related ingredients
                 </p>
                 
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {keywords.map((keyword, index) => (
-                    <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
-                      {keyword}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => handleRemoveKeyword(keyword)}
-                      >
-                        <XCircle className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
+                <Accordion type="single" collapsible className="w-full mb-4">
+                  <AccordionItem value="common-names">
+                    <AccordionTrigger className="text-md font-medium hover:no-underline">
+                      ✅ Common Names & Abbreviations
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {keywordCategories.commonNames.map((keyword, index) => (
+                          <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
+                            {keyword}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
+                              onClick={() => handleRemoveKeyword(keyword, 'commonNames')}
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        These are primary trigger terms in your scan.
+                      </p>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="chemical-synonyms">
+                    <AccordionTrigger className="text-md font-medium hover:no-underline">
+                      ✅ Chemical Synonyms
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {keywordCategories.chemicalSynonyms.map((keyword, index) => (
+                          <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
+                            {keyword}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
+                              onClick={() => handleRemoveKeyword(keyword, 'chemicalSynonyms')}
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Useful for detecting in scientific SDS or INCI-type declarations.
+                      </p>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="inci-terms">
+                    <AccordionTrigger className="text-md font-medium hover:no-underline">
+                      ✅ INCI (Cosmetic Labeling Terms)
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {keywordCategories.inciTerms.map((keyword, index) => (
+                          <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
+                            {keyword}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
+                              onClick={() => handleRemoveKeyword(keyword, 'inciTerms')}
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        These show up often in personal care products, wipes, and cleaning sprays.
+                      </p>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="additional-terms">
+                    <AccordionTrigger className="text-md font-medium hover:no-underline">
+                      Additional Terms
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {keywordCategories.additional.map((keyword, index) => (
+                          <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
+                            {keyword}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
+                              onClick={() => handleRemoveKeyword(keyword, 'additional')}
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
                 
-                <div className="flex gap-2 mt-4">
-                  <Input
-                    placeholder="Add new keyword..."
-                    value={newKeyword}
-                    onChange={(e) => setNewKeyword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddKeyword();
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={handleAddKeyword}
-                    className="shrink-0"
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Add
+                <div className="flex flex-col space-y-2 mt-6">
+                  <h4 className="font-medium">Add New Keyword</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="md:col-span-2">
+                      <Input
+                        placeholder="Enter new keyword or abbreviation..."
+                        value={newKeyword}
+                        onChange={(e) => setNewKeyword(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddKeyword();
+                          }
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="commonNames">Common Names & Abbreviations</SelectItem>
+                          <SelectItem value="chemicalSynonyms">Chemical Synonyms</SelectItem>
+                          <SelectItem value="inciTerms">INCI Terms</SelectItem>
+                          <SelectItem value="additional">Additional Terms</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button onClick={handleAddKeyword} className="w-full md:w-auto self-end">
+                    <PlusCircle className="h-4 w-4 mr-2" /> Add Keyword
                   </Button>
                 </div>
               </div>
