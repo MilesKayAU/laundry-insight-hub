@@ -3,8 +3,7 @@ import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist';
 
 // Configure PDF.js worker
-const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 export type ExtractedText = {
   text: string;
@@ -16,7 +15,7 @@ export type ExtractedText = {
 export const extractTextFromPDF = async (file: File): Promise<ExtractedText> => {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument(arrayBuffer).promise;
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
     
     let fullText = '';
     
@@ -42,15 +41,18 @@ export const extractTextFromPDF = async (file: File): Promise<ExtractedText> => 
 // Function to extract text from image files
 export const extractTextFromImage = async (file: File): Promise<ExtractedText> => {
   try {
-    const worker = await createWorker();
+    const worker = await createWorker('eng');
     
-    // Load image and recognize text
-    const imageData = await file.arrayBuffer();
-    await worker.loadLanguage('eng');
-    await worker.initialize('eng');
+    // Convert file to blob URL for Tesseract to use
+    const imageBlob = new Blob([await file.arrayBuffer()]);
+    const imageUrl = URL.createObjectURL(imageBlob);
     
-    const { data } = await worker.recognize(imageData);
+    // Recognize text from image
+    const { data } = await worker.recognize(imageUrl);
     await worker.terminate();
+    
+    // Clean up the blob URL after use
+    URL.revokeObjectURL(imageUrl);
     
     return {
       text: data.text,
