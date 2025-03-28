@@ -32,11 +32,20 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Pagination } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { mockProducts } from "@/lib/mockData";
 
 const DatabasePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // Number of items to display per page
   
   // Filter products - only show approved products and filter by search term
   const filteredProducts = mockProducts.filter(product => 
@@ -48,6 +57,27 @@ const DatabasePage = () => {
   // Separate products by type
   const sheetProducts = filteredProducts.filter(p => p.type === "Laundry Sheet");
   const podProducts = filteredProducts.filter(p => p.type === "Laundry Pod");
+  
+  // Calculate pagination for each tab
+  const paginateData = (data: typeof filteredProducts) => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
+  };
+  
+  const paginatedSheets = paginateData(sheetProducts);
+  const paginatedPods = paginateData(podProducts);
+  const paginatedAll = paginateData(filteredProducts);
+  
+  // Calculate total pages for current tab
+  const getTotalPages = (totalItems: number) => {
+    return Math.ceil(totalItems / itemsPerPage);
+  };
+  
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
   
   // Prepare data for charts
   const sheetChartData = sheetProducts
@@ -64,6 +94,45 @@ const DatabasePage = () => {
       PVA: p.pvaPercentage
     }));
 
+  // Pagination component
+  const PaginationControls = ({ totalItems }: { totalItems: number }) => {
+    const totalPages = getTotalPages(totalItems);
+    
+    if (totalPages <= 1) return null;
+    
+    return (
+      <Pagination className="mt-4">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious 
+              onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+              className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+            />
+          </PaginationItem>
+          
+          {Array.from({ length: totalPages }).map((_, index) => (
+            <PaginationItem key={index}>
+              <PaginationLink
+                isActive={currentPage === index + 1}
+                onClick={() => handlePageChange(index + 1)}
+                className="cursor-pointer"
+              >
+                {index + 1}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+          
+          <PaginationItem>
+            <PaginationNext 
+              onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+              className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    );
+  };
+
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="text-center mb-10">
@@ -77,12 +146,15 @@ const DatabasePage = () => {
         <Input
           placeholder="Search by product or brand name..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // Reset to first page on search
+          }}
           className="max-w-md mx-auto"
         />
       </div>
       
-      <Tabs defaultValue="sheets">
+      <Tabs defaultValue="sheets" onValueChange={() => setCurrentPage(1)}>
         <div className="flex justify-center mb-6">
           <TabsList>
             <TabsTrigger value="sheets">Laundry Sheets</TabsTrigger>
@@ -150,8 +222,8 @@ const DatabasePage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sheetProducts.length > 0 ? (
-                        sheetProducts.map((product) => (
+                      {paginatedSheets.length > 0 ? (
+                        paginatedSheets.map((product) => (
                           <TableRow key={product.id}>
                             <TableCell className="font-medium">{product.name}</TableCell>
                             <TableCell>{product.brand}</TableCell>
@@ -170,6 +242,7 @@ const DatabasePage = () => {
                     </TableBody>
                   </Table>
                 </div>
+                <PaginationControls totalItems={sheetProducts.length} />
               </div>
             </CardContent>
           </Card>
@@ -234,8 +307,8 @@ const DatabasePage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {podProducts.length > 0 ? (
-                        podProducts.map((product) => (
+                      {paginatedPods.length > 0 ? (
+                        paginatedPods.map((product) => (
                           <TableRow key={product.id}>
                             <TableCell className="font-medium">{product.name}</TableCell>
                             <TableCell>{product.brand}</TableCell>
@@ -254,6 +327,7 @@ const DatabasePage = () => {
                     </TableBody>
                   </Table>
                 </div>
+                <PaginationControls totalItems={podProducts.length} />
               </div>
             </CardContent>
           </Card>
@@ -280,8 +354,8 @@ const DatabasePage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProducts.length > 0 ? (
-                      filteredProducts.map((product) => (
+                    {paginatedAll.length > 0 ? (
+                      paginatedAll.map((product) => (
                         <TableRow key={product.id}>
                           <TableCell className="font-medium">{product.name}</TableCell>
                           <TableCell>{product.brand}</TableCell>
@@ -301,6 +375,7 @@ const DatabasePage = () => {
                   </TableBody>
                 </Table>
               </div>
+              <PaginationControls totalItems={filteredProducts.length} />
             </CardContent>
           </Card>
         </TabsContent>
