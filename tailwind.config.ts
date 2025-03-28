@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,31 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// PVAFree custom colors
+				pvablue: {
+					50: '#eaf5ff',
+					100: '#d0e8ff',
+					200: '#b0d6ff',
+					300: '#7dbdff',
+					400: '#4799ff',
+					500: '#1a73ff',
+					600: '#0055ff',
+					700: '#0045df',
+					800: '#0038b4',
+					900: '#0a348d',
+				},
+				pvagreen: {
+					50: '#effef6',
+					100: '#d7f9e8',
+					200: '#b2f1d0',
+					300: '#78e2af',
+					400: '#3cca85',
+					500: '#21af68',
+					600: '#0e8a4f',
+					700: '#0a6e42',
+					800: '#0a5736',
+					900: '#09482e',
 				}
 			},
 			borderRadius: {
