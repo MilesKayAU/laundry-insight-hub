@@ -11,6 +11,23 @@ export type ExtractedText = {
   filename: string;
 };
 
+export type PvaStatus = 'contains' | 'inconclusive' | 'verified-free' | 'needs-verification';
+
+// PVA-related keywords to scan for
+export const PVA_KEYWORDS = [
+  'pva',
+  'polyvinyl alcohol',
+  'poly vinyl alcohol',
+  'poly-vinyl-alcohol',
+  'pvoh',
+  'pvai',
+  'polyvinyl acetate',
+  'vinyl alcohol',
+  'ethenol homopolymer',
+  'ethanol homopolymer',
+  'pvac'
+];
+
 // Function to extract text from PDF files
 export const extractTextFromPDF = async (file: File): Promise<ExtractedText> => {
   try {
@@ -71,4 +88,22 @@ export const findKeywordsInText = (text: string, keywords: string[]): string[] =
   return keywords.filter(keyword => 
     lowerText.includes(keyword.toLowerCase())
   );
+};
+
+// Function to determine PVA status based on analysis
+export const determinePvaStatus = (foundKeywords: string[], previouslyVerifiedBrands: string[], currentBrand: string): PvaStatus => {
+  if (foundKeywords.length > 0) {
+    return 'contains';
+  }
+  
+  if (previouslyVerifiedBrands.includes(currentBrand)) {
+    return 'verified-free';
+  }
+  
+  // If no keywords found but brand not previously verified
+  if (foundKeywords.length === 0 && !previouslyVerifiedBrands.includes(currentBrand)) {
+    return 'needs-verification';
+  }
+  
+  return 'inconclusive';
 };

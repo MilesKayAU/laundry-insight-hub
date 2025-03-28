@@ -8,6 +8,11 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { 
+  Alert,
+  AlertTitle,
+  AlertDescription
+} from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,9 +26,17 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { FileUp, FileText, CheckCircle, AlertCircle } from "lucide-react";
-import { extractTextFromImage, extractTextFromPDF, findKeywordsInText } from "@/lib/textExtractor";
+import { FileUp, FileText, CheckCircle, AlertCircle, AlertTriangle, Ban, CircleCheck } from "lucide-react";
+import { 
+  extractTextFromImage, 
+  extractTextFromPDF, 
+  findKeywordsInText, 
+  PVA_KEYWORDS,
+  determinePvaStatus,
+  PvaStatus
+} from "@/lib/textExtractor";
 import { mockAdminSettings } from "@/lib/mockData";
+import { Badge } from "@/components/ui/badge";
 
 const ContributePage = () => {
   const { toast } = useToast();
@@ -41,6 +54,10 @@ const ContributePage = () => {
   const [foundKeywords, setFoundKeywords] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pvaStatus, setPvaStatus] = useState<PvaStatus | null>(null);
+
+  // Mock data for previously verified brands (this would come from backend/database in production)
+  const verifiedBrands = ["EcoClean", "GreenWash", "NaturalFresh"];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -66,6 +83,7 @@ const ContributePage = () => {
       setFile(selectedFile);
       setExtractedText("");
       setFoundKeywords([]);
+      setPvaStatus(null);
       
       // Start upload simulation
       simulateUpload(selectedFile);
@@ -110,24 +128,28 @@ const ContributePage = () => {
       
       setExtractedText(extractedTextData.text);
       
-      // Find keywords in extracted text
+      // Find PVA-related keywords in extracted text
       const keywords = findKeywordsInText(
         extractedTextData.text, 
-        mockAdminSettings.keywords
+        PVA_KEYWORDS
       );
       
       setFoundKeywords(keywords);
       
+      // Determine PVA status
+      const status = determinePvaStatus(keywords, verifiedBrands, brand);
+      setPvaStatus(status);
+      
       if (keywords.length > 0) {
         toast({
           title: "Analysis complete",
-          description: `Found ${keywords.length} keywords: ${keywords.join(", ")}`,
+          description: `Found ${keywords.length} PVA-related keywords: ${keywords.join(", ")}`,
           variant: "default"
         });
       } else {
         toast({
           title: "Analysis complete",
-          description: "No target keywords found in the document",
+          description: "No PVA-related keywords found in the document",
           variant: "default"
         });
       }
@@ -184,10 +206,60 @@ const ContributePage = () => {
       setFile(null);
       setExtractedText("");
       setFoundKeywords([]);
+      setPvaStatus(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     }, 1500);
+  };
+
+  const renderPvaStatusBadge = () => {
+    if (!pvaStatus) return null;
+    
+    switch (pvaStatus) {
+      case 'contains':
+        return (
+          <Alert className="mt-4 border-red-300 bg-red-50">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <AlertTitle className="text-red-600">Contains PVA</AlertTitle>
+            <AlertDescription className="text-red-600">
+              This product likely contains PVA. If you know the percentage, please enter it below.
+            </AlertDescription>
+          </Alert>
+        );
+      case 'verified-free':
+        return (
+          <Alert className="mt-4 border-green-300 bg-green-50">
+            <CircleCheck className="h-5 w-5 text-green-500" />
+            <AlertTitle className="text-green-600">Verified PVA-Free</AlertTitle>
+            <AlertDescription className="text-green-600">
+              This product has been previously verified as PVA-free by our administrators.
+            </AlertDescription>
+          </Alert>
+        );
+      case 'needs-verification':
+        return (
+          <Alert className="mt-4 border-yellow-300 bg-yellow-50">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            <AlertTitle className="text-yellow-600">Requires Verification</AlertTitle>
+            <AlertDescription className="text-yellow-600">
+              No PVA keywords found, but this brand requires admin verification before being marked as PVA-free.
+            </AlertDescription>
+          </Alert>
+        );
+      case 'inconclusive':
+        return (
+          <Alert className="mt-4 border-yellow-300 bg-yellow-50">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            <AlertTitle className="text-yellow-600">Inconclusive / Not enough info</AlertTitle>
+            <AlertDescription className="text-yellow-600">
+              Unable to determine if this product contains PVA. Additional information is needed.
+            </AlertDescription>
+          </Alert>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -367,6 +439,9 @@ const ContributePage = () => {
                   )}
                 </div>
                 
+                {/* PVA Status Indicator */}
+                {renderPvaStatusBadge()}
+                
                 {/* Analysis Results */}
                 {extractedText && (
                   <div className="border rounded-lg p-4 bg-muted/30">
@@ -382,14 +457,14 @@ const ContributePage = () => {
                     <div className="text-sm">
                       {foundKeywords.length > 0 ? (
                         <div>
-                          <p className="text-green-600 mb-2">
-                            Found {foundKeywords.length} keywords related to PVA:
+                          <p className="text-red-600 mb-2">
+                            Found {foundKeywords.length} PVA-related keywords:
                           </p>
                           <div className="flex flex-wrap gap-2 mb-3">
                             {foundKeywords.map((keyword, index) => (
-                              <span key={index} className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                              <Badge key={index} variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-200">
                                 {keyword}
-                              </span>
+                              </Badge>
                             ))}
                           </div>
                         </div>
