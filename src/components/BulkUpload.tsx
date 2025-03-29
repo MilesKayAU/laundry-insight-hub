@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   Card, 
@@ -198,6 +197,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                   <li><strong>Product Type</strong> - Must match exactly (e.g., "Laundry Sheets") (required)</li>
                   <li><strong>PVA Percentage (if known)</strong> - Numerical percentage (optional)</li>
                   <li><strong>Additional Notes</strong> - Product description, sources, etc. (optional)</li>
+                  <li><strong>Country</strong> - Country or region where the product is available (optional, defaults to "Global")</li>
                 </ul>
                 <p className="text-xs text-muted-foreground mt-2">
                   Note: Duplicates are detected based on having the same Brand Name AND Product Name

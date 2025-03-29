@@ -12,6 +12,7 @@ export interface BulkProductData {
   videoUrl?: string;
   websiteUrl?: string;
   additionalNotes?: string;
+  country?: string; // Add country field to BulkProductData interface
 }
 
 // Check if product with same brand and name already exists
@@ -80,6 +81,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
         brand: item.brand,
         name: item.name,
         type: item.type,
+        country: item.country || 'Global', // Use provided country or default to Global
         pvaStatus: item.pvaStatus,
         pvaPercentage: item.pvaPercentage,
         description: item.additionalNotes || item.description || "",
@@ -144,8 +146,8 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
 
 // Get sample CSV template content
 export const getSampleCSVTemplate = (): string => {
-  return 'Brand Name,Product Name,Product Type,PVA Percentage (if known),Additional Notes\n' +
-    'Example Brand,Product Name,Laundry Sheets,0,Product contains no PVA. Verified by manufacturer.';
+  return 'Brand Name,Product Name,Product Type,PVA Percentage (if known),Additional Notes,Country\n' +
+    'Example Brand,Product Name,Laundry Sheets,0,Product contains no PVA. Verified by manufacturer.,Australia';
 };
 
 // Group products by brand for chart visualization
