@@ -120,12 +120,50 @@ export const extractTextFromImage = async (file: File): Promise<ExtractedText> =
   }
 };
 
-// Function to check if text contains specified keywords
+// Function to find unique instances of PVA keywords in text
 export const findKeywordsInText = (text: string, keywords: string[]): string[] => {
   const lowerText = text.toLowerCase();
-  return keywords.filter(keyword => 
-    lowerText.includes(keyword.toLowerCase())
-  );
+  
+  // First pass: Find all matching keywords and their positions
+  const matchesWithPositions = keywords.flatMap(keyword => {
+    const keywordLower = keyword.toLowerCase();
+    const matches: { keyword: string, position: number }[] = [];
+    let position = lowerText.indexOf(keywordLower);
+    
+    while (position !== -1) {
+      matches.push({ keyword, position });
+      position = lowerText.indexOf(keywordLower, position + 1);
+    }
+    
+    return matches;
+  });
+  
+  // Sort matches by position
+  matchesWithPositions.sort((a, b) => a.position - b.position);
+  
+  // Second pass: Filter out overlapping matches
+  const uniqueMatches: string[] = [];
+  const usedRanges: { start: number, end: number }[] = [];
+  
+  for (const match of matchesWithPositions) {
+    const start = match.position;
+    const end = start + match.keyword.length;
+    
+    // Check if this match overlaps with any previously used range
+    const overlaps = usedRanges.some(range => 
+      (start >= range.start && start < range.end) || // Start is within a used range
+      (end > range.start && end <= range.end) || // End is within a used range
+      (start <= range.start && end >= range.end) // Match completely contains a used range
+    );
+    
+    if (!overlaps) {
+      uniqueMatches.push(match.keyword);
+      usedRanges.push({ start, end });
+    }
+  }
+  
+  // Third pass: Remove duplicates
+  return [...new Set(uniqueMatches)];
 };
 
 // Function to determine PVA status based on analysis
