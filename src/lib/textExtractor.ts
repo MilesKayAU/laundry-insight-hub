@@ -1,12 +1,5 @@
-
-// Tesseract.js for OCR (Optical Character Recognition)
+import { createHash } from "crypto";
 import Tesseract from 'tesseract.js';
-
-// Get product submissions from localStorage
-export const getProductSubmissions = () => {
-  const submissions = localStorage.getItem('product_submissions');
-  return submissions ? JSON.parse(submissions) : [];
-};
 
 // PVA keyword categories for detection in documents
 export const PVA_KEYWORDS_CATEGORIES = {
@@ -37,25 +30,23 @@ export const PVA_KEYWORDS_CATEGORIES = {
 // Define the ProductSubmission type
 export interface ProductSubmission {
   id: string;
-  brand: string;
   name: string;
+  brand: string;
   type: string;
-  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive' | string;
-  pvaPercentage: number | null;
-  extractedText?: string;
-  foundKeywords?: string[];
-  hasSDSFile?: boolean;
-  additionalNotes?: string;
-  userId?: string | null;
-  userName?: string | null;
-  mediaFiles?: string[];
-  approved: boolean;
-  dateSubmitted: string;
-  submittedAt?: string;
-  description?: string;
+  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
+  pvaPercentage?: number | null;
   imageUrl?: string;
   videoUrl?: string;
   websiteUrl?: string;
+  description?: string;
+  submittedAt: string;
+  dateSubmitted?: string;
+  approved: boolean;
+  brandVerified?: boolean;
+  brandOwnershipRequested?: boolean;
+  brandContactEmail?: string;
+  brandOwnershipRequestDate?: string;
+  brandVerificationDate?: string;
 }
 
 // Extract text from image using Tesseract OCR
@@ -102,4 +93,15 @@ export const deleteProductSubmission = (productId: string) => {
   const updatedSubmissions = submissions.filter(submission => submission.id !== productId);
   localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
   return updatedSubmissions;
+};
+
+// Get stored product submissions from local storage
+export const getProductSubmissions = (): ProductSubmission[] => {
+  try {
+    const storedSubmissions = localStorage.getItem("product_submissions");
+    return storedSubmissions ? JSON.parse(storedSubmissions) : [];
+  } catch (error) {
+    console.error("Error retrieving product submissions:", error);
+    return [];
+  }
 };

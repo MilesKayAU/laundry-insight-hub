@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Card, 
@@ -43,15 +42,29 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { mockProducts } from "@/lib/mockData";
-import { getProductSubmissions } from "@/lib/textExtractor";
+import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { requestBrandOwnership } from "@/lib/bulkUpload";
+import { useToast } from "@/components/ui/use-toast";
+import { VerifiedIcon, Pencil, BadgeCheck, Shield } from "lucide-react";
 
 interface ChartDataItem {
   name: string;
-  PVA: number;
-  isUnknown: boolean;
+  PVA: number | null;
+  brand: string;
 }
 
 const DatabasePage = () => {
@@ -59,6 +72,11 @@ const DatabasePage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // Number of items to display per page
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  
+  const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
+  const [contactEmail, setContactEmail] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const allSubmissions = getProductSubmissions();
   
@@ -104,26 +122,63 @@ const DatabasePage = () => {
     setCurrentPage(page);
   };
   
-  // Updated to properly handle unknown values with a default 25% for visualization
   const sheetChartData: ChartDataItem[] = sheetProducts.map(p => ({
     name: p.name,
-    PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25,
-    isUnknown: p.pvaPercentage === null
+    PVA: p.pvaPercentage,
+    brand: p.brand
   }));
   
-  // Updated to properly handle unknown values with a default 25% for visualization
   const podChartData: ChartDataItem[] = podProducts.map(p => ({
     name: p.name,
-    PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25,
-    isUnknown: p.pvaPercentage === null
+    PVA: p.pvaPercentage,
+    brand: p.brand
   }));
 
-  // Colors for chart bars
   const knownValueColor = "#3cca85";
   const podKnownValueColor = "#4799ff";
   const unknownValueColor = "#8E9196"; // Gray color for unknown values
 
-  // Custom tooltip component with proper typing
+  const handleBrandOwnershipRequest = () => {
+    if (!selectedProduct) return;
+    
+    if (!contactEmail || !contactEmail.includes('@') || !contactEmail.includes('.')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const emailDomain = contactEmail.split('@')[1];
+    const brandNameLower = selectedProduct.brand.toLowerCase().replace(/\s+/g, '');
+    
+    if (!emailDomain.includes(brandNameLower)) {
+      toast({
+        title: "Email verification",
+        description: "Your email does not match the brand domain. Our admin will carefully verify your ownership claim.",
+        variant: "default"
+      });
+    }
+    
+    const success = requestBrandOwnership(selectedProduct.id, contactEmail);
+    
+    if (success) {
+      toast({
+        title: "Ownership request submitted",
+        description: "Your request has been sent to our administrators for verification.",
+      });
+      setIsDialogOpen(false);
+      setContactEmail("");
+    } else {
+      toast({
+        title: "Request failed",
+        description: "There was an error submitting your request. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
       const dataItem = payload[0].payload as ChartDataItem;
@@ -131,11 +186,12 @@ const DatabasePage = () => {
       return (
         <div className="p-2 bg-white border border-gray-200 rounded shadow-md">
           <p className="font-medium">{label}</p>
+          <p className="text-sm text-gray-600">{dataItem.brand}</p>
           <p>
-            {dataItem.isUnknown ? (
-              <span className="text-gray-600">PVA: Unknown (Awaiting Verification)</span>
+            {dataItem.PVA === null ? (
+              <span className="text-gray-600">PVA: Unknown</span>
             ) : (
-              <span>PVA: {payload[0].value}%</span>
+              <span>PVA: {dataItem.PVA}%</span>
             )}
           </p>
         </div>
@@ -183,17 +239,56 @@ const DatabasePage = () => {
   };
 
   const renderPvaValue = (product) => {
-    if (product.pvaPercentage !== null) {
+    if (product.pvaPercentage !== null && product.pvaPercentage !== undefined) {
       return `${product.pvaPercentage}%`;
     } else {
       return (
         <span className="flex items-center gap-1">
           <Badge variant="outline" className="bg-gray-100 text-gray-800">
-            Unknown (Awaiting Verification)
+            Unknown
           </Badge>
         </span>
       );
     }
+  };
+  
+  const renderBrandVerification = (product) => {
+    if (product.brandVerified) {
+      return (
+        <Badge variant="outline" className="bg-green-100 text-green-800 ml-2">
+          <BadgeCheck className="h-3 w-3 mr-1" />
+          Verified
+        </Badge>
+      );
+    } else if (product.brandOwnershipRequested) {
+      return (
+        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 ml-2">
+          Verification Pending
+        </Badge>
+      );
+    }
+    return null;
+  };
+
+  const renderBrandButtons = (product) => {
+    if (product.brandVerified || product.brandOwnershipRequested) {
+      return null;
+    }
+    
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="ml-2 text-xs"
+        onClick={() => {
+          setSelectedProduct(product);
+          setIsDialogOpen(true);
+        }}
+      >
+        <Shield className="h-3 w-3 mr-1" />
+        Own this brand?
+      </Button>
+    );
   };
 
   return (
@@ -273,22 +368,19 @@ const DatabasePage = () => {
                         {sheetChartData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
-                            fill={entry.isUnknown ? unknownValueColor : knownValueColor} 
+                            fill={entry.PVA === null ? unknownValueColor : knownValueColor} 
                           />
                         ))}
                         <LabelList 
-                          dataKey="isUnknown" 
-                          position="top" 
-                          formatter={(value) => value ? "*" : ""}
+                          dataKey={(entry: ChartDataItem) => entry.PVA === null ? "?" : ""}
+                          position="top"
                         />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
-                  {sheetChartData.some(item => item.isUnknown) && (
-                    <div className="text-xs text-gray-500 italic mt-2">
-                      * Unknown value, set to 25% for visualization purposes. Awaiting verification.
-                    </div>
-                  )}
+                  <div className="text-xs text-gray-500 italic mt-2">
+                    ? = Unknown PVA content, awaiting verification
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
@@ -305,22 +397,29 @@ const DatabasePage = () => {
                         <TableHead>Product</TableHead>
                         <TableHead>Brand</TableHead>
                         <TableHead className="text-right">PVA %</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedSheets.length > 0 ? (
                         paginatedSheets.map((product) => (
                           <TableRow key={product.id}>
-                            <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {product.name}
+                              {renderBrandVerification(product)}
+                            </TableCell>
                             <TableCell>{product.brand}</TableCell>
                             <TableCell className="text-right">
                               {renderPvaValue(product)}
+                            </TableCell>
+                            <TableCell>
+                              {renderBrandButtons(product)}
                             </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                          <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
                             No laundry sheet data available
                           </TableCell>
                         </TableRow>
@@ -373,22 +472,19 @@ const DatabasePage = () => {
                         {podChartData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
-                            fill={entry.isUnknown ? unknownValueColor : podKnownValueColor} 
+                            fill={entry.PVA === null ? unknownValueColor : podKnownValueColor} 
                           />
                         ))}
                         <LabelList 
-                          dataKey="isUnknown" 
-                          position="top" 
-                          formatter={(value) => value ? "*" : ""}
+                          dataKey={(entry: ChartDataItem) => entry.PVA === null ? "?" : ""}
+                          position="top"
                         />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
-                  {podChartData.some(item => item.isUnknown) && (
-                    <div className="text-xs text-gray-500 italic mt-2">
-                      * Unknown value, set to 25% for visualization purposes. Awaiting verification.
-                    </div>
-                  )}
+                  <div className="text-xs text-gray-500 italic mt-2">
+                    ? = Unknown PVA content, awaiting verification
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
@@ -405,22 +501,29 @@ const DatabasePage = () => {
                         <TableHead>Product</TableHead>
                         <TableHead>Brand</TableHead>
                         <TableHead className="text-right">PVA %</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedPods.length > 0 ? (
                         paginatedPods.map((product) => (
                           <TableRow key={product.id}>
-                            <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {product.name}
+                              {renderBrandVerification(product)}
+                            </TableCell>
                             <TableCell>{product.brand}</TableCell>
                             <TableCell className="text-right">
                               {renderPvaValue(product)}
+                            </TableCell>
+                            <TableCell>
+                              {renderBrandButtons(product)}
                             </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                          <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
                             No laundry pod data available
                           </TableCell>
                         </TableRow>
@@ -451,23 +554,30 @@ const DatabasePage = () => {
                       <TableHead>Brand</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead className="text-right">PVA %</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedAll.length > 0 ? (
                       paginatedAll.map((product) => (
                         <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {product.name}
+                            {renderBrandVerification(product)}
+                          </TableCell>
                           <TableCell>{product.brand}</TableCell>
                           <TableCell>{product.type}</TableCell>
                           <TableCell className="text-right">
                             {renderPvaValue(product)}
                           </TableCell>
+                          <TableCell>
+                            {renderBrandButtons(product)}
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
                           No products matching your search criteria
                         </TableCell>
                       </TableRow>
@@ -532,6 +642,51 @@ const DatabasePage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Verify Brand Ownership</DialogTitle>
+            <DialogDescription>
+              {selectedProduct && (
+                <>
+                  Submit a request to verify that you represent {selectedProduct.brand}. 
+                  Our administrators will review your request.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="contact-email" className="text-right">
+                Business Email
+              </Label>
+              <Input
+                id="contact-email"
+                type="email"
+                placeholder="your@company.com"
+                className="col-span-3"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+              />
+            </div>
+            
+            <div className="col-span-4 text-sm text-muted-foreground">
+              <p>Please use an email address associated with your brand's domain for faster verification.</p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBrandOwnershipRequest}>
+              Submit Verification Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

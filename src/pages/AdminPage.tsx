@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -33,10 +32,12 @@ import {
   PlusCircle,
   Image,
   Video,
-  Link,
+  Link as LinkIcon,
   X,
   Upload,
-  BarChart
+  BarChart,
+  BadgeCheck,
+  Shield
 } from "lucide-react";
 import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
 import { 
@@ -72,9 +73,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import BulkUpload from "@/components/BulkUpload";
 import DataCharts from "@/components/DataCharts";
-import { isDuplicateProduct } from "@/lib/bulkUpload";
+import { isDuplicateProduct, approveBrandOwnership, rejectBrandOwnership } from "@/lib/bulkUpload";
 
-// Helper function to save additional product details
 const saveProductDetails = (productId: string, details: Partial<ProductSubmission>) => {
   const submissions = getProductSubmissions();
   const updatedSubmissions = submissions.map(submission => 
@@ -90,8 +90,8 @@ const AdminPage = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
   const [activeTab, setActiveTab] = useState("pending");
   const [bulkUploadMode, setBulkUploadMode] = useState(false);
+  const [pendingVerifications, setPendingVerifications] = useState<ProductSubmission[]>([]);
   
-  // State for product details form
   const [productDetails, setProductDetails] = useState({
     description: "",
     imageUrl: "",
@@ -99,10 +99,8 @@ const AdminPage = () => {
     websiteUrl: ""
   });
   
-  // State to control dialog open/close
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Initialize keyword state from our categorized keywords
   const [keywordCategories, setKeywordCategories] = useState({
     commonNames: [...PVA_KEYWORDS_CATEGORIES.commonNames],
     chemicalSynonyms: [...PVA_KEYWORDS_CATEGORIES.chemicalSynonyms],
@@ -114,7 +112,6 @@ const AdminPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("commonNames");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Load submissions from local storage when the component mounts
   useEffect(() => {
     loadProductSubmissions();
   }, []);
@@ -123,9 +120,12 @@ const AdminPage = () => {
     const submissions = getProductSubmissions();
     setPendingProducts(submissions.filter(p => !p.approved));
     setApprovedProducts(submissions.filter(p => p.approved));
+    
+    setPendingVerifications(submissions.filter(p => 
+      p.approved && p.brandOwnershipRequested && !p.brandVerified
+    ));
   };
 
-  // Get all keywords as a flat array for scanning functionality
   const getAllKeywords = () => {
     return [
       ...keywordCategories.commonNames,
@@ -136,7 +136,6 @@ const AdminPage = () => {
   };
 
   const handleApprove = (productId: string) => {
-    // Check for duplicates before approving
     const product = pendingProducts.find(p => p.id === productId);
     if (product && isDuplicateProduct(product.brand, product.name)) {
       toast({
@@ -176,7 +175,44 @@ const AdminPage = () => {
     });
   };
 
-  // Open product details dialog
+  const handleApproveBrandOwnership = (productId: string) => {
+    const success = approveBrandOwnership(productId);
+    
+    if (success) {
+      loadProductSubmissions();
+      
+      toast({
+        title: "Brand ownership approved",
+        description: "The brand has been verified.",
+      });
+    } else {
+      toast({
+        title: "Approval failed",
+        description: "There was an error approving this request.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectBrandOwnership = (productId: string) => {
+    const success = rejectBrandOwnership(productId);
+    
+    if (success) {
+      loadProductSubmissions();
+      
+      toast({
+        title: "Brand ownership rejected",
+        description: "The verification request has been rejected.",
+      });
+    } else {
+      toast({
+        title: "Rejection failed",
+        description: "There was an error rejecting this request.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const openProductDetails = (product: ProductSubmission) => {
     setSelectedProduct(product);
     setProductDetails({
@@ -188,7 +224,6 @@ const AdminPage = () => {
     setIsDialogOpen(true);
   };
 
-  // Save product details
   const handleSaveDetails = () => {
     if (!selectedProduct) return;
     
@@ -223,7 +258,6 @@ const AdminPage = () => {
       return;
     }
     
-    // Add the keyword to the selected category
     setKeywordCategories({
       ...keywordCategories,
       [selectedCategory]: [...keywordCategories[selectedCategory as keyof typeof keywordCategories], newKeyword.trim().toLowerCase()]
@@ -285,14 +319,21 @@ const AdminPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto">
+        <TabsList className="grid w-full grid-cols-5 max-w-3xl mx-auto">
           <TabsTrigger value="pending">Pending Approval</TabsTrigger>
           <TabsTrigger value="approved">Approved Products</TabsTrigger>
+          <TabsTrigger value="verifications" className="relative">
+            Brand Verifications
+            {pendingVerifications.length > 0 && (
+              <Badge className="ml-1 bg-orange-500" variant="default">
+                {pendingVerifications.length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
-        {/* Pending Submissions Tab */}
         <TabsContent value="pending" className="mt-6">
           <Card>
             <CardHeader>
@@ -386,7 +427,6 @@ const AdminPage = () => {
           </Card>
         </TabsContent>
         
-        {/* Approved Products Tab */}
         <TabsContent value="approved" className="mt-6">
           <Card>
             <CardHeader className="space-y-1">
@@ -424,10 +464,7 @@ const AdminPage = () => {
             <CardContent className="space-y-6">
               {approvedProducts.length > 0 ? (
                 <>
-                  {/* Data Visualization Charts */}
                   <DataCharts products={approvedProducts} />
-                  
-                  {/* Products Table */}
                   <div className="rounded-md border mt-6">
                     <Table>
                       <TableHeader>
@@ -500,12 +537,77 @@ const AdminPage = () => {
           </Card>
         </TabsContent>
         
-        {/* Bulk Upload Tab */}
+        <TabsContent value="verifications" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Brand Verification Requests</CardTitle>
+              <CardDescription>
+                Review and approve brand ownership verification requests
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pendingVerifications.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Brand</TableHead>
+                        <TableHead>Contact Email</TableHead>
+                        <TableHead>Requested</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingVerifications.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>{product.brand}</TableCell>
+                          <TableCell>{product.brandContactEmail}</TableCell>
+                          <TableCell>
+                            {product.brandOwnershipRequestDate && 
+                              new Date(product.brandOwnershipRequestDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleApproveBrandOwnership(product.id)}
+                                className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                                title="Approve Verification"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleRejectBrandOwnership(product.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                title="Reject Verification"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-10 text-muted-foreground">
+                  No pending brand verification requests
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
         <TabsContent value="bulk" className="mt-6">
           <BulkUpload onComplete={handleBulkUploadComplete} />
         </TabsContent>
         
-        {/* Settings Tab */}
         <TabsContent value="settings" className="mt-6">
           <Card>
             <CardHeader>
@@ -681,7 +783,6 @@ const AdminPage = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Product Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           {selectedProduct && (
@@ -783,7 +884,7 @@ const AdminPage = () => {
                 <div className="grid grid-cols-4 items-center gap-4">
                   <div className="text-right">
                     <Label htmlFor="website-url" className="flex items-center justify-end gap-2">
-                      <Link className="h-4 w-4" /> Website
+                      <LinkIcon className="h-4 w-4" /> Website
                     </Label>
                   </div>
                   <Input

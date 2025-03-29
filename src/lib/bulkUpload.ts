@@ -1,4 +1,3 @@
-
 import { ProductSubmission, getProductSubmissions } from "./textExtractor";
 
 // Define the expected format for the CSV/Excel data
@@ -89,7 +88,9 @@ export const processBulkUpload = (data: BulkProductData[]): {
         websiteUrl: item.websiteUrl || "",
         submittedAt: new Date().toISOString(),
         approved: true, // Auto-approve admin uploads
-        dateSubmitted: new Date().toISOString()
+        dateSubmitted: new Date().toISOString(),
+        brandVerified: false, // Add brand verification status field
+        brandContactEmail: "" // Store contact email for brand verification
       };
 
       // Add to database
@@ -193,7 +194,7 @@ export const getBrandCategories = (products: ProductSubmission[], limit: number 
     count: products.length
   }));
   
-  const otherCount = otherBrands.reduce((sum, [_, products]) => sum + products.length, 0);
+  const otherCount = otherBrands.reduce((sum, [products]) => sum + products.length, 0);
   
   result.push({
     brand: 'Others',
@@ -201,4 +202,96 @@ export const getBrandCategories = (products: ProductSubmission[], limit: number 
   });
   
   return result;
+};
+
+// Request brand ownership verification
+export const requestBrandOwnership = (productId: string, contactEmail: string): boolean => {
+  try {
+    const submissions = getProductSubmissions();
+    const product = submissions.find(p => p.id === productId);
+    
+    if (!product) {
+      return false;
+    }
+    
+    // Update product with brand ownership request details
+    const updatedProduct = {
+      ...product,
+      brandOwnershipRequested: true,
+      brandContactEmail: contactEmail,
+      brandOwnershipRequestDate: new Date().toISOString()
+    };
+    
+    // Update in localStorage
+    const updatedSubmissions = submissions.map(p => 
+      p.id === productId ? updatedProduct : p
+    );
+    
+    localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
+    return true;
+  } catch (error) {
+    console.error("Error requesting brand ownership:", error);
+    return false;
+  }
+};
+
+// Approve brand ownership
+export const approveBrandOwnership = (productId: string): boolean => {
+  try {
+    const submissions = getProductSubmissions();
+    const product = submissions.find(p => p.id === productId);
+    
+    if (!product) {
+      return false;
+    }
+    
+    // Update product with verified status
+    const updatedProduct = {
+      ...product,
+      brandVerified: true,
+      brandOwnershipRequested: false,
+      brandVerificationDate: new Date().toISOString()
+    };
+    
+    // Update in localStorage
+    const updatedSubmissions = submissions.map(p => 
+      p.id === productId ? updatedProduct : p
+    );
+    
+    localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
+    return true;
+  } catch (error) {
+    console.error("Error approving brand ownership:", error);
+    return false;
+  }
+};
+
+// Reject brand ownership request
+export const rejectBrandOwnership = (productId: string): boolean => {
+  try {
+    const submissions = getProductSubmissions();
+    const product = submissions.find(p => p.id === productId);
+    
+    if (!product) {
+      return false;
+    }
+    
+    // Update product to remove ownership request
+    const updatedProduct = {
+      ...product,
+      brandOwnershipRequested: false,
+      brandVerified: false
+    };
+    
+    // Update in localStorage
+    const updatedSubmissions = submissions.map(p => 
+      p.id === productId ? updatedProduct : p
+    );
+    
+    localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
+    return true;
+  } catch (error) {
+    console.error("Error rejecting brand ownership:", error);
+    return false;
+  }
 };
