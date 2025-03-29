@@ -1,3 +1,4 @@
+
 import { ProductSubmission, getProductSubmissions } from "./textExtractor";
 
 // Define the expected format for the CSV/Excel data
@@ -11,6 +12,7 @@ export interface BulkProductData {
   imageUrl?: string;
   videoUrl?: string;
   websiteUrl?: string;
+  additionalNotes?: string;
 }
 
 // Check if product with same brand and name already exists
@@ -39,13 +41,33 @@ export const processBulkUpload = (data: BulkProductData[]): {
   data.forEach(item => {
     try {
       // Validate required fields
-      if (!item.brand || !item.name || !item.type || !item.pvaStatus) {
+      if (!item.brand || !item.name || !item.type) {
         result.errors.push({ 
           item, 
-          error: 'Missing required fields (brand, name, type, or pvaStatus)' 
+          error: 'Missing required fields (brand, name, or type)' 
         });
         return;
       }
+
+      // Determine PVA status based on percentage or additional notes
+      let pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive' = 'needs-verification';
+      
+      // Check additional notes for PVA indicators
+      if (item.additionalNotes) {
+        const notes = item.additionalNotes.toLowerCase();
+        if (notes.includes('contains polyvinyl alcohol') || 
+            notes.includes('contains pva') || 
+            notes.includes('pva listed in ingredients')) {
+          pvaStatus = 'contains';
+        } else if (notes.includes('pva-free') || 
+                  notes.includes('no pva') || 
+                  notes.includes('verified free')) {
+          pvaStatus = 'verified-free';
+        }
+      }
+      
+      // Use provided pvaStatus if it exists, otherwise use our determined one
+      item.pvaStatus = item.pvaStatus || pvaStatus;
 
       // Check for duplicates
       if (isDuplicateProduct(item.brand, item.name)) {
@@ -61,7 +83,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
         type: item.type,
         pvaStatus: item.pvaStatus,
         pvaPercentage: item.pvaPercentage,
-        description: item.description || "",
+        description: item.additionalNotes || item.description || "",
         imageUrl: item.imageUrl || "",
         videoUrl: item.videoUrl || "",
         websiteUrl: item.websiteUrl || "",
@@ -97,11 +119,21 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
     const item: any = {};
     
     headers.forEach((header, index) => {
-      if (header === 'pvaPercentage') {
+      // Convert headers to match our expected format
+      let fieldName = header.toLowerCase().replace(/\s+/g, '');
+      
+      // Map CSV headers to our interface properties
+      if (fieldName === 'brandname') fieldName = 'brand';
+      if (fieldName === 'productname') fieldName = 'name';
+      if (fieldName === 'producttype') fieldName = 'type';
+      if (fieldName === 'pvapercentage(ifknown)') fieldName = 'pvaPercentage';
+      if (fieldName === 'additionalnotes') fieldName = 'additionalNotes';
+      
+      if (fieldName === 'pvaPercentage') {
         const numValue = parseFloat(values[index]);
-        item[header] = isNaN(numValue) ? undefined : numValue;
+        item[fieldName] = isNaN(numValue) ? undefined : numValue;
       } else {
-        item[header] = values[index];
+        item[fieldName] = values[index];
       }
     });
     
@@ -111,8 +143,8 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
 
 // Get sample CSV template content
 export const getSampleCSVTemplate = (): string => {
-  return 'brand,name,type,pvaStatus,pvaPercentage,description,imageUrl,videoUrl,websiteUrl\n' +
-    'Example Brand,Product Name,Cosmetic,verified-free,0,Product description,https://example.com/image.jpg,https://example.com/video.mp4,https://example.com';
+  return 'Brand Name,Product Name,Product Type,PVA Percentage (if known),Additional Notes\n' +
+    'Example Brand,Product Name,Laundry Sheets,0,Product contains no PVA. Verified by manufacturer.';
 };
 
 // Group products by brand for chart visualization

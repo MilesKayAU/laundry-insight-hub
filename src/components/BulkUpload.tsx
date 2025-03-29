@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -30,7 +30,8 @@ import {
   AlertCircle, 
   Check, 
   X, 
-  AlertTriangle 
+  AlertTriangle,
+  FileText
 } from "lucide-react";
 import { BulkProductData, parseCSV, processBulkUpload, getSampleCSVTemplate } from '@/lib/bulkUpload';
 
@@ -57,6 +58,12 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     reader.onload = (event) => {
       const content = event.target?.result as string;
       setCsvData(content);
+      
+      // Show preview toast
+      toast({
+        title: "File loaded",
+        description: `Successfully loaded ${file.name}. Review the content and click "Process CSV Data" to import.`,
+      });
     };
     reader.readAsText(file);
   };
@@ -95,7 +102,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'product_template.csv';
+    a.download = 'pva_product_template.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -109,6 +116,9 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       fileInputRef.current.value = '';
     }
   };
+  
+  // Extract first few lines of CSV for preview
+  const csvPreview = csvData.split('\n').slice(0, 5).join('\n');
 
   return (
     <Card className="w-full">
@@ -143,7 +153,13 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
             </div>
             
             <div className="space-y-1">
-              <Label htmlFor="csv-preview">CSV Content Preview</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="csv-preview">CSV Content Preview</Label>
+                {csvData && <Badge variant="outline" className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {csvData.split('\n').length - 1} rows detected
+                </Badge>}
+              </div>
               <Textarea 
                 id="csv-preview" 
                 placeholder="CSV data will appear here after file upload, or you can paste it directly"
@@ -173,20 +189,19 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
             
             <Alert variant="default" className="bg-muted">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Format Information</AlertTitle>
+              <AlertTitle>Expected Format</AlertTitle>
               <AlertDescription>
                 <p className="mb-2">Your CSV should have the following columns:</p>
                 <ul className="list-disc pl-5 space-y-1 text-sm">
-                  <li><strong>brand</strong> - Company or brand name (required)</li>
-                  <li><strong>name</strong> - Product name (required)</li>
-                  <li><strong>type</strong> - Product type/category (required)</li>
-                  <li><strong>pvaStatus</strong> - One of: contains, verified-free, needs-verification, inconclusive (required)</li>
-                  <li><strong>pvaPercentage</strong> - Numerical percentage (optional)</li>
-                  <li><strong>description</strong> - Product description (optional)</li>
-                  <li><strong>imageUrl</strong> - URL to product image (optional)</li>
-                  <li><strong>videoUrl</strong> - URL to product video (optional)</li>
-                  <li><strong>websiteUrl</strong> - URL to product website (optional)</li>
+                  <li><strong>Brand Name</strong> - Company or brand name (required)</li>
+                  <li><strong>Product Name</strong> - Product name (required)</li>
+                  <li><strong>Product Type</strong> - Must match exactly (e.g., "Laundry Sheets") (required)</li>
+                  <li><strong>PVA Percentage (if known)</strong> - Numerical percentage (optional)</li>
+                  <li><strong>Additional Notes</strong> - Product description, sources, etc. (optional)</li>
                 </ul>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Note: Duplicates are detected based on having the same Brand Name AND Product Name
+                </p>
               </AlertDescription>
             </Alert>
           </div>
@@ -213,6 +228,8 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                       <TableHead>Product</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>PVA Status</TableHead>
+                      <TableHead>PVA %</TableHead>
+                      <TableHead>Notes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -229,6 +246,12 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                           }>
                             {item.pvaStatus}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {item.pvaPercentage !== undefined ? `${item.pvaPercentage}%` : 'N/A'}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {item.additionalNotes || 'N/A'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -248,6 +271,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                     <TableRow>
                       <TableHead>Brand</TableHead>
                       <TableHead>Product</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Reason</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -256,6 +280,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                       <TableRow key={`duplicate-${index}`}>
                         <TableCell>{item.brand}</TableCell>
                         <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.type}</TableCell>
                         <TableCell className="text-amber-600 flex items-center gap-2">
                           <AlertTriangle className="h-4 w-4" />
                           Product with same brand and name already exists
