@@ -87,7 +87,7 @@ interface ChartDataItem {
   name: string;
   PVA: number | null;
   brand: string;
-  pvaMissing?: string;
+  pvaMissing: string;
   productId: string;
 }
 
@@ -488,15 +488,18 @@ const DatabasePage = () => {
                         name="PVA Content (%)" 
                         barSize={20}
                       >
-                        {limitedChartData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={entry.PVA === null ? unknownValueColor : 
-                                  (entry.productId in podKnownValueColor ? podKnownValueColor : knownValueColor)}
-                            // For unknown values, display at 20% for visual representation
-                            value={entry.PVA === null ? 20 : entry.PVA}
-                          />
-                        ))}
+                        {limitedChartData.map((entry, index) => {
+                          // For unknown values, create a visual representation at 20%
+                          const visualValue = entry.PVA === null ? 20 : entry.PVA;
+                          
+                          return (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.PVA === null ? unknownValueColor : 
+                                    (entry.name.includes("Pod") ? podKnownValueColor : knownValueColor)}
+                            />
+                          );
+                        })}
                         <LabelList 
                           dataKey="pvaMissing"
                           position="right"
