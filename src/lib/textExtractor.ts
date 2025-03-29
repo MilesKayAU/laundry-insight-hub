@@ -12,18 +12,21 @@ export type ExtractedText = {
 
 export type PvaStatus = 'contains' | 'inconclusive' | 'verified-free' | 'needs-verification';
 
-export type ProductSubmission = {
+export interface ProductSubmission {
   id: string;
-  brand: string;
   name: string;
-  type: "Laundry Sheet" | "Laundry Pod";
-  pvaPercentage: string | null;
-  pvaStatus: PvaStatus;
-  extractedText: string;
-  foundKeywords: string[];
+  brand: string;
+  type: string;
+  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
+  pvaPercentage: number | null;
+  submittedAt: number;
   approved: boolean;
-  submittedAt: string;
-};
+  // New fields for PVA-free page
+  description?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  websiteUrl?: string;
+}
 
 // PVA-related keywords to scan for, organized by category
 export const PVA_KEYWORDS_CATEGORIES = {

@@ -29,7 +29,11 @@ import {
   Trash, 
   Search, 
   Plus, 
-  PlusCircle 
+  PlusCircle,
+  Image,
+  Video,
+  Link,
+  X
 } from "lucide-react";
 import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
 import { 
@@ -52,11 +56,40 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+
+// Helper function to save additional product details
+const saveProductDetails = (productId: string, details: Partial<ProductSubmission>) => {
+  const submissions = getProductSubmissions();
+  const updatedSubmissions = submissions.map(submission => 
+    submission.id === productId ? { ...submission, ...details } : submission
+  );
+  localStorage.setItem('productSubmissions', JSON.stringify(updatedSubmissions));
+};
 
 const AdminPage = () => {
   const { toast } = useToast();
   const [pendingProducts, setPendingProducts] = useState<ProductSubmission[]>([]);
   const [approvedProducts, setApprovedProducts] = useState<ProductSubmission[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
+  
+  // State for product details form
+  const [productDetails, setProductDetails] = useState({
+    description: "",
+    imageUrl: "",
+    videoUrl: "",
+    websiteUrl: ""
+  });
   
   // Initialize keyword state from our categorized keywords
   const [keywordCategories, setKeywordCategories] = useState({
@@ -118,6 +151,30 @@ const AdminPage = () => {
     toast({
       title: "Product deleted",
       description: "The product has been removed from the database.",
+    });
+  };
+
+  // Open product details dialog
+  const openProductDetails = (product: ProductSubmission) => {
+    setSelectedProduct(product);
+    setProductDetails({
+      description: product.description || "",
+      imageUrl: product.imageUrl || "",
+      videoUrl: product.videoUrl || "",
+      websiteUrl: product.websiteUrl || ""
+    });
+  };
+
+  // Save product details
+  const handleSaveDetails = () => {
+    if (!selectedProduct) return;
+    
+    saveProductDetails(selectedProduct.id, productDetails);
+    loadProductSubmissions();
+    
+    toast({
+      title: "Details updated",
+      description: "The product details have been saved.",
     });
   };
 
@@ -353,15 +410,26 @@ const AdminPage = () => {
                             {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => handleDelete(product.id)}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              title="Delete"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => openProductDetails(product)}
+                                title="Edit Details"
+                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleDelete(product.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                title="Delete"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -552,6 +620,142 @@ const AdminPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Product Details Dialog */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <span className="hidden">Edit Product</span>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[600px]">
+          {selectedProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Edit Product Details</DialogTitle>
+                <DialogDescription>
+                  Update details for {selectedProduct.name} from {selectedProduct.brand}. These details will be displayed on the PVA-free products page if the product is verified free.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="pva-status" className="text-right">PVA Status</Label>
+                  <div className="col-span-3">
+                    <Select 
+                      defaultValue={selectedProduct.pvaStatus}
+                      onValueChange={(value: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive') => {
+                        saveProductDetails(selectedProduct.id, { pvaStatus: value });
+                        loadProductSubmissions();
+                        setSelectedProduct({...selectedProduct, pvaStatus: value});
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="contains">Contains PVA</SelectItem>
+                        <SelectItem value="verified-free">Verified Free (0% PVA)</SelectItem>
+                        <SelectItem value="needs-verification">Needs Verification</SelectItem>
+                        <SelectItem value="inconclusive">Inconclusive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="pva-percentage" className="text-right">PVA %</Label>
+                  <div className="col-span-3">
+                    <Input
+                      id="pva-percentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="PVA percentage (if known)"
+                      defaultValue={selectedProduct.pvaPercentage || ""}
+                      onChange={(e) => {
+                        const value = e.target.value === "" ? null : parseFloat(e.target.value);
+                        saveProductDetails(selectedProduct.id, { pvaPercentage: value });
+                        loadProductSubmissions();
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label htmlFor="description" className="text-right">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Product description"
+                    className="col-span-3"
+                    value={productDetails.description}
+                    onChange={(e) => setProductDetails({...productDetails, description: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right">
+                    <Label htmlFor="image-url" className="flex items-center justify-end gap-2">
+                      <Image className="h-4 w-4" /> Image URL
+                    </Label>
+                  </div>
+                  <Input
+                    id="image-url"
+                    type="url"
+                    placeholder="https://example.com/product-image.jpg"
+                    className="col-span-3"
+                    value={productDetails.imageUrl}
+                    onChange={(e) => setProductDetails({...productDetails, imageUrl: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right">
+                    <Label htmlFor="video-url" className="flex items-center justify-end gap-2">
+                      <Video className="h-4 w-4" /> Video URL
+                    </Label>
+                  </div>
+                  <Input
+                    id="video-url"
+                    type="url"
+                    placeholder="https://youtube.com/embed/video-id"
+                    className="col-span-3"
+                    value={productDetails.videoUrl}
+                    onChange={(e) => setProductDetails({...productDetails, videoUrl: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right">
+                    <Label htmlFor="website-url" className="flex items-center justify-end gap-2">
+                      <Link className="h-4 w-4" /> Website
+                    </Label>
+                  </div>
+                  <Input
+                    id="website-url"
+                    type="url"
+                    placeholder="https://example.com/product"
+                    className="col-span-3"
+                    value={productDetails.websiteUrl}
+                    onChange={(e) => setProductDetails({...productDetails, websiteUrl: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" type="button">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <DialogClose asChild>
+                  <Button type="submit" onClick={handleSaveDetails}>
+                    Save changes
+                  </Button>
+                </DialogClose>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

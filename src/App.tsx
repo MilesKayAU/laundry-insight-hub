@@ -10,6 +10,7 @@ import ContributePage from "./pages/ContributePage";
 import DatabasePage from "./pages/DatabasePage";
 import AdminPage from "./pages/AdminPage";
 import AboutPva from "./pages/AboutPva";
+import PvaFreePage from "./pages/PvaFreePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/database" element={<DatabasePage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/about" element={<AboutPva />} />
+            <Route path="/pva-free" element={<PvaFreePage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Route>
