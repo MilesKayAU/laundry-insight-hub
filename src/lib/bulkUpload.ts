@@ -15,6 +15,7 @@ export interface BulkProductData {
   additionalNotes?: string;
   country?: string;
   hasPva?: 'yes' | 'no' | 'unidentified';
+  productUrl?: string; // New field for product URL
 }
 
 // Check if product with same brand and name already exists in APPROVED products
@@ -133,7 +134,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
         description: item.additionalNotes || item.description || "",
         imageUrl: item.imageUrl || "",
         videoUrl: item.videoUrl || "",
-        websiteUrl: item.websiteUrl || "",
+        websiteUrl: item.productUrl || item.websiteUrl || "", // Use productUrl as websiteUrl if available
         submittedAt: new Date().toISOString(),
         approved: false,
         dateSubmitted: new Date().toISOString(),
@@ -249,7 +250,15 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
       'country': 'country',
       'region': 'country',
       'market': 'country',
-      'availability': 'country'
+      'availability': 'country',
+      
+      // Product URL variations
+      'producturl': 'productUrl',
+      'product url': 'productUrl',
+      'url': 'productUrl',
+      'link': 'productUrl',
+      'website': 'productUrl',
+      'product link': 'productUrl'
     };
     
     // Create a mapping from the actual headers to our field names
@@ -404,8 +413,8 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
 
 // Get sample CSV template content
 export const getSampleCSVTemplate = (): string => {
-  return '"Brand Name","Product Name","Product Type","Ingredients","PVA Percentage (if known)","Additional Notes","Country"\n' +
-    '"Example Brand","Product Name","Laundry Sheets","Water, Sodium Lauryl Sulfate, Sodium Carbonate, Citric Acid","0","Product contains no PVA. Verified by manufacturer.","Australia"';
+  return '"Brand Name","Product Name","Product Type","Ingredients","PVA Percentage (if known)","Additional Notes","Country","Product URL"\n' +
+    '"Example Brand","Product Name","Laundry Sheets","Water, Sodium Lauryl Sulfate, Sodium Carbonate, Citric Acid","0","Product contains no PVA. Verified by manufacturer.","Australia","https://example.com/product"';
 };
 
 // Group products by brand for chart visualization

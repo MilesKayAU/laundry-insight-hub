@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { 
   Card, 
@@ -32,7 +33,8 @@ import {
   AlertTriangle,
   FileText,
   HelpCircle,
-  Info
+  Info,
+  Link as LinkIcon
 } from "lucide-react";
 import { BulkProductData, parseCSV, processBulkUpload, getSampleCSVTemplate } from '@/lib/bulkUpload';
 
@@ -312,6 +314,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                   <li><strong>PVA Percentage (if known)</strong> - Numerical percentage (optional)</li>
                   <li><strong>Additional Notes</strong> - Product description, sources, etc. (optional)</li>
                   <li><strong>Country</strong> - Country or region where the product is available (optional, defaults to "Global")</li>
+                  <li><strong>Product URL</strong> - Link to the product page or website (optional)</li>
                 </ul>
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
                   <p>Note: The column headers can be flexible (e.g., "Brand", "Brand Name", "Company", etc.)</p>
@@ -357,6 +360,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                         <TableHead>Ingredients</TableHead>
                         <TableHead>Notes</TableHead>
                         <TableHead>Country</TableHead>
+                        <TableHead>URL</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -385,6 +389,19 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                           </TableCell>
                           <TableCell>
                             {item.country || 'Global'}
+                          </TableCell>
+                          <TableCell>
+                            {item.productUrl ? (
+                              <a 
+                                href={item.productUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                <LinkIcon className="h-3 w-3" />
+                                Link
+                              </a>
+                            ) : 'N/A'}
                           </TableCell>
                         </TableRow>
                       ))}
