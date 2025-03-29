@@ -63,30 +63,30 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// PVAFree custom colors
-				pvablue: {
-					50: '#eaf5ff',
-					100: '#d0e8ff',
-					200: '#b0d6ff',
-					300: '#7dbdff',
-					400: '#4799ff',
-					500: '#1a73ff',
-					600: '#0055ff',
-					700: '#0045df',
-					800: '#0038b4',
-					900: '#0a348d',
+				// Science theme custom colors
+				science: {
+					50: '#edf8ff',
+					100: '#dbeeff',
+					200: '#bfe1ff',
+					300: '#92ceff',
+					400: '#5db0ff',
+					500: '#3690ff',
+					600: '#2371f5',
+					700: '#1c5ee0',
+					800: '#1d4eb5',
+					900: '#1f438c',
 				},
-				pvagreen: {
-					50: '#effef6',
-					100: '#d7f9e8',
-					200: '#b2f1d0',
-					300: '#78e2af',
-					400: '#3cca85',
-					500: '#21af68',
-					600: '#0e8a4f',
-					700: '#0a6e42',
-					800: '#0a5736',
-					900: '#09482e',
+				tech: {
+					50: '#eff7ff',
+					100: '#daf1ff',
+					200: '#bee7ff',
+					300: '#92d8ff',
+					400: '#5dc2ff',
+					500: '#36a6ff',
+					600: '#2387ff',
+					700: '#1c73e0',
+					800: '#1d5eb5',
+					900: '#1f4f8c',
 				}
 			},
 			borderRadius: {
@@ -110,11 +110,21 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'float': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-10px)' }
+				},
+				'pulse-glow': {
+					'0%, 100%': { boxShadow: '0 0 10px 2px rgba(93, 188, 255, 0.2)' },
+					'50%': { boxShadow: '0 0 20px 5px rgba(93, 188, 255, 0.4)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'float': 'float 6s ease-in-out infinite',
+				'pulse-glow': 'pulse-glow 4s ease-in-out infinite'
 			}
 		}
 	},

@@ -8,199 +8,199 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { 
-  Alert,
-  AlertTitle,
-  AlertDescription
-} from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
-import { FileUp, FileText, CheckCircle, AlertCircle, AlertTriangle, Ban, CircleCheck } from "lucide-react";
-import { 
-  extractTextFromImage, 
-  extractTextFromPDF, 
-  findKeywordsInText, 
-  PVA_KEYWORDS,
-  determinePvaStatus,
-  PvaStatus,
-  saveProductSubmission,
-  getVerifiedBrands,
-  ProductSubmission
-} from "@/lib/textExtractor";
-import { mockAdminSettings } from "@/lib/mockData";
-import { Badge } from "@/components/ui/badge";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
+import { Upload, Image, FileText, Check, X, AlertCircle, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { extractText } from "@/lib/textExtractor";
+
+// PVA-related keywords to search for in extracted text
+const PVA_KEYWORDS = [
+  "polyvinyl alcohol",
+  "pva",
+  "pvoh",
+  "vinyl alcohol polymer",
+  "ethenol homopolymer",
+];
+
+const DEFAULT_PVA_STATUS = "Unknown";
 
 const ContributePage = () => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sdsFileInputRef = useRef<HTMLInputElement>(null);
   
-  const [brand, setBrand] = useState("");
-  const [productName, setProductName] = useState("");
-  const [productType, setProductType] = useState<"Laundry Sheet" | "Laundry Pod">("Laundry Sheet");
-  const [pvaPercentage, setPvaPercentage] = useState("");
-  const [uploadType, setUploadType] = useState("image");
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [extractedText, setExtractedText] = useState("");
+  const [productImage, setProductImage] = useState<File | null>(null);
+  const [sdsFile, setSdsFile] = useState<File | null>(null);
+  const [extractedText, setExtractedText] = useState<string>("");
   const [foundKeywords, setFoundKeywords] = useState<string[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pvaStatus, setPvaStatus] = useState<PvaStatus | null>(null);
-  const [verifiedBrands, setVerifiedBrands] = useState<string[]>([]);
+  const [pvaStatus, setPvaStatus] = useState<string>(DEFAULT_PVA_STATUS);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isSDSProcessing, setIsSDSProcessing] = useState<boolean>(false);
+  
+  // Form fields
+  const [brand, setBrand] = useState<string>("");
+  const [productName, setProductName] = useState<string>("");
+  const [productType, setProductType] = useState<string>("");
+  const [pvaPercentage, setPvaPercentage] = useState<string>("");
+  const [additionalNotes, setAdditionalNotes] = useState<string>("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  // Check if form is valid
+  const isFormValid = brand && productName && productType && productImage;
 
-  useEffect(() => {
-    const savedVerifiedBrands = getVerifiedBrands();
-    setVerifiedBrands([...savedVerifiedBrands, "EcoClean", "GreenWash", "NaturalFresh"]);
-  }, []);
+  // Function to handle product image upload
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      
-      if (uploadType === "image" && !selectedFile.type.startsWith("image/")) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload an image file (JPG, PNG, etc.)",
-          variant: "destructive"
-        });
-        return;
-      } else if (uploadType === "pdf" && selectedFile.type !== "application/pdf") {
-        toast({
-          title: "Invalid file type", 
-          description: "Please upload a PDF file",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      setFile(selectedFile);
-      setExtractedText("");
-      setFoundKeywords([]);
-      setPvaStatus(null);
-      
-      simulateUpload(selectedFile);
-    }
-  };
-
-  const simulateUpload = (file: File) => {
-    setIsUploading(true);
-    setUploadProgress(0);
-    
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 200);
-  };
-
-  const handleAnalyzeFile = async () => {
-    if (!file) {
+    // Check file type
+    if (!file.type.includes("image/")) {
       toast({
-        title: "No file selected",
-        description: "Please upload a file to analyze",
-        variant: "destructive"
+        title: "Invalid file type",
+        description: "Please upload an image file (JPEG, PNG, etc.)",
+        variant: "destructive",
       });
       return;
     }
+
+    setProductImage(file);
+    setImagePreview(URL.createObjectURL(file));
     
-    setIsAnalyzing(true);
+    // Process the image for text extraction
+    setIsProcessing(true);
     try {
-      let extractedTextData;
+      const text = await extractText(file);
+      setExtractedText(text);
       
-      if (uploadType === "image") {
-        extractedTextData = await extractTextFromImage(file);
-      } else {
-        extractedTextData = await extractTextFromPDF(file);
-      }
-      
-      setExtractedText(extractedTextData.text);
-      
-      const keywords = findKeywordsInText(
-        extractedTextData.text, 
-        PVA_KEYWORDS
+      // Search for PVA keywords in the extracted text
+      const found = PVA_KEYWORDS.filter(keyword => 
+        text.toLowerCase().includes(keyword.toLowerCase())
       );
       
-      setFoundKeywords(keywords);
+      setFoundKeywords(found);
       
-      const status = determinePvaStatus(keywords, verifiedBrands, brand);
-      setPvaStatus(status);
-      
-      if (keywords.length > 0) {
+      if (found.length > 0) {
+        setPvaStatus("Contains PVA");
         toast({
-          title: "Analysis complete",
-          description: `Found ${keywords.length} PVA-related keywords: ${keywords.join(", ")}`,
-          variant: "default"
+          title: "PVA Detected",
+          description: "We found possible PVA-related ingredients in this product.",
+          variant: "destructive",
         });
       } else {
+        setPvaStatus("No PVA Detected");
         toast({
-          title: "Analysis complete",
-          description: "No PVA-related keywords found in the document",
-          variant: "default"
+          title: "No PVA Detected",
+          description: "No PVA-related ingredients were detected in the image.",
         });
       }
     } catch (error) {
-      console.error("Error analyzing file:", error);
+      console.error("Error processing image:", error);
       toast({
-        title: "Analysis failed",
-        description: "There was an error analyzing your file. Please try again.",
-        variant: "destructive"
+        title: "Error processing image",
+        description: "We couldn't extract text from this image. Please try a clearer image or enter details manually.",
+        variant: "destructive",
       });
     } finally {
-      setIsAnalyzing(false);
+      setIsProcessing(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!brand || !productName || !productType) {
+  // Function to handle SDS file upload
+  const handleSDSUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.includes("pdf") && !file.type.includes("image/")) {
       toast({
-        title: "Missing information",
-        description: "Please fill out all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!file) {
-      toast({
-        title: "No file uploaded",
-        description: "Please upload an image or PDF file",
-        variant: "destructive"
+        title: "Invalid file type",
+        description: "Please upload a PDF or image file",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!pvaStatus) {
+    setSdsFile(file);
+    
+    // If it's an image, process it for text extraction
+    if (file.type.includes("image/")) {
+      setIsSDSProcessing(true);
+      try {
+        const text = await extractText(file);
+        
+        // Append to existing extracted text
+        setExtractedText(prevText => prevText ? `${prevText}\n\n--- From SDS ---\n${text}` : text);
+        
+        // Search for PVA keywords in the extracted text
+        const found = PVA_KEYWORDS.filter(keyword => 
+          text.toLowerCase().includes(keyword.toLowerCase())
+        );
+        
+        // Add any new keywords found
+        setFoundKeywords(prevKeywords => {
+          const newKeywords = found.filter(keyword => !prevKeywords.includes(keyword));
+          return [...prevKeywords, ...newKeywords];
+        });
+        
+        if (found.length > 0) {
+          setPvaStatus("Contains PVA");
+          toast({
+            title: "PVA Detected in SDS",
+            description: "We found possible PVA-related ingredients in the SDS document.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error processing SDS image:", error);
+        toast({
+          title: "Error processing SDS image",
+          description: "We couldn't extract text from this SDS image. Please try a clearer image.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSDSProcessing(false);
+      }
+    } else {
+      // For PDFs, we just store the file - actual processing would need backend integration
       toast({
-        title: "Analysis required",
-        description: "Please analyze the file for PVA content first",
-        variant: "destructive"
+        title: "SDS Uploaded",
+        description: "Your SDS file has been uploaded.",
+      });
+    }
+  };
+
+  // Function to handle form submission
+  const handleSubmit = () => {
+    if (!isFormValid) {
+      toast({
+        title: "Please fill out all required fields",
+        description: "Brand, product name, product type, and product image are required.",
+        variant: "destructive",
       });
       return;
     }
+
+    // Here you would typically send this data to your backend
+    // For this prototype, we'll just show a success message
     
-    setIsSubmitting(true);
-    
-    const newSubmission: ProductSubmission = {
-      id: `sub_${Date.now()}`,
+    // Log the submission data for debugging
+    const submissionData = {
       brand,
       name: productName,
       type: productType,
@@ -208,317 +208,290 @@ const ContributePage = () => {
       pvaStatus,
       extractedText,
       foundKeywords,
-      approved: false,
-      submittedAt: new Date().toISOString()
+      hasSDSFile: !!sdsFile,
+      additionalNotes
     };
     
-    saveProductSubmission(newSubmission);
+    console.log("Submission data:", submissionData);
     
-    setTimeout(() => {
-      setIsSubmitting(false);
-      
-      toast({
-        title: "Submission successful",
-        description: "Your contribution has been received and is pending admin approval",
-        variant: "default"
-      });
-      
-      setBrand("");
-      setProductName("");
-      setProductType("Laundry Sheet");
-      setPvaPercentage("");
-      setFile(null);
-      setExtractedText("");
-      setFoundKeywords([]);
-      setPvaStatus(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }, 1500);
+    toast({
+      title: "Submission Successful",
+      description: "Thank you for your contribution to the PVA-Free database.",
+    });
+    
+    // Reset form
+    setBrand("");
+    setProductName("");
+    setProductType("");
+    setPvaPercentage("");
+    setAdditionalNotes("");
+    setProductImage(null);
+    setSdsFile(null);
+    setImagePreview(null);
+    setExtractedText("");
+    setFoundKeywords([]);
+    setPvaStatus(DEFAULT_PVA_STATUS);
   };
 
-  const renderPvaStatusBadge = () => {
-    if (!pvaStatus) return null;
-    
-    switch (pvaStatus) {
-      case 'contains':
-        return (
-          <Alert className="mt-4 border-red-300 bg-red-50">
-            <AlertCircle className="h-5 w-5 text-red-500" />
-            <AlertTitle className="text-red-600">Contains PVA</AlertTitle>
-            <AlertDescription className="text-red-600">
-              This product likely contains PVA. If you know the percentage, please enter it below.
-            </AlertDescription>
-          </Alert>
-        );
-      case 'verified-free':
-        return (
-          <Alert className="mt-4 border-green-300 bg-green-50">
-            <CircleCheck className="h-5 w-5 text-green-500" />
-            <AlertTitle className="text-green-600">Verified PVA-Free</AlertTitle>
-            <AlertDescription className="text-green-600">
-              This product has been previously verified as PVA-free by our administrators.
-            </AlertDescription>
-          </Alert>
-        );
-      case 'needs-verification':
-        return (
-          <Alert className="mt-4 border-yellow-300 bg-yellow-50">
-            <AlertTriangle className="h-5 w-5 text-yellow-500" />
-            <AlertTitle className="text-yellow-600">Requires Verification</AlertTitle>
-            <AlertDescription className="text-yellow-600">
-              No PVA keywords found, but this brand requires admin verification before being marked as PVA-free.
-            </AlertDescription>
-          </Alert>
-        );
-      case 'inconclusive':
-        return (
-          <Alert className="mt-4 border-yellow-300 bg-yellow-50">
-            <AlertTriangle className="h-5 w-5 text-yellow-500" />
-            <AlertTitle className="text-yellow-600">Inconclusive / Not enough info</AlertTitle>
-            <AlertDescription className="text-yellow-600">
-              Unable to determine if this product contains PVA. Additional information is needed.
-            </AlertDescription>
-          </Alert>
-        );
-      default:
-        return null;
-    }
-  };
+  // Cleanup image preview on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   return (
-    <div className="container mx-auto py-10 px-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold">Contribute to Our Database</h1>
-          <p className="text-muted-foreground mt-2">
-            Help build a comprehensive database of laundry product ingredients
+    <div className="container mx-auto py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-bold mb-3 text-science-800">Contribute to Our Database</h1>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Help us build a comprehensive database of laundry products by sharing ingredient 
+            information. Your contributions help others make informed choices.
           </p>
         </div>
         
-        <Card>
+        <Card className="science-card">
           <CardHeader>
             <CardTitle>Product Information</CardTitle>
             <CardDescription>
-              Upload an image of a product label or a PDF of an SDS report and provide product details
+              Fill out the details about the laundry product you want to add to our database.
             </CardDescription>
           </CardHeader>
-          
-          <CardContent>
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="brand">Brand Name*</Label>
-                      <Input 
-                        id="brand" 
-                        placeholder="e.g. EcoClean" 
-                        value={brand}
-                        onChange={(e) => setBrand(e.target.value)}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="product-name">Product Name*</Label>
-                      <Input 
-                        id="product-name" 
-                        placeholder="e.g. Fresh Sheets" 
-                        value={productName}
-                        onChange={(e) => setProductName(e.target.value)}
-                        required
-                      />
-                    </div>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="brand">Brand Name <span className="text-destructive">*</span></Label>
+                <Input 
+                  id="brand" 
+                  placeholder="e.g., Tide" 
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="productName">Product Name <span className="text-destructive">*</span></Label>
+                <Input 
+                  id="productName" 
+                  placeholder="e.g., Free & Clear Laundry Sheets" 
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="productType">Product Type <span className="text-destructive">*</span></Label>
+              <Select value={productType} onValueChange={setProductType}>
+                <SelectTrigger id="productType">
+                  <SelectValue placeholder="Select Product Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="laundry_sheets">Laundry Sheets</SelectItem>
+                  <SelectItem value="laundry_pods">Laundry Pods/Pacs</SelectItem>
+                  <SelectItem value="liquid_detergent">Liquid Detergent</SelectItem>
+                  <SelectItem value="powder_detergent">Powder Detergent</SelectItem>
+                  <SelectItem value="dryer_sheets">Dryer Sheets</SelectItem>
+                  <SelectItem value="fabric_softener">Fabric Softener</SelectItem>
+                  <SelectItem value="stain_remover">Stain Remover</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="pvaPercentage">PVA Percentage (if known)</Label>
+              <Input 
+                id="pvaPercentage" 
+                type="number" 
+                min="0" 
+                max="100" 
+                placeholder="e.g., 15"
+                value={pvaPercentage}
+                onChange={(e) => setPvaPercentage(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="additionalNotes">Additional Notes</Label>
+              <Textarea 
+                id="additionalNotes" 
+                placeholder="Add any other relevant information about the product..." 
+                value={additionalNotes}
+                onChange={(e) => setAdditionalNotes(e.target.value)}
+                className="h-24"
+              />
+            </div>
+            
+            <Separator className="my-4" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2 block">Product Image <span className="text-destructive">*</span></Label>
+                  <div 
+                    className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-science-50 transition-colors border-science-200"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {imagePreview ? (
+                      <div className="space-y-2">
+                        <img 
+                          src={imagePreview} 
+                          alt="Product Preview" 
+                          className="max-h-40 mx-auto rounded-md"
+                        />
+                        <p className="text-sm text-gray-500">Click to change image</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="h-10 w-10 text-science-500 mx-auto" />
+                        <p className="text-sm font-medium text-science-700">Upload Product Image</p>
+                        <p className="text-xs text-gray-500">
+                          Upload a clear image of the product packaging showing ingredients.
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="product-type">Product Type*</Label>
-                      <Select 
-                        value={productType} 
-                        onValueChange={(value) => setProductType(value as "Laundry Sheet" | "Laundry Pod")}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select product type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Laundry Sheet">Laundry Sheet</SelectItem>
-                          <SelectItem value="Laundry Pod">Laundry Pod</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="pva-percentage">PVA Percentage (if known)</Label>
-                      <Input 
-                        id="pva-percentage" 
-                        type="number"
-                        placeholder="e.g. 45" 
-                        value={pvaPercentage}
-                        onChange={(e) => setPvaPercentage(e.target.value)}
-                        min="0"
-                        max="100"
-                      />
-                    </div>
-                  </div>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleProductImageUpload} 
+                    accept="image/*"
+                    className="hidden"
+                  />
                 </div>
                 
                 <div>
-                  <Tabs defaultValue="image" onValueChange={(value) => setUploadType(value)}>
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="image">Upload Image</TabsTrigger>
-                      <TabsTrigger value="pdf">Upload PDF</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="image" className="mt-4">
-                      <Card>
-                        <CardContent className="pt-6">
-                          <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <FileUp className="h-10 w-10 text-muted-foreground mb-4" />
-                            <p className="text-sm font-medium mb-1">
-                              {file ? file.name : "Click to upload product image"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              JPG, PNG, or GIF up to 5MB
-                            </p>
-                            <input 
-                              ref={fileInputRef}
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden"
-                              onChange={handleFileChange}
-                            />
-                          </div>
-                          
-                          {isUploading && (
-                            <div className="mt-4">
-                              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-primary" 
-                                  style={{ width: `${uploadProgress}%` }}
-                                />
-                              </div>
-                              <p className="text-xs text-center mt-1">Uploading: {uploadProgress}%</p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
-                    
-                    <TabsContent value="pdf" className="mt-4">
-                      <Card>
-                        <CardContent className="pt-6">
-                          <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <FileText className="h-10 w-10 text-muted-foreground mb-4" />
-                            <p className="text-sm font-medium mb-1">
-                              {file ? file.name : "Click to upload SDS document"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              PDF files up to 10MB
-                            </p>
-                            <input 
-                              ref={fileInputRef}
-                              type="file" 
-                              accept="application/pdf" 
-                              className="hidden"
-                              onChange={handleFileChange}
-                            />
-                          </div>
-                          
-                          {isUploading && (
-                            <div className="mt-4">
-                              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-primary" 
-                                  style={{ width: `${uploadProgress}%` }}
-                                />
-                              </div>
-                              <p className="text-xs text-center mt-1">Uploading: {uploadProgress}%</p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
-                  </Tabs>
+                  <Label className="mb-2 block">Safety Data Sheet (Optional)</Label>
+                  <div 
+                    className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-science-50 transition-colors border-science-200"
+                    onClick={() => sdsFileInputRef.current?.click()}
+                  >
+                    {sdsFile ? (
+                      <div className="space-y-2">
+                        <FileText className="h-10 w-10 text-science-500 mx-auto" />
+                        <p className="text-sm font-medium text-science-700">{sdsFile.name}</p>
+                        <p className="text-xs text-gray-500">Click to change file</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <FileText className="h-10 w-10 text-science-500 mx-auto" />
+                        <p className="text-sm font-medium text-science-700">Upload SDS Document</p>
+                        <p className="text-xs text-gray-500">
+                          Optionally upload a Safety Data Sheet if available.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <input 
+                    type="file" 
+                    ref={sdsFileInputRef} 
+                    onChange={handleSDSUpload} 
+                    accept="application/pdf,image/*"
+                    className="hidden"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-science-50 p-4 rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <Image className="h-5 w-5 text-science-600 mr-2" />
+                    <Label className="font-medium">Text Extraction Status</Label>
+                  </div>
                   
-                  {file && (
-                    <div className="mt-4">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={handleAnalyzeFile} 
-                        disabled={isAnalyzing || !file}
-                        className="w-full"
-                      >
-                        {isAnalyzing ? "Analyzing..." : "Analyze for PVA Content"}
-                      </Button>
+                  {isProcessing || isSDSProcessing ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-6 w-6 text-science-500 animate-spin" />
+                      <span className="ml-2 text-sm text-science-700">
+                        Processing {isSDSProcessing ? "SDS" : "product image"}...
+                      </span>
                     </div>
+                  ) : extractedText ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center">
+                        <Label className="text-sm">PVA Status:</Label>
+                        <div className="ml-2">
+                          {pvaStatus === "Contains PVA" ? (
+                            <div className="flex items-center">
+                              <AlertCircle className="h-4 w-4 text-destructive mr-1" />
+                              <span className="text-sm font-medium text-destructive">Contains PVA</span>
+                            </div>
+                          ) : pvaStatus === "No PVA Detected" ? (
+                            <div className="flex items-center">
+                              <Check className="h-4 w-4 text-science-600 mr-1" />
+                              <span className="text-sm font-medium text-science-600">No PVA Detected</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-500">Unknown</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {foundKeywords.length > 0 && (
+                        <div>
+                          <Label className="text-sm block mb-1">Detected PVA keywords:</Label>
+                          <div className="text-xs bg-gray-100 p-2 rounded">
+                            {foundKeywords.join(", ")}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            View Extracted Text
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Extracted Text</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              <div className="mt-2 bg-gray-100 p-3 rounded max-h-80 overflow-y-auto text-xs font-mono">
+                                {extractedText || "No text extracted"}
+                              </div>
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Close</AlertDialogCancel>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 py-2">
+                      Upload a product image to automatically extract ingredient information.
+                    </p>
                   )}
                 </div>
                 
-                {renderPvaStatusBadge()}
-                
-                {extractedText && (
-                  <div className="border rounded-lg p-4 bg-muted/30">
-                    <h3 className="font-medium mb-2 flex items-center">
-                      Analysis Results
-                      {foundKeywords.length > 0 ? (
-                        <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
-                      ) : (
-                        <AlertCircle className="ml-2 h-4 w-4 text-yellow-500" />
-                      )}
-                    </h3>
-                    
-                    <div className="text-sm">
-                      {foundKeywords.length > 0 ? (
-                        <div>
-                          <p className="text-red-600 mb-2">
-                            Found {foundKeywords.length} PVA-related keywords:
-                          </p>
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {foundKeywords.map((keyword, index) => (
-                              <Badge key={index} variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-200">
-                                {keyword}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-yellow-600 mb-2">
-                          No PVA-related keywords found in the document.
-                        </p>
-                      )}
-                      
-                      <div className="mt-2">
-                        <p className="text-xs text-muted-foreground mb-1">Extracted text preview:</p>
-                        <div className="max-h-20 overflow-y-auto bg-muted p-2 rounded text-xs">
-                          {extractedText.substring(0, 300)}
-                          {extractedText.length > 300 && "..."}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-medium mb-2 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2 text-science-600" />
+                    <span>Important Notes</span>
+                  </h3>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Ensure the ingredients list is clearly visible in the image</li>
+                    <li>• Higher resolution images yield better text extraction results</li>
+                    <li>• All submissions are reviewed by our team before being added to the database</li>
+                    <li>• Personal information is not stored with your submission</li>
+                  </ul>
+                </div>
               </div>
-              
-              <Button type="submit" className="w-full mt-6" disabled={isSubmitting}>
-                {isSubmitting ? "Submitting..." : "Submit Contribution"}
-              </Button>
-            </form>
+            </div>
           </CardContent>
-          
-          <CardFooter className="flex flex-col items-start px-6 py-4 bg-muted/20 text-xs text-muted-foreground">
-            <p>
-              Your contribution will be reviewed by administrators before being added to the database.
-            </p>
-            <p className="mt-1">
-              Fields marked with * are required.
-            </p>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline" onClick={() => window.location.reload()}>Cancel</Button>
+            <Button 
+              className="bg-science-600 hover:bg-science-700"
+              onClick={handleSubmit}
+              disabled={!isFormValid || isProcessing || isSDSProcessing}
+            >
+              Submit Contribution
+            </Button>
           </CardFooter>
         </Card>
       </div>
