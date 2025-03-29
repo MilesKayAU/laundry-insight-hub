@@ -176,11 +176,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="Laundry Sheet">Laundry Sheet</SelectItem>
                         <SelectItem value="Laundry Detergent">Laundry Detergent</SelectItem>
                         <SelectItem value="Dishwasher Detergent">Dishwasher Detergent</SelectItem>
                         <SelectItem value="Fabric Softener">Fabric Softener</SelectItem>
                         <SelectItem value="Laundry Pod">Laundry Pod</SelectItem>
-                        <SelectItem value="Laundry Sheet">Laundry Sheet</SelectItem>
                         <SelectItem value="Dishwasher Pod">Dishwasher Pod</SelectItem>
                         <SelectItem value="Stain Remover">Stain Remover</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
