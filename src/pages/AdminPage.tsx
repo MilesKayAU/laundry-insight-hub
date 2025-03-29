@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -234,7 +233,7 @@ const AdminPage = () => {
                               <Badge variant="destructive">Contains PVA</Badge>
                             )}
                             {product.pvaStatus === 'verified-free' && (
-                              <Badge variant="success" className="bg-green-100 text-green-800">Verified Free</Badge>
+                              <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
                             )}
                             {product.pvaStatus === 'needs-verification' && (
                               <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
@@ -341,7 +340,7 @@ const AdminPage = () => {
                               <Badge variant="destructive">Contains PVA</Badge>
                             )}
                             {product.pvaStatus === 'verified-free' && (
-                              <Badge variant="success" className="bg-green-100 text-green-800">Verified Free</Badge>
+                              <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
                             )}
                             {product.pvaStatus === 'needs-verification' && (
                               <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
