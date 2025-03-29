@@ -59,7 +59,7 @@ const Navbar = () => {
   return (
     <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto flex justify-between items-center py-3">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-1">
           <div className="relative w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-science-500 to-tech-500 animate-pulse-glow">
             <Microscope className="h-5 w-5 text-white absolute" />
           </div>
