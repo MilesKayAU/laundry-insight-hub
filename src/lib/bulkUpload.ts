@@ -6,7 +6,8 @@ export interface BulkProductData {
   brand: string;
   name: string;
   type: string;
-  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
+  ingredients?: string; // New field replacing pvaStatus
+  pvaStatus?: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive'; // Now optional as it will be derived
   pvaPercentage?: number;
   description?: string;
   imageUrl?: string;
@@ -26,6 +27,39 @@ export const isDuplicateProduct = (brand: string, name: string): boolean => {
       product.name.toLowerCase() === name.toLowerCase()
   );
 };
+
+// Analyze ingredients to determine PVA status
+export const analyzePvaStatus = (ingredients?: string): 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive' => {
+  if (!ingredients) {
+    return 'needs-verification';
+  }
+  
+  const ingredientsLower = ingredients.toLowerCase();
+  
+  // PVA detection patterns
+  const pvaPatterns = [
+    'polyvinyl alcohol', 'pva', 'pvoh', 'vinyl alcohol', 'poly(vinyl alcohol)',
+    'ethenol homopolymer', 'vinyl alcohol polymer', 'polyethenol',
+    'pvac', 'polyvinyl acetate'
+  ];
+  
+  // Check if any PVA patterns are found in the ingredients
+  for (const pattern of pvaPatterns) {
+    if (ingredientsLower.includes(pattern)) {
+      return 'contains';
+    }
+  }
+  
+  // Check for explicit PVA-free claims
+  if (ingredientsLower.includes('pva-free') || 
+      ingredientsLower.includes('no pva') || 
+      ingredientsLower.includes('pva free')) {
+    return 'verified-free';
+  }
+  
+  // If we have ingredients but couldn't determine status conclusively
+  return 'inconclusive';
+}
 
 // Process bulk data and add to database
 export const processBulkUpload = (data: BulkProductData[]): { 
@@ -51,11 +85,14 @@ export const processBulkUpload = (data: BulkProductData[]): {
         return;
       }
 
-      // Determine PVA status based on hasPva field first, then percentage or additional notes
-      let pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive' = 'needs-verification';
+      // Determine PVA status based on ingredients list
+      let pvaStatus = analyzePvaStatus(item.ingredients);
       
-      // If the explicit hasPva field is provided, use it to determine status
-      if (item.hasPva) {
+      // Override with explicit status if provided
+      if (item.pvaStatus) {
+        pvaStatus = item.pvaStatus;
+      } else if (item.hasPva) {
+        // If the explicit hasPva field is provided, use it to determine status
         if (item.hasPva === 'yes') {
           pvaStatus = 'contains';
         } else if (item.hasPva === 'no') {
@@ -79,9 +116,6 @@ export const processBulkUpload = (data: BulkProductData[]): {
         }
       }
       
-      // Use provided pvaStatus if it exists, otherwise use our determined one
-      item.pvaStatus = item.pvaStatus || pvaStatus;
-
       // Check for duplicates
       if (isDuplicateProduct(item.brand, item.name)) {
         result.duplicates.push(item);
@@ -95,7 +129,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
         name: item.name,
         type: item.type,
         country: item.country || 'Global',
-        pvaStatus: item.pvaStatus,
+        pvaStatus: pvaStatus,
         pvaPercentage: item.pvaPercentage,
         description: item.additionalNotes || item.description || "",
         imageUrl: item.imageUrl || "",
@@ -105,7 +139,8 @@ export const processBulkUpload = (data: BulkProductData[]): {
         approved: false,
         dateSubmitted: new Date().toISOString(),
         brandVerified: false,
-        brandContactEmail: ""
+        brandContactEmail: "",
+        ingredients: item.ingredients || "" // Store ingredients for later reference
       };
 
       // Add to database
@@ -186,7 +221,13 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
       'product type': 'type',
       'category': 'type',
       
-      // PVA Status variations
+      // Ingredients (new field)
+      'ingredients': 'ingredients',
+      'ingredients list': 'ingredients',
+      'product ingredients': 'ingredients',
+      'formula': 'ingredients',
+      
+      // Legacy PVA Status variations (kept for backward compatibility)
       'pvastatus': 'hasPva',
       'haspva': 'hasPva',
       'has pva': 'hasPva',
@@ -253,9 +294,9 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
           fieldMapping[index] = 'type';
           foundRequiredFields['type'] = true;
           console.log(`Special mapped "${lowerHeader}" to "type"`);
-        } else if (lowerHeader.includes('pva') && lowerHeader.includes('has')) {
-          fieldMapping[index] = 'hasPva';
-          console.log(`Special mapped "${lowerHeader}" to "hasPva"`);
+        } else if (lowerHeader.includes('ingredient')) {
+          fieldMapping[index] = 'ingredients';
+          console.log(`Special mapped "${lowerHeader}" to "ingredients"`);
         }
       }
     });
@@ -364,8 +405,8 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
 
 // Get sample CSV template content
 export const getSampleCSVTemplate = (): string => {
-  return '"Brand Name","Product Name","Product Type","Has PVA","PVA Percentage (if known)","Additional Notes","Country"\n' +
-    '"Example Brand","Product Name","Laundry Sheets","no","0","Product contains no PVA. Verified by manufacturer.","Australia"';
+  return '"Brand Name","Product Name","Product Type","Ingredients","PVA Percentage (if known)","Additional Notes","Country"\n' +
+    '"Example Brand","Product Name","Laundry Sheets","Water, Sodium Lauryl Sulfate, Sodium Carbonate, Citric Acid","0","Product contains no PVA. Verified by manufacturer.","Australia"';
 };
 
 // Group products by brand for chart visualization

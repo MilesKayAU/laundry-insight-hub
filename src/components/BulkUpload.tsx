@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   Card, 
@@ -78,18 +77,14 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       const content = event.target?.result as string;
       setCsvData(content);
       
-      // Preview content to check for potential header issues
       const firstLine = content.split('\n')[0].toLowerCase();
       
-      // Check for quoted headers - common in Excel exports
       if (firstLine.startsWith('"brand') || firstLine.includes('"brand name"')) {
-        // Headers look good
         toast({
           title: "File loaded",
           description: `Successfully loaded ${file.name}. Review the content and click "Process CSV Data" to import.`,
         });
       } else {
-        // Possible header issue
         setHeaderWarning("Your CSV headers might not match our template. Please ensure you have Brand Name, Product Name, and Product Type columns.");
         toast({
           title: "File loaded - check headers",
@@ -129,7 +124,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         throw new Error("Invalid CSV format");
       }
       
-      // Add more detailed logging to help debug parsing issues
       console.log("Processing CSV data:", csvData.substring(0, 300) + "...");
       
       const parsedData = parseCSV(csvData);
@@ -211,7 +205,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       <CardContent>
         {!results ? (
           <div className="space-y-6">
-            {/* File upload section */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="space-y-1 w-full">
                 <Label htmlFor="csv-file">Upload CSV File</Label>
@@ -247,7 +240,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
               </Alert>
             )}
             
-            {/* CSV preview section */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <Label htmlFor="csv-preview">CSV Content Preview</Label>
@@ -277,7 +269,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
               )}
             </div>
             
-            {/* Action buttons */}
             <div className="flex items-center space-x-4">
               <Button 
                 onClick={handleProcessData} 
@@ -308,7 +299,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
               </Button>
             </div>
             
-            {/* Help information with clearer formatting */}
             <Alert variant="default" className="bg-muted">
               <HelpCircle className="h-4 w-4" />
               <AlertTitle>Expected Format</AlertTitle>
@@ -318,7 +308,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                   <li><strong>Brand Name</strong> - Company or brand name (required)</li>
                   <li><strong>Product Name</strong> - Product name (required)</li>
                   <li><strong>Product Type</strong> - Must match exactly (e.g., "Laundry Sheets") (required)</li>
-                  <li><strong>Has PVA</strong> - Enter "yes", "no", or leave blank for "unidentified" (optional)</li>
+                  <li><strong>Ingredients</strong> - Full ingredients list (recommended for automatic PVA detection)</li>
                   <li><strong>PVA Percentage (if known)</strong> - Numerical percentage (optional)</li>
                   <li><strong>Additional Notes</strong> - Product description, sources, etc. (optional)</li>
                   <li><strong>Country</strong> - Country or region where the product is available (optional, defaults to "Global")</li>
@@ -364,6 +354,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                         <TableHead>Type</TableHead>
                         <TableHead>PVA Status</TableHead>
                         <TableHead>PVA %</TableHead>
+                        <TableHead>Ingredients</TableHead>
                         <TableHead>Notes</TableHead>
                         <TableHead>Country</TableHead>
                       </TableRow>
@@ -385,6 +376,9 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                           </TableCell>
                           <TableCell>
                             {item.pvaPercentage !== undefined ? `${item.pvaPercentage}%` : 'N/A'}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {item.ingredients || 'N/A'}
                           </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {item.additionalNotes || 'N/A'}

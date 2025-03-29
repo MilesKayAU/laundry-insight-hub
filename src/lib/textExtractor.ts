@@ -35,13 +35,14 @@ export interface ProductSubmission {
   name: string;
   brand: string;
   type: string;
-  country: string; // Added country field
+  country: string; 
   pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
   pvaPercentage?: number | null;
   imageUrl?: string;
   videoUrl?: string;
   websiteUrl?: string;
   description?: string;
+  ingredients?: string; // Added ingredients field
   submittedAt: string;
   dateSubmitted?: string;
   approved: boolean;
@@ -119,6 +120,7 @@ export const createProductSubmission = (submission: Partial<ProductSubmission>):
     country: submission.country || 'Global', // Default country to Global
     pvaStatus: submission.pvaStatus || 'needs-verification',
     pvaPercentage: submission.pvaPercentage || null,
+    ingredients: submission.ingredients || '',
     submittedAt: submission.submittedAt || new Date().toISOString(),
     approved: submission.approved || false,
     ...submission
