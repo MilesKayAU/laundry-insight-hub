@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Card, 
@@ -21,7 +22,9 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  Cell,
+  LabelList
 } from "recharts";
 import { 
   Table, 
@@ -60,6 +63,16 @@ const DatabasePage = () => {
      product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
+  // Include approved submissions from local storage
+  const approvedSubmissions = allSubmissions.filter(submission => 
+    submission.approved && 
+    (submission.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+     submission.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+  
+  // Combine mock products with approved submissions
+  const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions];
+  
   // Filter pending submissions - submissions that are not yet approved
   const pendingSubmissions = allSubmissions.filter(submission => 
     !submission.approved && 
@@ -68,11 +81,11 @@ const DatabasePage = () => {
   );
   
   // Separate products by type
-  const sheetProducts = approvedProducts.filter(p => p.type === "Laundry Sheet");
-  const podProducts = approvedProducts.filter(p => p.type === "Laundry Pod");
+  const sheetProducts = combinedApprovedProducts.filter(p => p.type === "Laundry Sheet");
+  const podProducts = combinedApprovedProducts.filter(p => p.type === "Laundry Pod");
   
   // Calculate pagination for each tab
-  const paginateData = (data: typeof approvedProducts) => {
+  const paginateData = (data) => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return data.slice(startIndex, endIndex);
@@ -80,36 +93,60 @@ const DatabasePage = () => {
   
   const paginatedSheets = paginateData(sheetProducts);
   const paginatedPods = paginateData(podProducts);
-  const paginatedAll = paginateData(approvedProducts);
+  const paginatedAll = paginateData(combinedApprovedProducts);
   const paginatedPending = paginateData(pendingSubmissions);
   
   // Calculate total pages for current tab
-  const getTotalPages = (totalItems: number) => {
+  const getTotalPages = (totalItems) => {
     return Math.ceil(totalItems / itemsPerPage);
   };
   
   // Handle page change
-  const handlePageChange = (page: number) => {
+  const handlePageChange = (page) => {
     setCurrentPage(page);
   };
   
-  // Prepare data for charts
-  const sheetChartData = sheetProducts
-    .filter(p => p.pvaPercentage !== null)
-    .map(p => ({
-      name: p.name,
-      PVA: p.pvaPercentage
-    }));
+  // Prepare data for charts - include products with unknown PVA percentages
+  const sheetChartData = sheetProducts.map(p => ({
+    name: p.name,
+    PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25, // Default to 25% for unknown values
+    isUnknown: p.pvaPercentage === null // Flag to identify unknown values
+  }));
   
-  const podChartData = podProducts
-    .filter(p => p.pvaPercentage !== null)
-    .map(p => ({
-      name: p.name,
-      PVA: p.pvaPercentage
-    }));
+  const podChartData = podProducts.map(p => ({
+    name: p.name,
+    PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25, // Default to 25% for unknown values
+    isUnknown: p.pvaPercentage === null // Flag to identify unknown values
+  }));
+
+  // Colors for the chart bars
+  const knownValueColor = "#3cca85"; // Green for sheets
+  const podKnownValueColor = "#4799ff"; // Blue for pods
+  const unknownValueColor = "#8E9196"; // Gray for unknown values
+
+  // Custom tooltip for the chart that indicates unknown values
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const isUnknown = payload[0].payload.isUnknown;
+      
+      return (
+        <div className="p-2 bg-white border border-gray-200 rounded shadow-md">
+          <p className="font-medium">{label}</p>
+          <p>
+            {isUnknown ? (
+              <span className="text-gray-600">PVA: Unknown (Awaiting Verification)</span>
+            ) : (
+              <span>PVA: {payload[0].value}%</span>
+            )}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Pagination component
-  const PaginationControls = ({ totalItems }: { totalItems: number }) => {
+  const PaginationControls = ({ totalItems }) => {
     const totalPages = getTotalPages(totalItems);
     
     if (totalPages <= 1) return null;
@@ -145,6 +182,21 @@ const DatabasePage = () => {
         </PaginationContent>
       </Pagination>
     );
+  };
+
+  // Helper function to display PVA percentage in tables
+  const renderPvaValue = (product) => {
+    if (product.pvaPercentage !== null) {
+      return `${product.pvaPercentage}%`;
+    } else {
+      return (
+        <span className="flex items-center gap-1">
+          <Badge variant="outline" className="bg-gray-100 text-gray-800">
+            Unknown (Awaiting Verification)
+          </Badge>
+        </span>
+      );
+    }
   };
 
   return (
@@ -216,15 +268,31 @@ const DatabasePage = () => {
                           position: 'insideLeft' 
                         }} 
                       />
-                      <Tooltip />
+                      <Tooltip content={<CustomTooltip />} />
                       <Legend />
                       <Bar 
                         dataKey="PVA" 
-                        fill="#3cca85" 
                         name="PVA Content (%)" 
-                      />
+                      >
+                        {sheetChartData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.isUnknown ? unknownValueColor : knownValueColor} 
+                          />
+                        ))}
+                        <LabelList 
+                          dataKey="isUnknown" 
+                          position="top" 
+                          formatter={(value) => value ? "*" : ""}
+                        />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
+                  {sheetChartData.some(item => item.isUnknown) && (
+                    <div className="text-xs text-gray-500 italic mt-2">
+                      * Unknown value, set to 25% for visualization purposes. Awaiting verification.
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
@@ -250,7 +318,7 @@ const DatabasePage = () => {
                             <TableCell className="font-medium">{product.name}</TableCell>
                             <TableCell>{product.brand}</TableCell>
                             <TableCell className="text-right">
-                              {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'N/A'}
+                              {renderPvaValue(product)}
                             </TableCell>
                           </TableRow>
                         ))
@@ -301,15 +369,31 @@ const DatabasePage = () => {
                           position: 'insideLeft' 
                         }} 
                       />
-                      <Tooltip />
+                      <Tooltip content={<CustomTooltip />} />
                       <Legend />
                       <Bar 
                         dataKey="PVA" 
-                        fill="#4799ff" 
                         name="PVA Content (%)" 
-                      />
+                      >
+                        {podChartData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.isUnknown ? unknownValueColor : podKnownValueColor} 
+                          />
+                        ))}
+                        <LabelList 
+                          dataKey="isUnknown" 
+                          position="top" 
+                          formatter={(value) => value ? "*" : ""}
+                        />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
+                  {podChartData.some(item => item.isUnknown) && (
+                    <div className="text-xs text-gray-500 italic mt-2">
+                      * Unknown value, set to 25% for visualization purposes. Awaiting verification.
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
@@ -335,7 +419,7 @@ const DatabasePage = () => {
                             <TableCell className="font-medium">{product.name}</TableCell>
                             <TableCell>{product.brand}</TableCell>
                             <TableCell className="text-right">
-                              {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'N/A'}
+                              {renderPvaValue(product)}
                             </TableCell>
                           </TableRow>
                         ))
@@ -383,7 +467,7 @@ const DatabasePage = () => {
                           <TableCell>{product.brand}</TableCell>
                           <TableCell>{product.type}</TableCell>
                           <TableCell className="text-right">
-                            {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'N/A'}
+                            {renderPvaValue(product)}
                           </TableCell>
                         </TableRow>
                       ))
@@ -397,7 +481,7 @@ const DatabasePage = () => {
                   </TableBody>
                 </Table>
               </div>
-              <PaginationControls totalItems={approvedProducts.length} />
+              <PaginationControls totalItems={combinedApprovedProducts.length} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -436,7 +520,7 @@ const DatabasePage = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'N/A'}
+                            {renderPvaValue(product)}
                           </TableCell>
                         </TableRow>
                       ))
