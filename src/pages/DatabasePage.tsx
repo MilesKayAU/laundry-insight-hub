@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Card, 
@@ -41,25 +40,39 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { mockProducts } from "@/lib/mockData";
+import { getProductSubmissions } from "@/lib/textExtractor";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DatabasePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // Number of items to display per page
+  const { isAuthenticated } = useAuth();
   
-  // Filter products - only show approved products and filter by search term
-  const filteredProducts = mockProducts.filter(product => 
+  // Get all product submissions
+  const allSubmissions = getProductSubmissions();
+  
+  // Filter products - show approved products and filter by search term
+  const approvedProducts = mockProducts.filter(product => 
     product.approved && 
     (product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
      product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
+  // Filter pending submissions - submissions that are not yet approved
+  const pendingSubmissions = allSubmissions.filter(submission => 
+    !submission.approved && 
+    (submission.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+     submission.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+  
   // Separate products by type
-  const sheetProducts = filteredProducts.filter(p => p.type === "Laundry Sheet");
-  const podProducts = filteredProducts.filter(p => p.type === "Laundry Pod");
+  const sheetProducts = approvedProducts.filter(p => p.type === "Laundry Sheet");
+  const podProducts = approvedProducts.filter(p => p.type === "Laundry Pod");
   
   // Calculate pagination for each tab
-  const paginateData = (data: typeof filteredProducts) => {
+  const paginateData = (data: typeof approvedProducts) => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return data.slice(startIndex, endIndex);
@@ -67,7 +80,8 @@ const DatabasePage = () => {
   
   const paginatedSheets = paginateData(sheetProducts);
   const paginatedPods = paginateData(podProducts);
-  const paginatedAll = paginateData(filteredProducts);
+  const paginatedAll = paginateData(approvedProducts);
+  const paginatedPending = paginateData(pendingSubmissions);
   
   // Calculate total pages for current tab
   const getTotalPages = (totalItems: number) => {
@@ -160,6 +174,14 @@ const DatabasePage = () => {
             <TabsTrigger value="sheets">Laundry Sheets</TabsTrigger>
             <TabsTrigger value="pods">Laundry Pods</TabsTrigger>
             <TabsTrigger value="all">All Products</TabsTrigger>
+            {pendingSubmissions.length > 0 && (
+              <TabsTrigger value="pending" className="relative">
+                Pending Submissions
+                <Badge variant="default" className="ml-1 bg-amber-500 text-white">
+                  {pendingSubmissions.length}
+                </Badge>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
         
@@ -375,7 +397,60 @@ const DatabasePage = () => {
                   </TableBody>
                 </Table>
               </div>
-              <PaginationControls totalItems={filteredProducts.length} />
+              <PaginationControls totalItems={approvedProducts.length} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Pending Submissions Tab */}
+        <TabsContent value="pending">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Submissions</CardTitle>
+              <CardDescription>
+                Products that have been submitted but are waiting for approval
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Brand</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">PVA %</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedPending.length > 0 ? (
+                      paginatedPending.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>{product.brand}</TableCell>
+                          <TableCell>{product.type}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                              Pending Review
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'N/A'}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                          No pending submissions matching your search criteria
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls totalItems={pendingSubmissions.length} />
             </CardContent>
           </Card>
         </TabsContent>
