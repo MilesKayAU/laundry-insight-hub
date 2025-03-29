@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { 
   Card, 
@@ -36,10 +37,26 @@ import {
   Link as LinkIcon
 } from "lucide-react";
 import { BulkProductData, parseCSV, processBulkUpload, getSampleCSVTemplate } from '@/lib/bulkUpload';
+import { MultiSelect } from '@/components/ui/select';
 
 interface BulkUploadProps {
   onComplete: () => void;
 }
+
+const countryOptions = [
+  { value: "Australia", label: "Australia" },
+  { value: "United States", label: "United States" },
+  { value: "United Kingdom", label: "United Kingdom" },
+  { value: "Canada", label: "Canada" },
+  { value: "New Zealand", label: "New Zealand" },
+  { value: "Germany", label: "Germany" },
+  { value: "France", label: "France" },
+  { value: "Japan", label: "Japan" },
+  { value: "China", label: "China" },
+  { value: "India", label: "India" },
+  { value: "Brazil", label: "Brazil" },
+  { value: "Other", label: "Other" },
+];
 
 const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
   const { toast } = useToast();
@@ -47,6 +64,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [headerWarning, setHeaderWarning] = useState<string | null>(null);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [results, setResults] = useState<{
     success: BulkProductData[];
     duplicates: BulkProductData[];
@@ -135,6 +153,13 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         throw new Error("No valid data rows");
       }
       
+      // Apply selected countries to all products if specified
+      if (selectedCountries.length > 0) {
+        parsedData.forEach(item => {
+          item.countries = selectedCountries;
+        });
+      }
+      
       const result = processBulkUpload(parsedData);
       setResults(result);
       
@@ -190,6 +215,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     setResults(null);
     setParseError(null);
     setHeaderWarning(null);
+    setSelectedCountries([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -228,6 +254,21 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                   </Button>
                 </div>
               </div>
+            </div>
+            
+            <div className="space-y-1">
+              <Label>Apply to All Products</Label>
+              <MultiSelect
+                options={countryOptions}
+                selected={selectedCountries}
+                onChange={setSelectedCountries}
+                placeholder="Select countries to apply to all products"
+                description="These countries will be applied to all products in the bulk upload"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Select multiple countries if the products are available in multiple regions. 
+                Individual country values in CSV will be overridden.
+              </p>
             </div>
             
             {headerWarning && (
@@ -312,12 +353,13 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                   <li><strong>Ingredients</strong> - Full ingredients list (recommended for automatic PVA detection)</li>
                   <li><strong>PVA Percentage (if known)</strong> - Numerical percentage (optional)</li>
                   <li><strong>Additional Notes</strong> - Product description, sources, etc. (optional)</li>
-                  <li><strong>Country</strong> - Country or region where the product is available (optional, defaults to "Global")</li>
+                  <li><strong>Countries</strong> - Comma-separated list of countries (optional, overrides global selections)</li>
                   <li><strong>Product URL</strong> - Link to the product page or website (optional)</li>
                 </ul>
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
                   <p>Note: The column headers can be flexible (e.g., "Brand", "Brand Name", "Company", etc.)</p>
                   <p>Tip: Download the template for a properly formatted example</p>
+                  <p>New! You can now specify multiple countries in your CSV using comma-separated values or use the multi-select above.</p>
                   <p className="font-semibold mt-1">When exporting from Excel or Google Sheets, headers may be automatically enclosed in quotes - this is okay!</p>
                 </div>
               </AlertDescription>
@@ -356,9 +398,9 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                         <TableHead>Type</TableHead>
                         <TableHead>PVA Status</TableHead>
                         <TableHead>PVA %</TableHead>
+                        <TableHead>Countries</TableHead>
                         <TableHead>Ingredients</TableHead>
                         <TableHead>Notes</TableHead>
-                        <TableHead>Country</TableHead>
                         <TableHead>URL</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -380,14 +422,18 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                           <TableCell>
                             {item.pvaPercentage !== undefined ? `${item.pvaPercentage}%` : 'N/A'}
                           </TableCell>
+                          <TableCell>
+                            {item.countries && item.countries.length > 0 
+                              ? (item.countries.length > 2 
+                                  ? `${item.countries.length} countries` 
+                                  : item.countries.join(', '))
+                              : 'Global'}
+                          </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {item.ingredients || 'N/A'}
                           </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {item.additionalNotes || 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {item.country || 'Global'}
                           </TableCell>
                           <TableCell>
                             {item.productUrl ? (
@@ -422,6 +468,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                       <TableHead>Brand</TableHead>
                       <TableHead>Product</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Countries</TableHead>
                       <TableHead>Reason</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -431,6 +478,13 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                         <TableCell>{item.brand}</TableCell>
                         <TableCell>{item.name}</TableCell>
                         <TableCell>{item.type}</TableCell>
+                        <TableCell>
+                          {item.countries && item.countries.length > 0 
+                            ? (item.countries.length > 2 
+                                ? `${item.countries.length} countries` 
+                                : item.countries.join(', '))
+                            : 'Global'}
+                        </TableCell>
                         <TableCell className="text-amber-600 flex items-center gap-2">
                           <AlertTriangle className="h-4 w-4" />
                           Product with same brand and name already exists
@@ -453,6 +507,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                     <TableRow>
                       <TableHead>Brand</TableHead>
                       <TableHead>Product</TableHead>
+                      <TableHead>Countries</TableHead>
                       <TableHead>Error</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -461,6 +516,13 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                       <TableRow key={`error-${index}`}>
                         <TableCell>{item.item.brand || "N/A"}</TableCell>
                         <TableCell>{item.item.name || "N/A"}</TableCell>
+                        <TableCell>
+                          {item.item.countries && item.item.countries.length > 0 
+                            ? (item.item.countries.length > 2 
+                                ? `${item.item.countries.length} countries` 
+                                : item.item.countries.join(', '))
+                            : 'Global'}
+                        </TableCell>
                         <TableCell className="text-red-600 flex items-center gap-2">
                           <X className="h-4 w-4" />
                           {item.error}

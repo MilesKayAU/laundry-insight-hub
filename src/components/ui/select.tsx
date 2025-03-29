@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
@@ -144,6 +145,82 @@ const SelectSeparator = React.forwardRef<
 ))
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
+// New component for multi-select functionality
+interface MultiSelectProps {
+  options: { value: string; label: string }[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  placeholder?: string;
+  className?: string;
+  label?: string;
+  description?: string;
+}
+
+const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
+  ({ options, selected, onChange, placeholder = "Select options", className, label, description }, ref) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+
+    // Toggle selection of an option
+    const toggleOption = (value: string) => {
+      const newSelected = selected.includes(value)
+        ? selected.filter(item => item !== value)
+        : [...selected, value];
+      onChange(newSelected);
+    };
+
+    // Get display text for selected options
+    const getDisplayText = () => {
+      if (selected.length === 0) return placeholder;
+      if (selected.length === 1) {
+        const option = options.find(opt => opt.value === selected[0]);
+        return option ? option.label : placeholder;
+      }
+      return `${selected.length} selected`;
+    };
+
+    return (
+      <div ref={ref} className={cn("space-y-2", className)}>
+        {label && <div className="text-sm font-medium">{label}</div>}
+        <div 
+          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-pointer"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <div className="truncate">{getDisplayText()}</div>
+          <ChevronDown className="h-4 w-4 opacity-50" />
+        </div>
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        
+        {isOpen && (
+          <div className="absolute z-50 mt-1 max-h-60 w-[calc(100%-2rem)] overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+            {options.map((option) => (
+              <div
+                key={option.value}
+                className={cn(
+                  "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                  selected.includes(option.value) ? "bg-accent text-accent-foreground" : ""
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleOption(option.value);
+                }}
+              >
+                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                  {selected.includes(option.value) && <Check className="h-4 w-4" />}
+                </span>
+                {option.label}
+              </div>
+            ))}
+            {options.length === 0 && (
+              <div className="py-6 text-center text-sm">No options available</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+MultiSelect.displayName = "MultiSelect";
+
 export {
   Select,
   SelectGroup,
@@ -155,4 +232,5 @@ export {
   SelectSeparator,
   SelectScrollUpButton,
   SelectScrollDownButton,
+  MultiSelect,
 }

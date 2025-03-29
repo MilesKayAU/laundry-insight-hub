@@ -28,6 +28,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  MultiSelect,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import MediaUploader from "@/components/MediaUploader";
@@ -45,7 +46,7 @@ const productSchema = z.object({
   productType: z.string().min(1, {
     message: "Please select a product type.",
   }),
-  country: z.string().optional(),
+  countries: z.array(z.string()).optional(),
   websiteUrl: z.string().url({
     message: "Please enter a valid URL (e.g. https://example.com)",
   }).or(z.string().length(0)),
@@ -59,9 +60,25 @@ interface ProductFormProps {
   onComplete: () => void;
 }
 
+const countryOptions = [
+  { value: "Australia", label: "Australia" },
+  { value: "United States", label: "United States" },
+  { value: "United Kingdom", label: "United Kingdom" },
+  { value: "Canada", label: "Canada" },
+  { value: "New Zealand", label: "New Zealand" },
+  { value: "Germany", label: "Germany" },
+  { value: "France", label: "France" },
+  { value: "Japan", label: "Japan" },
+  { value: "China", label: "China" },
+  { value: "India", label: "India" },
+  { value: "Brazil", label: "Brazil" },
+  { value: "Other", label: "Other" },
+];
+
 const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
   const [media, setMedia] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const { toast } = useToast();
 
   const form = useForm<ProductFormValues>({
@@ -70,7 +87,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
       productName: "",
       brandName: "",
       productType: "",
-      country: "",
+      countries: [],
       websiteUrl: "",
       ingredients: "",
       comments: "",
@@ -85,7 +102,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
         name: data.productName,
         brand: data.brandName,
         type: data.productType,
-        country: data.country || undefined,
+        countries: selectedCountries,
         websiteUrl: data.websiteUrl || undefined,
         ingredients: data.ingredients || undefined,
         comments: data.comments || undefined,
@@ -101,6 +118,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
         // Reset form
         form.reset();
         setMedia([]);
+        setSelectedCountries([]);
         onComplete();
       } else {
         toast({
@@ -193,33 +211,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
               
               <FormField
                 control={form.control}
-                name="country"
-                render={({ field }) => (
+                name="countries"
+                render={() => (
                   <FormItem>
-                    <FormLabel>Country/Region</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Australia">Australia</SelectItem>
-                        <SelectItem value="United States">United States</SelectItem>
-                        <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                        <SelectItem value="Canada">Canada</SelectItem>
-                        <SelectItem value="New Zealand">New Zealand</SelectItem>
-                        <SelectItem value="Germany">Germany</SelectItem>
-                        <SelectItem value="France">France</SelectItem>
-                        <SelectItem value="Japan">Japan</SelectItem>
-                        <SelectItem value="China">China</SelectItem>
-                        <SelectItem value="India">India</SelectItem>
-                        <SelectItem value="Brazil">Brazil</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Countries/Regions</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        options={countryOptions}
+                        selected={selectedCountries}
+                        onChange={(selected) => {
+                          setSelectedCountries(selected);
+                          form.setValue('countries', selected);
+                        }}
+                        placeholder="Select countries"
+                      />
+                    </FormControl>
                     <FormDescription>
-                      Where this product is primarily sold
+                      Select all regions where this product is sold
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
