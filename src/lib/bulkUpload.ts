@@ -1,12 +1,11 @@
-
-import { ProductSubmission, getProductSubmissions } from "./textExtractor";
+import { ProductSubmission, getProductSubmissions, analyzePvaContent, getAllPvaPatterns } from "./textExtractor";
 
 // Define the expected format for the CSV/Excel data
 export interface BulkProductData {
   brand: string;
   name: string;
   type: string;
-  ingredients?: string; // New field replacing pvaStatus
+  ingredients?: string; // Primary field for PVA detection
   pvaStatus?: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive'; // Now optional as it will be derived
   pvaPercentage?: number;
   description?: string;
@@ -28,38 +27,35 @@ export const isDuplicateProduct = (brand: string, name: string): boolean => {
   );
 };
 
-// Analyze ingredients to determine PVA status
+// Analyze ingredients to determine PVA status with enhanced detection
 export const analyzePvaStatus = (ingredients?: string): 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive' => {
   if (!ingredients) {
     return 'needs-verification';
   }
   
-  const ingredientsLower = ingredients.toLowerCase();
+  console.log(`Analyzing ingredients for PVA: "${ingredients.substring(0, 100)}${ingredients.length > 100 ? '...' : ''}"`);
   
-  // PVA detection patterns
-  const pvaPatterns = [
-    'polyvinyl alcohol', 'pva', 'pvoh', 'vinyl alcohol', 'poly(vinyl alcohol)',
-    'ethenol homopolymer', 'vinyl alcohol polymer', 'polyethenol',
-    'pvac', 'polyvinyl acetate'
-  ];
+  // Use the enhanced PVA content analyzer
+  const analysis = analyzePvaContent(ingredients);
   
-  // Check if any PVA patterns are found in the ingredients
-  for (const pattern of pvaPatterns) {
-    if (ingredientsLower.includes(pattern)) {
-      return 'contains';
-    }
+  // Log the analysis result for debugging
+  if (analysis.detectedTerms.length > 0) {
+    console.log(`PVA detected! Terms found: ${analysis.detectedTerms.join(', ')}`);
   }
   
-  // Check for explicit PVA-free claims
-  if (ingredientsLower.includes('pva-free') || 
-      ingredientsLower.includes('no pva') || 
-      ingredientsLower.includes('pva free')) {
+  if (analysis.isExplicitlyFree) {
+    console.log('Product explicitly marked as PVA-free');
     return 'verified-free';
   }
   
-  // If we have ingredients but couldn't determine status conclusively
-  return 'inconclusive';
-}
+  if (analysis.containsPva) {
+    return 'contains';
+  }
+  
+  // If ingredients are provided but no PVA is detected, and it's not explicitly marked as free
+  // We consider it inconclusive rather than verified-free to be cautious
+  return ingredients.length > 10 ? 'inconclusive' : 'needs-verification';
+};
 
 // Process bulk data and add to database
 export const processBulkUpload = (data: BulkProductData[]): { 

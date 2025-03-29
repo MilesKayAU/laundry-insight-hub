@@ -1,4 +1,3 @@
-
 import { createHash } from "crypto";
 import Tesseract from 'tesseract.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,6 +26,16 @@ export const PVA_KEYWORDS_CATEGORIES = {
     "poval",
     "vinnapas"
   ]
+};
+
+// Get all PVA patterns as a flat array for detection
+export const getAllPvaPatterns = () => {
+  return [
+    ...PVA_KEYWORDS_CATEGORIES.commonNames,
+    ...PVA_KEYWORDS_CATEGORIES.chemicalSynonyms,
+    ...PVA_KEYWORDS_CATEGORIES.inciTerms,
+    ...PVA_KEYWORDS_CATEGORIES.additional
+  ];
 };
 
 // Define the ProductSubmission type
@@ -124,5 +133,60 @@ export const createProductSubmission = (submission: Partial<ProductSubmission>):
     submittedAt: submission.submittedAt || new Date().toISOString(),
     approved: submission.approved || false,
     ...submission
+  };
+};
+
+// Analyze ingredients for PVA content
+export const analyzePvaContent = (ingredients: string): { 
+  containsPva: boolean; 
+  detectedTerms: string[];
+  isExplicitlyFree: boolean;
+} => {
+  if (!ingredients) {
+    return { containsPva: false, detectedTerms: [], isExplicitlyFree: false };
+  }
+  
+  const ingredientsLower = ingredients.toLowerCase();
+  const allPatterns = getAllPvaPatterns();
+  const detectedTerms: string[] = [];
+  
+  // Check for each PVA pattern in the ingredients
+  for (const pattern of allPatterns) {
+    // Use word boundary regex to avoid partial matches
+    const regex = new RegExp(`\\b${pattern}\\b`, 'i');
+    
+    if (regex.test(ingredientsLower)) {
+      detectedTerms.push(pattern);
+    }
+  }
+  
+  // Also check for general cases without word boundaries
+  for (const pattern of allPatterns) {
+    if (ingredientsLower.includes(pattern) && !detectedTerms.includes(pattern)) {
+      detectedTerms.push(pattern);
+    }
+  }
+  
+  // Check for explicit PVA-free claims
+  const freePatterns = [
+    'pva-free', 
+    'pva free', 
+    'free from pva', 
+    'does not contain pva',
+    'without pva',
+    'no pva',
+    'pva: none',
+    'pva: 0%',
+    'free of polyvinyl alcohol'
+  ];
+  
+  const isExplicitlyFree = freePatterns.some(pattern => 
+    ingredientsLower.includes(pattern)
+  );
+  
+  return { 
+    containsPva: detectedTerms.length > 0, 
+    detectedTerms,
+    isExplicitlyFree
   };
 };
