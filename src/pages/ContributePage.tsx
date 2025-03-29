@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { 
   Card, 
@@ -25,7 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Upload, Image, FileText, Check, X, AlertCircle, Loader2, UserRound, LogIn, Search } from "lucide-react";
+import { Upload, Image, FileText, Check, X, AlertCircle, Loader2, UserRound, LogIn, Search, Link as LinkIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { extractTextFromImage, analyzePastedIngredients } from "@/lib/textExtractor";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,6 +66,7 @@ const ContributePage = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [ingredientsText, setIngredientsText] = useState<string>("");
   const [ingredientsAnalysisConfidence, setIngredientsAnalysisConfidence] = useState<'high' | 'medium' | 'low' | null>(null);
+  const [productUrl, setProductUrl] = useState<string>("");
   
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   
@@ -182,7 +182,6 @@ const ContributePage = () => {
     }
   };
 
-  // New function to analyze pasted ingredients
   const handleAnalyzeIngredients = async () => {
     if (!ingredientsText.trim()) {
       toast({
@@ -269,6 +268,7 @@ const ContributePage = () => {
       approved: false,
       id: `submission_${Date.now()}`,
       dateSubmitted: new Date().toISOString(),
+      websiteUrl: productUrl || null,
     };
     
     console.log("Submission data:", submissionData);
@@ -299,6 +299,7 @@ const ContributePage = () => {
     setMediaFiles([]);
     setIngredientsText("");
     setIngredientsAnalysisConfidence(null);
+    setProductUrl("");
   };
 
   useEffect(() => {
@@ -420,6 +421,21 @@ const ContributePage = () => {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="productUrl">Product Website URL</Label>
+                <div className="relative">
+                  <Input 
+                    id="productUrl" 
+                    placeholder="e.g., https://example.com/product" 
+                    value={productUrl}
+                    onChange={(e) => setProductUrl(e.target.value)}
+                    className="pl-10"
+                  />
+                  <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                </div>
+                <p className="text-xs text-muted-foreground">Add the official product page URL where users can learn more about this product</p>
               </div>
               
               <div className="space-y-2">
