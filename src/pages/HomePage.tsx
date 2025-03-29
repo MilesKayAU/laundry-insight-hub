@@ -1,4 +1,3 @@
-
 import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -7,7 +6,7 @@ const HomePage = () => {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="py-24 px-4 bg-gradient-to-br from-science-50 to-tech-100 relative overflow-hidden">
+      <section className="py-24 px-4 bg-gradient-to-br from-tech-50 to-science-100 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-science-300 filter blur-3xl animate-float"></div>
           <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-tech-300 filter blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
@@ -41,7 +40,7 @@ const HomePage = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-white">
+      <section className="py-20 px-4 bg-science-50">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4 text-science-800">How PVAFree Works</h2>
@@ -82,7 +81,7 @@ const HomePage = () => {
       </section>
 
       {/* About PVA Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-tech-50 to-science-50">
+      <section className="py-20 px-4 bg-gradient-to-br from-science-50 to-tech-50">
         <div className="container mx-auto">
           <div className="glass-effect p-10 rounded-2xl max-w-4xl mx-auto">
             <div className="flex items-center justify-center mb-6">
@@ -107,7 +106,7 @@ const HomePage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-science-600 to-tech-600 text-white">
+      <section className="py-20 px-4 bg-gradient-to-r from-tech-600 to-science-600 text-white">
         <div className="container mx-auto text-center">
           <h2 className="text-3xl font-bold mb-6">Join Our Research Community</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
