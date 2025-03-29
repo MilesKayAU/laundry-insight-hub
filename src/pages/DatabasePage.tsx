@@ -68,11 +68,6 @@ import {
 import DataCharts from "@/components/DataCharts";
 import CountrySelector from "@/components/CountrySelector";
 
-const updatedMockProducts = mockProducts.map(product => ({
-  ...product,
-  country: "Global"
-}));
-
 const DatabasePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,6 +77,8 @@ const DatabasePage = () => {
   const [selectedCountry, setSelectedCountry] = useState("Global");
   const [countrySelected, setCountrySelected] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [allSubmissions, setAllSubmissions] = useState<ProductSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
   const itemsPerPage = 10;
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -99,10 +96,23 @@ const DatabasePage = () => {
     return () => clearInterval(intervalId);
   }, []);
   
-  const allSubmissions = getProductSubmissions();
+  const handleRefreshData = () => {
+    setLoading(true);
+    const freshData = getProductSubmissions();
+    console.info(`Refreshed data: Found ${freshData.length} submission(s)`);
+    setAllSubmissions(freshData);
+    setLoading(false);
+    setRefreshKey(prev => prev + 1);
+    
+    toast({
+      title: "Data refreshed",
+      description: "The product database has been refreshed with the latest data.",
+    });
+  };
   
-  const approvedProducts = updatedMockProducts.filter(product => product.approved);
   const approvedSubmissions = allSubmissions.filter(submission => submission.approved);
+  
+  const approvedProducts = approvedSubmissions.length > 0 ? [] : mockProducts.filter(product => product.approved);
   
   const availableCountries = Array.from(new Set([
     ...approvedProducts.map(p => p.country || "Global"),
@@ -176,17 +186,6 @@ const DatabasePage = () => {
     setCountrySelected(true);
   };
 
-  const handleRefreshData = () => {
-    setRefreshKey(prev => prev + 1);
-    const freshData = getProductSubmissions();
-    console.info(`Refreshed data: Found ${freshData.length} submission(s)`);
-    
-    toast({
-      title: "Data refreshed",
-      description: "The product database has been refreshed with the latest data.",
-    });
-  };
-
   const handleBrandOwnershipRequest = () => {
     if (!selectedProduct) return;
     
@@ -226,27 +225,6 @@ const DatabasePage = () => {
         variant: "destructive"
       });
     }
-  };
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const dataItem = payload[0].payload;
-      
-      return (
-        <div className="p-3 bg-white border border-gray-200 rounded shadow-md">
-          <p className="font-medium">{label}</p>
-          <p className="text-sm text-gray-600">{dataItem.brand}</p>
-          <p>
-            {dataItem.PVA === null ? (
-              <span className="text-gray-600">PVA: Unknown - Waiting on verification</span>
-            ) : (
-              <span>PVA: {dataItem.PVA}%</span>
-            )}
-          </p>
-        </div>
-      );
-    }
-    return null;
   };
 
   const PaginationControls = ({ totalItems }) => {
@@ -343,6 +321,16 @@ const DatabasePage = () => {
       </Button>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-10 px-4 flex justify-center items-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading product data...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!countrySelected) {
     return (

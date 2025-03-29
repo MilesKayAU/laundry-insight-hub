@@ -65,10 +65,8 @@ export interface ProductSubmission {
 // Extract text from image using Tesseract OCR
 export const extractTextFromImage = async (file: File): Promise<{ text: string }> => {
   try {
-    // Create a URL for the image file
     const imageUrl = URL.createObjectURL(file);
     
-    // Use Tesseract.js to extract text from the image
     const result = await Tesseract.recognize(
       imageUrl,
       'eng', // Language: English
@@ -77,10 +75,8 @@ export const extractTextFromImage = async (file: File): Promise<{ text: string }
       }
     );
     
-    // Clean up the URL to prevent memory leaks
     URL.revokeObjectURL(imageUrl);
     
-    // Return the extracted text
     return { text: result.data.text };
   } catch (error) {
     console.error('Error extracting text from image:', error);
@@ -111,13 +107,14 @@ export const deleteProductSubmission = (productId: string) => {
 // Get stored product submissions from local storage
 export const getProductSubmissions = (): ProductSubmission[] => {
   try {
-    // Force a fresh read from localStorage
     const storageString = localStorage.getItem('product_submissions');
-    if (!storageString) return [];
+    if (!storageString) {
+      console.info("No product submissions found in localStorage");
+      return [];
+    }
     
-    // Parse and return the data
     const submissions = JSON.parse(storageString) as ProductSubmission[];
-    console.info(`Retrieved ${submissions.length} product submissions`);
+    console.info(`Retrieved ${submissions.length} product submissions from localStorage`);
     return submissions;
   } catch (error) {
     console.error("Error retrieving product submissions:", error);
@@ -156,9 +153,7 @@ export const analyzePvaContent = (ingredients: string): {
   const allPatterns = getAllPvaPatterns();
   const detectedTerms: string[] = [];
   
-  // Check for each PVA pattern in the ingredients
   for (const pattern of allPatterns) {
-    // Use word boundary regex to avoid partial matches
     const regex = new RegExp(`\\b${pattern}\\b`, 'i');
     
     if (regex.test(ingredientsLower)) {
@@ -166,14 +161,12 @@ export const analyzePvaContent = (ingredients: string): {
     }
   }
   
-  // Also check for general cases without word boundaries
   for (const pattern of allPatterns) {
     if (ingredientsLower.includes(pattern) && !detectedTerms.includes(pattern)) {
       detectedTerms.push(pattern);
     }
   }
   
-  // Check for explicit PVA-free claims
   const freePatterns = [
     'pva-free', 
     'pva free', 
