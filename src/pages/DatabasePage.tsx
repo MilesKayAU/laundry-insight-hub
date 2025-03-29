@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -49,7 +50,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -59,19 +59,45 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { requestBrandOwnership } from "@/lib/bulkUpload";
 import { useToast } from "@/components/ui/use-toast";
-import { VerifiedIcon, Pencil, BadgeCheck, Shield } from "lucide-react";
+import { 
+  BadgeCheck, 
+  Shield, 
+  Filter, 
+  Search as SearchIcon,
+  ChevronDown,
+  BarChart as BarChartIcon
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ChartDataItem {
   name: string;
   PVA: number | null;
   brand: string;
   pvaMissing?: string;
+  productId: string;
 }
 
 const DatabasePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5; // Number of items to display per page
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterPvaStatus, setFilterPvaStatus] = useState<string>("all");
+  const [chartView, setChartView] = useState(true);
+  const itemsPerPage = 10; // Increased items per page
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   
@@ -81,28 +107,36 @@ const DatabasePage = () => {
   
   const allSubmissions = getProductSubmissions();
   
-  const approvedProducts = mockProducts.filter(product => 
-    product.approved && 
-    (product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-  
-  const approvedSubmissions = allSubmissions.filter(submission => 
-    submission.approved && 
-    (submission.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     submission.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const approvedProducts = mockProducts.filter(product => product.approved);
+  const approvedSubmissions = allSubmissions.filter(submission => submission.approved);
   
   const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions];
   
-  const pendingSubmissions = allSubmissions.filter(submission => 
-    !submission.approved && 
-    (submission.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     submission.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Apply filters
+  const filteredProducts = combinedApprovedProducts.filter(product => {
+    // Search filter
+    const matchesSearch = 
+      searchTerm === "" || 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      product.brand.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Type filter
+    const matchesType = 
+      filterType === "all" || 
+      product.type === filterType;
+    
+    // PVA status filter
+    const matchesPvaStatus = 
+      filterPvaStatus === "all" || 
+      (filterPvaStatus === "contains" && product.pvaPercentage !== null && product.pvaPercentage > 0) ||
+      (filterPvaStatus === "free" && product.pvaPercentage === 0) ||
+      (filterPvaStatus === "unknown" && product.pvaPercentage === null);
+    
+    return matchesSearch && matchesType && matchesPvaStatus;
+  });
   
-  const sheetProducts = combinedApprovedProducts.filter(p => p.type === "Laundry Sheet");
-  const podProducts = combinedApprovedProducts.filter(p => p.type === "Laundry Pod");
+  // Get unique product types for filter
+  const productTypes = Array.from(new Set(combinedApprovedProducts.map(p => p.type)));
   
   const paginateData = (data) => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -110,10 +144,7 @@ const DatabasePage = () => {
     return data.slice(startIndex, endIndex);
   };
   
-  const paginatedSheets = paginateData(sheetProducts);
-  const paginatedPods = paginateData(podProducts);
-  const paginatedAll = paginateData(combinedApprovedProducts);
-  const paginatedPending = paginateData(pendingSubmissions);
+  const paginatedProducts = paginateData(filteredProducts);
   
   const getTotalPages = (totalItems) => {
     return Math.ceil(totalItems / itemsPerPage);
@@ -123,19 +154,25 @@ const DatabasePage = () => {
     setCurrentPage(page);
   };
   
-  const sheetChartData: ChartDataItem[] = sheetProducts.map(p => ({
+  // All products combined for the chart view
+  const chartData: ChartDataItem[] = filteredProducts.map(p => ({
     name: p.name,
     PVA: p.pvaPercentage,
     brand: p.brand,
-    pvaMissing: p.pvaPercentage === null ? "?" : ""
+    pvaMissing: p.pvaPercentage === null ? "?" : "",
+    productId: p.id
   }));
-  
-  const podChartData: ChartDataItem[] = podProducts.map(p => ({
-    name: p.name,
-    PVA: p.pvaPercentage,
-    brand: p.brand,
-    pvaMissing: p.pvaPercentage === null ? "?" : ""
-  }));
+
+  // Sort chart data by PVA percentage (with nulls at the end)
+  chartData.sort((a, b) => {
+    if (a.PVA === null && b.PVA === null) return 0;
+    if (a.PVA === null) return 1;
+    if (b.PVA === null) return -1;
+    return a.PVA - b.PVA;
+  });
+
+  // Limit chart data to prevent overcrowding (show top 25)
+  const limitedChartData = chartData.slice(0, 25);
 
   const knownValueColor = "#3cca85";
   const podKnownValueColor = "#4799ff";
@@ -187,12 +224,12 @@ const DatabasePage = () => {
       const dataItem = payload[0].payload as ChartDataItem;
       
       return (
-        <div className="p-2 bg-white border border-gray-200 rounded shadow-md">
+        <div className="p-3 bg-white border border-gray-200 rounded shadow-md">
           <p className="font-medium">{label}</p>
           <p className="text-sm text-gray-600">{dataItem.brand}</p>
           <p>
             {dataItem.PVA === null ? (
-              <span className="text-gray-600">PVA: Unknown</span>
+              <span className="text-gray-600">PVA: Unknown - Waiting on verification</span>
             ) : (
               <span>PVA: {dataItem.PVA}%</span>
             )}
@@ -303,252 +340,193 @@ const DatabasePage = () => {
         </p>
       </div>
       
-      <div className="mb-6">
-        <Input
-          placeholder="Search by product or brand name..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="max-w-md mx-auto"
-        />
-      </div>
-      
-      <Tabs defaultValue="sheets" onValueChange={() => setCurrentPage(1)}>
-        <div className="flex justify-center mb-6">
-          <TabsList>
-            <TabsTrigger value="sheets">Laundry Sheets</TabsTrigger>
-            <TabsTrigger value="pods">Laundry Pods</TabsTrigger>
-            <TabsTrigger value="all">All Products</TabsTrigger>
-            {pendingSubmissions.length > 0 && (
-              <TabsTrigger value="pending" className="relative">
-                Pending Submissions
-                <Badge variant="default" className="ml-1 bg-amber-500 text-white">
-                  {pendingSubmissions.length}
-                </Badge>
-              </TabsTrigger>
-            )}
-          </TabsList>
-        </div>
-        
-        <TabsContent value="sheets">
-          <Card>
-            <CardHeader>
-              <CardTitle>Laundry Sheets - PVA Content</CardTitle>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <CardTitle>PVA Content Database</CardTitle>
               <CardDescription>
-                Comparing PVA percentages across different laundry sheet products
+                Search, filter and explore products to find PVA content information
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {sheetChartData.length > 0 ? (
-                <div className="h-80">
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant={chartView ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setChartView(true)}
+              >
+                <BarChartIcon className="h-4 w-4 mr-2" />
+                Chart View
+              </Button>
+              <Button 
+                variant={!chartView ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setChartView(false)}
+              >
+                <Table className="h-4 w-4 mr-2" />
+                Table View
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6 space-y-4">
+            {/* Search and filter controls */}
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by product or brand name..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-8"
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <Select 
+                  value={filterType} 
+                  onValueChange={(value) => {
+                    setFilterType(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Product Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {productTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      PVA Filter
+                      <ChevronDown className="h-4 w-4 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Filter by PVA</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={filterPvaStatus === "all"}
+                      onCheckedChange={() => {
+                        setFilterPvaStatus("all");
+                        setCurrentPage(1);
+                      }}
+                    >
+                      All Products
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={filterPvaStatus === "contains"}
+                      onCheckedChange={() => {
+                        setFilterPvaStatus("contains");
+                        setCurrentPage(1);
+                      }}
+                    >
+                      Contains PVA
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={filterPvaStatus === "free"}
+                      onCheckedChange={() => {
+                        setFilterPvaStatus("free");
+                        setCurrentPage(1);
+                      }}
+                    >
+                      PVA-Free
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={filterPvaStatus === "unknown"}
+                      onCheckedChange={() => {
+                        setFilterPvaStatus("unknown");
+                        setCurrentPage(1);
+                      }}
+                    >
+                      Unknown PVA
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+          
+          {/* Conditional rendering based on view selection */}
+          {chartView ? (
+            <div>
+              {/* Chart view */}
+              {limitedChartData.length > 0 ? (
+                <div className="h-96">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={sheetChartData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      data={limitedChartData}
+                      margin={{ top: 20, right: 30, left: 30, bottom: 100 }}
+                      layout="vertical"
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                       <XAxis 
-                        dataKey="name" 
-                        angle={-45} 
-                        textAnchor="end" 
-                        height={70}
+                        type="number"
+                        label={{ value: 'PVA Content (%)', position: 'insideBottom', offset: -10 }}
                       />
                       <YAxis 
-                        label={{ 
-                          value: 'PVA Content (%)', 
-                          angle: -90, 
-                          position: 'insideLeft' 
-                        }} 
+                        dataKey="name"
+                        type="category"
+                        width={150}
+                        tick={{ fontSize: 11 }}
                       />
                       <Tooltip content={<CustomTooltip />} />
                       <Legend />
                       <Bar 
                         dataKey="PVA" 
                         name="PVA Content (%)" 
+                        barSize={20}
                       >
-                        {sheetChartData.map((entry, index) => (
+                        {limitedChartData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
-                            fill={entry.PVA === null ? unknownValueColor : knownValueColor} 
+                            fill={entry.PVA === null ? unknownValueColor : 
+                                  (entry.productId in podKnownValueColor ? podKnownValueColor : knownValueColor)}
+                            // For unknown values, display at 20% for visual representation
+                            value={entry.PVA === null ? 20 : entry.PVA}
                           />
                         ))}
                         <LabelList 
                           dataKey="pvaMissing"
-                          position="top"
+                          position="right"
                         />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="text-xs text-gray-500 italic mt-2">
-                    ? = Unknown PVA content, awaiting verification
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No laundry sheet data matching your search criteria
-                </div>
-              )}
-              
-              <div className="mt-8">
-                <h3 className="text-lg font-medium mb-4">Laundry Sheets Database</h3>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead className="text-right">PVA %</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedSheets.length > 0 ? (
-                        paginatedSheets.map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell className="font-medium">
-                              {product.name}
-                              {renderBrandVerification(product)}
-                            </TableCell>
-                            <TableCell>{product.brand}</TableCell>
-                            <TableCell className="text-right">
-                              {renderPvaValue(product)}
-                            </TableCell>
-                            <TableCell>
-                              {renderBrandButtons(product)}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
-                            No laundry sheet data available
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-                <PaginationControls totalItems={sheetProducts.length} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="pods">
-          <Card>
-            <CardHeader>
-              <CardTitle>Laundry Pods - PVA Content</CardTitle>
-              <CardDescription>
-                Comparing PVA percentages across different laundry pod products
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {podChartData.length > 0 ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={podChartData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45} 
-                        textAnchor="end" 
-                        height={70}
-                      />
-                      <YAxis 
-                        label={{ 
-                          value: 'PVA Content (%)', 
-                          angle: -90, 
-                          position: 'insideLeft' 
-                        }} 
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar 
-                        dataKey="PVA" 
-                        name="PVA Content (%)" 
-                      >
-                        {podChartData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={entry.PVA === null ? unknownValueColor : podKnownValueColor} 
-                          />
-                        ))}
                         <LabelList 
-                          dataKey="pvaMissing"
-                          position="top"
+                          dataKey="PVA"
+                          position="right"
+                          formatter={(value) => value === null ? "Unknown" : `${value}%`}
                         />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
-                  <div className="text-xs text-gray-500 italic mt-2">
-                    ? = Unknown PVA content, awaiting verification
+                  <div className="text-xs text-gray-500 italic mt-2 text-center">
+                    ? = Unknown PVA content (displayed at 20% as reference), awaiting verification from suppliers
                   </div>
+                  {filteredProducts.length > limitedChartData.length && (
+                    <div className="text-center text-sm text-muted-foreground mt-2">
+                      Showing top 25 products. Use table view to see all {filteredProducts.length} products.
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
-                  No laundry pod data matching your search criteria
+                  No products matching your search criteria
                 </div>
               )}
-              
-              <div className="mt-8">
-                <h3 className="text-lg font-medium mb-4">Laundry Pods Database</h3>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead className="text-right">PVA %</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedPods.length > 0 ? (
-                        paginatedPods.map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell className="font-medium">
-                              {product.name}
-                              {renderBrandVerification(product)}
-                            </TableCell>
-                            <TableCell>{product.brand}</TableCell>
-                            <TableCell className="text-right">
-                              {renderPvaValue(product)}
-                            </TableCell>
-                            <TableCell>
-                              {renderBrandButtons(product)}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
-                            No laundry pod data available
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-                <PaginationControls totalItems={podProducts.length} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="all">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Products Database</CardTitle>
-              <CardDescription>
-                Complete list of all products in our database
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            </div>
+          ) : (
+            <div>
+              {/* Table view */}
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -561,8 +539,8 @@ const DatabasePage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedAll.length > 0 ? (
-                      paginatedAll.map((product) => (
+                    {paginatedProducts.length > 0 ? (
+                      paginatedProducts.map((product) => (
                         <TableRow key={product.id}>
                           <TableCell className="font-medium">
                             {product.name}
@@ -588,63 +566,11 @@ const DatabasePage = () => {
                   </TableBody>
                 </Table>
               </div>
-              <PaginationControls totalItems={combinedApprovedProducts.length} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="pending">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Submissions</CardTitle>
-              <CardDescription>
-                Products that have been submitted but are waiting for approval
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Brand</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">PVA %</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedPending.length > 0 ? (
-                      paginatedPending.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.type}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
-                              Pending Review
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {renderPvaValue(product)}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                          No pending submissions matching your search criteria
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-              <PaginationControls totalItems={pendingSubmissions.length} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <PaginationControls totalItems={filteredProducts.length} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
