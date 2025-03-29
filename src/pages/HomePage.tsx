@@ -15,7 +15,7 @@ const HomePage = () => {
         <div className="container mx-auto text-center relative z-10">
           <div className="inline-flex items-center mb-8 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-science-100 shadow-sm">
             <FlaskConical className="h-4 w-4 text-science-500 mr-2" />
-            <span className="text-sm font-medium text-gray-700">Scientifically Verified Data</span>
+            <span className="text-sm font-medium text-gray-700">Collaborative Product Database</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold mb-6">
             <span className="bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">

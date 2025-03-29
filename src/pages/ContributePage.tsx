@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { 
   Card, 
@@ -25,11 +24,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Upload, Image, FileText, Check, X, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, Image, FileText, Check, X, AlertCircle, Loader2, UserRound, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { extractTextFromImage } from "@/lib/textExtractor";
+import { useAuth } from "@/contexts/AuthContext";
+import AuthDialog from "@/components/AuthDialog";
+import MediaUploader from "@/components/MediaUploader";
+import CommentsSection from "@/components/CommentsSection";
 
-// PVA-related keywords to search for in extracted text
 const PVA_KEYWORDS = [
   "polyvinyl alcohol",
   "pva",
@@ -42,6 +44,7 @@ const DEFAULT_PVA_STATUS = "Unknown";
 
 const ContributePage = () => {
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sdsFileInputRef = useRef<HTMLInputElement>(null);
   
@@ -53,7 +56,6 @@ const ContributePage = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isSDSProcessing, setIsSDSProcessing] = useState<boolean>(false);
   
-  // Form fields
   const [brand, setBrand] = useState<string>("");
   const [productName, setProductName] = useState<string>("");
   const [productType, setProductType] = useState<string>("");
@@ -61,15 +63,14 @@ const ContributePage = () => {
   const [additionalNotes, setAdditionalNotes] = useState<string>("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
-  // Check if form is valid
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  
   const isFormValid = brand && productName && productType && productImage;
 
-  // Function to handle product image upload
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file type
     if (!file.type.includes("image/")) {
       toast({
         title: "Invalid file type",
@@ -82,13 +83,11 @@ const ContributePage = () => {
     setProductImage(file);
     setImagePreview(URL.createObjectURL(file));
     
-    // Process the image for text extraction
     setIsProcessing(true);
     try {
       const extracted = await extractTextFromImage(file);
       setExtractedText(extracted.text);
       
-      // Search for PVA keywords in the extracted text
       const found = PVA_KEYWORDS.filter(keyword => 
         extracted.text.toLowerCase().includes(keyword.toLowerCase())
       );
@@ -121,12 +120,10 @@ const ContributePage = () => {
     }
   };
 
-  // Function to handle SDS file upload
   const handleSDSUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file type
     if (!file.type.includes("pdf") && !file.type.includes("image/")) {
       toast({
         title: "Invalid file type",
@@ -138,21 +135,17 @@ const ContributePage = () => {
 
     setSdsFile(file);
     
-    // If it's an image, process it for text extraction
     if (file.type.includes("image/")) {
       setIsSDSProcessing(true);
       try {
         const extracted = await extractTextFromImage(file);
         
-        // Append to existing extracted text
         setExtractedText(prevText => prevText ? `${prevText}\n\n--- From SDS ---\n${extracted.text}` : extracted.text);
         
-        // Search for PVA keywords in the extracted text
         const found = PVA_KEYWORDS.filter(keyword => 
           extracted.text.toLowerCase().includes(keyword.toLowerCase())
         );
         
-        // Add any new keywords found
         setFoundKeywords(prevKeywords => {
           const newKeywords = found.filter(keyword => !prevKeywords.includes(keyword));
           return [...prevKeywords, ...newKeywords];
@@ -177,7 +170,6 @@ const ContributePage = () => {
         setIsSDSProcessing(false);
       }
     } else {
-      // For PDFs, we just store the file - actual processing would need backend integration
       toast({
         title: "SDS Uploaded",
         description: "Your SDS file has been uploaded.",
@@ -185,7 +177,10 @@ const ContributePage = () => {
     }
   };
 
-  // Function to handle form submission
+  const handleMediaFilesChange = (files: File[]) => {
+    setMediaFiles(files);
+  };
+
   const handleSubmit = () => {
     if (!isFormValid) {
       toast({
@@ -196,10 +191,6 @@ const ContributePage = () => {
       return;
     }
 
-    // Here you would typically send this data to your backend
-    // For this prototype, we'll just show a success message
-    
-    // Log the submission data for debugging
     const submissionData = {
       brand,
       name: productName,
@@ -209,7 +200,10 @@ const ContributePage = () => {
       extractedText,
       foundKeywords,
       hasSDSFile: !!sdsFile,
-      additionalNotes
+      additionalNotes,
+      userId: user?.id || null,
+      userName: user?.name || null,
+      mediaFiles: mediaFiles.map(f => f.name),
     };
     
     console.log("Submission data:", submissionData);
@@ -219,7 +213,6 @@ const ContributePage = () => {
       description: "Thank you for your contribution to the PVA-Free database.",
     });
     
-    // Reset form
     setBrand("");
     setProductName("");
     setProductType("");
@@ -231,9 +224,9 @@ const ContributePage = () => {
     setExtractedText("");
     setFoundKeywords([]);
     setPvaStatus(DEFAULT_PVA_STATUS);
+    setMediaFiles([]);
   };
 
-  // Cleanup image preview on unmount
   useEffect(() => {
     return () => {
       if (imagePreview) {
@@ -251,6 +244,25 @@ const ContributePage = () => {
             Help us build a comprehensive database of laundry products by sharing ingredient 
             information. Your contributions help others make informed choices.
           </p>
+          
+          {!isAuthenticated && (
+            <div className="mt-6 inline-flex items-center rounded-lg bg-science-50 px-5 py-3 shadow-sm border border-science-100">
+              <UserRound className="h-5 w-5 text-science-500 mr-2" />
+              <span className="text-sm text-science-700 mr-3">
+                Register for more features
+              </span>
+              <AuthDialog>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-science-300 text-science-700 flex items-center"
+                >
+                  <LogIn className="h-4 w-4 mr-1" />
+                  Login / Register
+                </Button>
+              </AuthDialog>
+            </div>
+          )}
         </div>
         
         <Card className="science-card">
@@ -394,6 +406,16 @@ const ContributePage = () => {
                     className="hidden"
                   />
                 </div>
+                
+                {isAuthenticated && (
+                  <div className="mt-4">
+                    <MediaUploader 
+                      label="Additional Media (Images/Videos)" 
+                      onChange={handleMediaFilesChange}
+                      currentFiles={mediaFiles}
+                    />
+                  </div>
+                )}
               </div>
               
               <div className="space-y-4">
@@ -476,12 +498,19 @@ const ContributePage = () => {
                   <ul className="text-sm text-gray-600 space-y-1">
                     <li>• Ensure the ingredients list is clearly visible in the image</li>
                     <li>• Higher resolution images yield better text extraction results</li>
-                    <li>• All submissions are reviewed by our team before being added to the database</li>
-                    <li>• Personal information is not stored with your submission</li>
+                    <li>• All submissions are reviewed by our community before database inclusion</li>
+                    <li>• Register to upload multiple media files and add comments</li>
                   </ul>
                 </div>
               </div>
             </div>
+            
+            {isAuthenticated && (
+              <>
+                <Separator className="my-4" />
+                <CommentsSection />
+              </>
+            )}
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" onClick={() => window.location.reload()}>Cancel</Button>
