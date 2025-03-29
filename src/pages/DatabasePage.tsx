@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Card, 
@@ -24,7 +23,8 @@ import {
   Legend, 
   ResponsiveContainer,
   Cell,
-  LabelList
+  LabelList,
+  TooltipProps
 } from "recharts";
 import { 
   Table, 
@@ -47,44 +47,43 @@ import { getProductSubmissions } from "@/lib/textExtractor";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 
+interface ChartDataItem {
+  name: string;
+  PVA: number;
+  isUnknown: boolean;
+}
+
 const DatabasePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // Number of items to display per page
   const { isAuthenticated } = useAuth();
   
-  // Get all product submissions
   const allSubmissions = getProductSubmissions();
   
-  // Filter products - show approved products and filter by search term
   const approvedProducts = mockProducts.filter(product => 
     product.approved && 
     (product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
      product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  // Include approved submissions from local storage
   const approvedSubmissions = allSubmissions.filter(submission => 
     submission.approved && 
     (submission.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
      submission.brand.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  // Combine mock products with approved submissions
   const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions];
   
-  // Filter pending submissions - submissions that are not yet approved
   const pendingSubmissions = allSubmissions.filter(submission => 
     !submission.approved && 
     (submission.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
      submission.brand.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  // Separate products by type
   const sheetProducts = combinedApprovedProducts.filter(p => p.type === "Laundry Sheet");
   const podProducts = combinedApprovedProducts.filter(p => p.type === "Laundry Pod");
   
-  // Calculate pagination for each tab
   const paginateData = (data) => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -96,36 +95,31 @@ const DatabasePage = () => {
   const paginatedAll = paginateData(combinedApprovedProducts);
   const paginatedPending = paginateData(pendingSubmissions);
   
-  // Calculate total pages for current tab
   const getTotalPages = (totalItems) => {
     return Math.ceil(totalItems / itemsPerPage);
   };
   
-  // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
   
-  // Prepare data for charts - include products with unknown PVA percentages
   const sheetChartData = sheetProducts.map(p => ({
     name: p.name,
-    PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25, // Default to 25% for unknown values
-    isUnknown: p.pvaPercentage === null // Flag to identify unknown values
+    PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25,
+    isUnknown: p.pvaPercentage === null
   }));
   
   const podChartData = podProducts.map(p => ({
     name: p.name,
-    PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25, // Default to 25% for unknown values
-    isUnknown: p.pvaPercentage === null // Flag to identify unknown values
+    PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25,
+    isUnknown: p.pvaPercentage === null
   }));
 
-  // Colors for the chart bars
-  const knownValueColor = "#3cca85"; // Green for sheets
-  const podKnownValueColor = "#4799ff"; // Blue for pods
-  const unknownValueColor = "#8E9196"; // Gray for unknown values
+  const knownValueColor = "#3cca85";
+  const podKnownValueColor = "#4799ff";
+  const unknownValueColor = "#8E9196";
 
-  // Custom tooltip for the chart that indicates unknown values
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
       const isUnknown = payload[0].payload.isUnknown;
       
@@ -145,7 +139,6 @@ const DatabasePage = () => {
     return null;
   };
 
-  // Pagination component
   const PaginationControls = ({ totalItems }) => {
     const totalPages = getTotalPages(totalItems);
     
@@ -184,7 +177,6 @@ const DatabasePage = () => {
     );
   };
 
-  // Helper function to display PVA percentage in tables
   const renderPvaValue = (product) => {
     if (product.pvaPercentage !== null) {
       return `${product.pvaPercentage}%`;
@@ -214,7 +206,7 @@ const DatabasePage = () => {
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setCurrentPage(1); // Reset to first page on search
+            setCurrentPage(1);
           }}
           className="max-w-md mx-auto"
         />
@@ -237,7 +229,6 @@ const DatabasePage = () => {
           </TabsList>
         </div>
         
-        {/* Laundry Sheets Tab */}
         <TabsContent value="sheets">
           <Card>
             <CardHeader>
@@ -338,7 +329,6 @@ const DatabasePage = () => {
           </Card>
         </TabsContent>
         
-        {/* Laundry Pods Tab */}
         <TabsContent value="pods">
           <Card>
             <CardHeader>
@@ -439,7 +429,6 @@ const DatabasePage = () => {
           </Card>
         </TabsContent>
         
-        {/* All Products Tab */}
         <TabsContent value="all">
           <Card>
             <CardHeader>
@@ -486,7 +475,6 @@ const DatabasePage = () => {
           </Card>
         </TabsContent>
         
-        {/* Pending Submissions Tab */}
         <TabsContent value="pending">
           <Card>
             <CardHeader>
