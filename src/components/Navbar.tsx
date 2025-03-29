@@ -66,7 +66,7 @@ const Navbar = () => {
           <span className="text-2xl font-bold bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
             PVAFree
           </span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-science-100 text-science-800 font-medium">
+          <span className="text-2xl font-bold bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
             .com
           </span>
         </Link>
