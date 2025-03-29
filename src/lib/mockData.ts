@@ -1,5 +1,5 @@
 
-export type ProductType = 'Laundry Sheet' | 'Laundry Pod';
+export type ProductType = 'Laundry Sheet' | 'Laundry Pod' | 'Dishwasher Pod' | 'Dishwasher Sheet' | 'Tablet' | 'Other';
 
 export interface Product {
   id: string;
