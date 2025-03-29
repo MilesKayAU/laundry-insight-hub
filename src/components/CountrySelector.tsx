@@ -18,12 +18,12 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   onCountrySelect,
   onSubmit
 }) => {
-  // Ensure all countries are properly lowercase for consistent comparison
+  // Ensure all countries are properly normalized
   const normalizedCountries = countries.map(country => 
     typeof country === 'string' ? country.trim() : country
   );
 
-  // Check if Australia exists in the normalized countries array
+  // Create a case-insensitive check for Australia
   const hasAustralia = normalizedCountries.some(
     country => country.toLowerCase() === 'australia'
   );

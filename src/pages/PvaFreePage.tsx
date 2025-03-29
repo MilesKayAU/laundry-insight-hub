@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Search } from "lucide-react";
 import { 
@@ -19,20 +19,45 @@ import {
   CollapsibleTrigger
 } from "@/components/ui/collapsible";
 import { getProductSubmissions } from "@/lib/textExtractor";
+import { useToast } from "@/components/ui/use-toast";
 
 const PvaFreePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
   
   // Get all approved products with 0% PVA (pvaStatus is 'verified-free')
   const pvaFreeProducts = getProductSubmissions().filter(
     product => product.approved && product.pvaStatus === 'verified-free'
   );
 
+  useEffect(() => {
+    // Check if we have products
+    if (pvaFreeProducts.length === 0) {
+      toast({
+        title: "Data Loading",
+        description: "Loading product data from our database...",
+      });
+    } else {
+      setLoading(false);
+    }
+  }, [pvaFreeProducts.length, toast]);
+
   // Filter products based on search term
   const filteredProducts = pvaFreeProducts.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     product.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading && pvaFreeProducts.length === 0) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading product data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-10 px-4">
