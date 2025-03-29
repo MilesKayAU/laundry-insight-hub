@@ -1,5 +1,5 @@
 
-import { ArrowRight, Upload, Database, Shield, Flask, Microscope, MoveRight } from "lucide-react";
+import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -14,7 +14,7 @@ const HomePage = () => {
         </div>
         <div className="container mx-auto text-center relative z-10">
           <div className="inline-flex items-center mb-8 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-science-100 shadow-sm">
-            <Flask className="h-4 w-4 text-science-500 mr-2" />
+            <FlaskConical className="h-4 w-4 text-science-500 mr-2" />
             <span className="text-sm font-medium text-gray-700">Scientifically Verified Data</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold mb-6">

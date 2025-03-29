@@ -27,7 +27,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Upload, Image, FileText, Check, X, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { extractText } from "@/lib/textExtractor";
+import { extractTextFromImage } from "@/lib/textExtractor";
 
 // PVA-related keywords to search for in extracted text
 const PVA_KEYWORDS = [
@@ -85,12 +85,12 @@ const ContributePage = () => {
     // Process the image for text extraction
     setIsProcessing(true);
     try {
-      const text = await extractText(file);
-      setExtractedText(text);
+      const extracted = await extractTextFromImage(file);
+      setExtractedText(extracted.text);
       
       // Search for PVA keywords in the extracted text
       const found = PVA_KEYWORDS.filter(keyword => 
-        text.toLowerCase().includes(keyword.toLowerCase())
+        extracted.text.toLowerCase().includes(keyword.toLowerCase())
       );
       
       setFoundKeywords(found);
@@ -142,14 +142,14 @@ const ContributePage = () => {
     if (file.type.includes("image/")) {
       setIsSDSProcessing(true);
       try {
-        const text = await extractText(file);
+        const extracted = await extractTextFromImage(file);
         
         // Append to existing extracted text
-        setExtractedText(prevText => prevText ? `${prevText}\n\n--- From SDS ---\n${text}` : text);
+        setExtractedText(prevText => prevText ? `${prevText}\n\n--- From SDS ---\n${extracted.text}` : extracted.text);
         
         // Search for PVA keywords in the extracted text
         const found = PVA_KEYWORDS.filter(keyword => 
-          text.toLowerCase().includes(keyword.toLowerCase())
+          extracted.text.toLowerCase().includes(keyword.toLowerCase())
         );
         
         // Add any new keywords found

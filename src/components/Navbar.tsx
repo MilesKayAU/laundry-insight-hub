@@ -10,9 +10,9 @@ import {
   UploadCloud, 
   Database, 
   Settings, 
-  Flask, 
+  Beaker, 
   Microscope, 
-  Beaker
+  FlaskConical
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -25,7 +25,7 @@ const Navbar = () => {
     { name: "Contribute", path: "/contribute", icon: <UploadCloud className="h-4 w-4 mr-2" /> },
     { name: "Database", path: "/database", icon: <Database className="h-4 w-4 mr-2" /> },
     { name: "Admin", path: "/admin", icon: <Settings className="h-4 w-4 mr-2" /> },
-    { name: "About PVA", path: "/about", icon: <Flask className="h-4 w-4 mr-2" /> },
+    { name: "About PVA", path: "/about", icon: <FlaskConical className="h-4 w-4 mr-2" /> },
     { name: "PVA Free", path: "/pva-free", icon: <Beaker className="h-4 w-4 mr-2" /> },
   ];
 
