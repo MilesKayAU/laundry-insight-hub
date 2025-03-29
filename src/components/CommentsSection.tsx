@@ -18,9 +18,13 @@ interface Comment {
 
 interface CommentsSectionProps {
   productId?: string;
+  topicId?: string; // Added topicId as an optional prop
 }
 
-const CommentsSection: React.FC<CommentsSectionProps> = ({ productId = "demo" }) => {
+const CommentsSection: React.FC<CommentsSectionProps> = ({ productId, topicId }) => {
+  // Use either productId or topicId, with "demo" as fallback
+  const commentIdentifier = productId || topicId || "demo";
+  
   const { user, isAuthenticated } = useAuth();
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
