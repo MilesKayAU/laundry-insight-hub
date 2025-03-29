@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, ResponsiveContainer, LabelList } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, ResponsiveContainer, LabelList } from "recharts";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { getBrandCategories } from "@/lib/bulkUpload";
 import { 
@@ -47,7 +47,7 @@ interface PvaChartItem {
 
 const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const [brandLimit, setBrandLimit] = useState("10");
-  const [chartType, setChartType] = useState("pie");
+  const [chartType, setChartType] = useState("bar");
 
   // Create brand distribution data that includes PVA percentages
   const createBrandPvaData = () => {
@@ -83,8 +83,8 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
       };
     });
     
-    // Sort by count (descending)
-    brandData.sort((a, b) => b.count - a.count);
+    // Sort by count (ascending) - for horizontal bar chart
+    brandData.sort((a, b) => a.count - b.count);
     
     // Limit to the specified number of brands
     return brandData.slice(0, parseInt(brandLimit));
@@ -120,42 +120,78 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   // Limit data to prevent overcrowding (show top 15)
   const limitedPvaData = sortedPvaData.slice(0, 15);
 
-  // Format label for pie chart segments - Modified to fix label placement
-  const formatPieChartLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, index, payload }) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 1.4; // Adjusted to keep inside container
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    
-    if (index >= brandPvaData.length) return null;
-    
-    const item = brandPvaData[index];
-    let pvaText;
-    
-    if (item.pva === null) {
-      pvaText = "(Unknown PVA)";
-    } else if (item.pva === 0) {
-      pvaText = "(0% PVA)";
-    } else {
-      // Format PVA to 1 decimal place and ensure it's a valid number
-      const pvaNum = parseFloat(String(item.pva));
-      pvaText = isNaN(pvaNum) ? "(Unknown PVA)" : `(${pvaNum.toFixed(1)}% PVA)`;
+  const renderBrandBarChart = () => {
+    if (products.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          No product data available for visualization
+        </div>
+      );
     }
 
-    // Calculate text anchor based on angle to prevent text from going outside container
-    const textAnchor = x > cx ? 'start' : 'end';
-    
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="#000" 
-        textAnchor={textAnchor} 
-        dominantBaseline="central"
-        fontSize={10} // Smaller font size to fit better
-      >
-        {`${item.brand}: ${item.count} ${pvaText}`}
-      </text>
+      <div className="h-[600px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={brandPvaData}
+            layout="vertical"
+            margin={{ top: 20, right: 180, left: 120, bottom: 20 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+            <XAxis type="number" />
+            <YAxis 
+              dataKey="brand" 
+              type="category" 
+              width={100}
+              tick={{ fontSize: 11 }}
+            />
+            <Tooltip 
+              content={({ active, payload }) => {
+                if (active && payload && payload.length > 0) {
+                  const data = payload[0].payload as ChartDataItem;
+                  return (
+                    <div className="p-3 bg-background border border-border rounded shadow-md">
+                      <p className="font-medium">{data.brand}</p>
+                      <p>Products: {data.count}</p>
+                      <p>
+                        {data.pva === null ? (
+                          <span className="text-muted-foreground">PVA: Unknown</span>
+                        ) : data.pva === 0 ? (
+                          <span>PVA: 0% (PVA-Free)</span>
+                        ) : (
+                          <span>Avg. PVA: {parseFloat(String(data.pva)).toFixed(1)}%</span>
+                        )}
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Legend />
+            <Bar 
+              dataKey="count" 
+              name="Number of Products" 
+              barSize={20}
+            >
+              {brandPvaData.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.pva === null ? unknownValueColor : COLORS[index % COLORS.length]} 
+                />
+              ))}
+              <LabelList 
+                dataKey="count" 
+                position="right" 
+                formatter={(value: number) => `${value} product${value !== 1 ? 's' : ''}`}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="text-xs text-gray-500 italic mt-2 text-center">
+          Gray bars = Unknown PVA content, awaiting verification from suppliers
+        </div>
+      </div>
     );
   };
 
@@ -260,13 +296,13 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                 <SelectValue placeholder="Chart Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pie">Brand Distribution</SelectItem>
-                <SelectItem value="bar">PVA Content</SelectItem>
+                <SelectItem value="bar">Brand Distribution</SelectItem>
+                <SelectItem value="pva">PVA Content</SelectItem>
               </SelectContent>
             </Select>
           </div>
           
-          {chartType === "pie" && (
+          {chartType === "bar" && (
             <div className="flex items-center gap-2">
               <Label htmlFor="brand-limit">Top Brands:</Label>
               <Select value={brandLimit} onValueChange={setBrandLimit}>
@@ -286,66 +322,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
         </div>
       </CardHeader>
       <CardContent>
-        {chartType === "pie" ? (
-          <div className="h-[600px] w-full overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 20, right: 20, bottom: 120, left: 20 }}>
-                <Pie
-                  data={brandPvaData}
-                  dataKey="count"
-                  nameKey="brand"
-                  cx="50%"
-                  cy="45%"
-                  outerRadius={180}
-                  fill="#8884d8"
-                  labelLine={true}
-                  label={formatPieChartLabel}
-                >
-                  {brandPvaData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.pva === null ? unknownValueColor : COLORS[index % COLORS.length]} 
-                    />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length > 0) {
-                      const data = payload[0].payload as ChartDataItem;
-                      return (
-                        <div className="p-3 bg-background border border-border rounded shadow-md">
-                          <p className="font-medium">{data.brand}</p>
-                          <p>Products: {data.count}</p>
-                          <p>
-                            {data.pva === null ? (
-                              <span className="text-muted-foreground">PVA: Unknown</span>
-                            ) : data.pva === 0 ? (
-                              <span>PVA: 0% (PVA-Free)</span>
-                            ) : (
-                              <span>Avg. PVA: {parseFloat(String(data.pva)).toFixed(1)}%</span>
-                            )}
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Legend 
-                  layout="horizontal" 
-                  verticalAlign="bottom" 
-                  align="center"
-                  wrapperStyle={{ paddingTop: "40px", bottom: 0 }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="text-xs text-gray-500 italic mt-2 text-center">
-              Gray slices = Unknown PVA content, awaiting verification from suppliers
-            </div>
-          </div>
-        ) : (
-          renderPvaChart()
-        )}
+        {chartType === "bar" ? renderBrandBarChart() : renderPvaChart()}
       </CardContent>
     </Card>
   );

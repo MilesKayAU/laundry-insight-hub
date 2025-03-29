@@ -1,4 +1,5 @@
-import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight } from "lucide-react";
+
+import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -75,6 +76,47 @@ const HomePage = () => {
               <p className="text-gray-600 text-center">
                 Advanced analytics show precise PVA measurements across different laundry products.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PVA Illustration Section */}
+      <section className="py-20 px-4 bg-amber-50">
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row items-center gap-12">
+            <div className="md:w-1/2">
+              <div className="mb-4 inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800">
+                <Info className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">The PVA Problem</span>
+              </div>
+              <h2 className="text-3xl font-bold mb-6 text-science-800">Understanding PVA in Laundry Products</h2>
+              <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+                Polyvinyl Alcohol (PVA) is commonly used in laundry sheets and pods as a dissolving film. 
+                However, recent studies show it persists in the environment and doesn't break down in wastewater treatment.
+              </p>
+              <p className="text-lg text-gray-700 mb-8 leading-relaxed">
+                The substance can remain as microplastics in waterways, potentially causing harm to aquatic ecosystems 
+                and entering the food chain.
+              </p>
+              <Button asChild variant="outline" className="bg-white border-amber-300 hover:bg-amber-50 text-amber-800">
+                <Link to="/about">
+                  Learn More About PVA Impact
+                  <MoveRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            <div className="md:w-1/2 relative">
+              <div className="rounded-lg overflow-hidden shadow-2xl">
+                <img 
+                  src="/lovable-uploads/92933f9c-0e6a-46ef-8059-9b5c4cb8d2db.png" 
+                  alt="PVA dripping from laundry sheets" 
+                  className="w-full h-auto"
+                />
+              </div>
+              <div className="absolute -bottom-4 -right-4 bg-amber-100 text-amber-800 px-4 py-2 rounded-lg shadow-md text-sm font-medium">
+                PVA residue doesn't fully dissolve
+              </div>
             </div>
           </div>
         </div>
