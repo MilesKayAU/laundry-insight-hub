@@ -1,5 +1,7 @@
+
 import { createHash } from "crypto";
 import Tesseract from 'tesseract.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // PVA keyword categories for detection in documents
 export const PVA_KEYWORDS_CATEGORIES = {
@@ -33,6 +35,7 @@ export interface ProductSubmission {
   name: string;
   brand: string;
   type: string;
+  country: string; // Added country field
   pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
   pvaPercentage?: number | null;
   imageUrl?: string;
@@ -104,4 +107,20 @@ export const getProductSubmissions = (): ProductSubmission[] => {
     console.error("Error retrieving product submissions:", error);
     return [];
   }
+};
+
+// Helper function to create a new product submission with defaults
+export const createProductSubmission = (submission: Partial<ProductSubmission>): ProductSubmission => {
+  return {
+    id: submission.id || uuidv4(),
+    name: submission.name || '',
+    brand: submission.brand || '',
+    type: submission.type || '',
+    country: submission.country || 'Global', // Default country to Global
+    pvaStatus: submission.pvaStatus || 'needs-verification',
+    pvaPercentage: submission.pvaPercentage || null,
+    submittedAt: submission.submittedAt || new Date().toISOString(),
+    approved: submission.approved || false,
+    ...submission
+  };
 };

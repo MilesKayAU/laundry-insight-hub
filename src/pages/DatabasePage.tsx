@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -6,26 +7,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  Cell,
-  LabelList,
-  TooltipProps
-} from "recharts";
 import { 
   Table, 
   TableBody, 
@@ -64,7 +46,9 @@ import {
   Filter, 
   Search as SearchIcon,
   ChevronDown,
-  BarChart as BarChartIcon
+  BarChart as BarChartIcon,
+  Globe,
+  Map
 } from "lucide-react";
 import {
   Select,
@@ -81,14 +65,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import DataCharts from "@/components/DataCharts";
+import CountrySelector from "@/components/CountrySelector";
 
-interface ChartDataItem {
-  name: string;
-  PVA: number | null;
-  brand: string;
-  pvaMissing: string;
-  productId: string;
-}
+// Update mock products to include country field
+const updatedMockProducts = mockProducts.map(product => ({
+  ...product,
+  country: "Global"
+}));
 
 const DatabasePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,6 +80,8 @@ const DatabasePage = () => {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterPvaStatus, setFilterPvaStatus] = useState<string>("all");
   const [chartView, setChartView] = useState(true);
+  const [selectedCountry, setSelectedCountry] = useState("Global");
+  const [countrySelected, setCountrySelected] = useState(false);
   const itemsPerPage = 10;
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -106,10 +92,24 @@ const DatabasePage = () => {
   
   const allSubmissions = getProductSubmissions();
   
-  const approvedProducts = mockProducts.filter(product => product.approved);
+  const approvedProducts = updatedMockProducts.filter(product => product.approved);
   const approvedSubmissions = allSubmissions.filter(submission => submission.approved);
   
-  const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions];
+  // Create a list of all available countries
+  const availableCountries = Array.from(new Set([
+    ...approvedProducts.map(p => p.country || "Global"),
+    ...approvedSubmissions.map(p => p.country || "Global")
+  ])).filter(country => country !== "Global").sort();
+  
+  // Type guard for ProductSubmission
+  const isProductSubmission = (product: any): product is ProductSubmission => {
+    return 'pvaStatus' in product;
+  };
+  
+  // Combine products and filter by country
+  const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions].filter(product => {
+    return selectedCountry === "Global" || product.country === selectedCountry;
+  });
   
   const filteredProducts = combinedApprovedProducts.filter(product => {
     const matchesSearch = 
@@ -121,11 +121,26 @@ const DatabasePage = () => {
       filterType === "all" || 
       product.type === filterType;
     
-    const matchesPvaStatus = 
-      filterPvaStatus === "all" || 
-      (filterPvaStatus === "contains" && product.pvaPercentage !== null && product.pvaPercentage > 0) ||
-      (filterPvaStatus === "free" && product.pvaPercentage === 0) ||
-      (filterPvaStatus === "unknown" && product.pvaPercentage === null);
+    let matchesPvaStatus = filterPvaStatus === "all";
+    
+    if (isProductSubmission(product)) {
+      if (filterPvaStatus === "contains" && product.pvaPercentage !== null && product.pvaPercentage > 0) {
+        matchesPvaStatus = true;
+      } else if (filterPvaStatus === "free" && product.pvaPercentage === 0) {
+        matchesPvaStatus = true;
+      } else if (filterPvaStatus === "unknown" && product.pvaPercentage === null) {
+        matchesPvaStatus = true;
+      }
+    } else {
+      // Handle non-ProductSubmission products differently if needed
+      if (filterPvaStatus === "contains" && product.pvaPercentage !== null && product.pvaPercentage > 0) {
+        matchesPvaStatus = true;
+      } else if (filterPvaStatus === "free" && product.pvaPercentage === 0) {
+        matchesPvaStatus = true;
+      } else if (filterPvaStatus === "unknown" && product.pvaPercentage === null) {
+        matchesPvaStatus = true;
+      }
+    }
     
     return matchesSearch && matchesType && matchesPvaStatus;
   });
@@ -148,26 +163,13 @@ const DatabasePage = () => {
     setCurrentPage(page);
   };
   
-  const chartData: ChartDataItem[] = filteredProducts.map(p => ({
-    name: p.name,
-    PVA: p.pvaPercentage,
-    brand: p.brand,
-    pvaMissing: p.pvaPercentage === null ? "Unknown - Awaiting verification" : "",
-    productId: p.id
-  }));
-
-  chartData.sort((a, b) => {
-    if (a.PVA === null && b.PVA === null) return 0;
-    if (a.PVA === null) return 1;
-    if (b.PVA === null) return -1;
-    return a.PVA - b.PVA;
-  });
-
-  const limitedChartData = chartData.slice(0, 25);
-
-  const knownValueColor = "#3cca85";
-  const podKnownValueColor = "#4799ff";
-  const unknownValueColor = "#8E9196";
+  const handleCountrySelect = (country: string) => {
+    setSelectedCountry(country);
+  };
+  
+  const handleViewProducts = () => {
+    setCountrySelected(true);
+  };
 
   const handleBrandOwnershipRequest = () => {
     if (!selectedProduct) return;
@@ -210,9 +212,9 @@ const DatabasePage = () => {
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+  const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const dataItem = payload[0].payload as ChartDataItem;
+      const dataItem = payload[0].payload;
       
       return (
         <div className="p-3 bg-white border border-gray-200 rounded shadow-md">
@@ -284,6 +286,8 @@ const DatabasePage = () => {
   };
   
   const renderBrandVerification = (product) => {
+    if (!isProductSubmission(product)) return null;
+    
     if (product.brandVerified) {
       return (
         <Badge variant="outline" className="bg-green-100 text-green-800 ml-2">
@@ -302,6 +306,8 @@ const DatabasePage = () => {
   };
 
   const renderBrandButtons = (product) => {
+    if (!isProductSubmission(product)) return null;
+    
     if (product.brandVerified || product.brandOwnershipRequested) {
       return null;
     }
@@ -312,7 +318,7 @@ const DatabasePage = () => {
         size="sm"
         className="ml-2 text-xs"
         onClick={() => {
-          setSelectedProduct(product);
+          setSelectedProduct(product as ProductSubmission);
           setIsDialogOpen(true);
         }}
       >
@@ -321,6 +327,26 @@ const DatabasePage = () => {
       </Button>
     );
   };
+
+  if (!countrySelected) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold">Product Database</h1>
+          <p className="text-muted-foreground mt-2">
+            Explore our database of laundry products and their PVA content
+          </p>
+        </div>
+        
+        <CountrySelector
+          selectedCountry={selectedCountry}
+          countries={availableCountries}
+          onCountrySelect={handleCountrySelect}
+          onSubmit={handleViewProducts}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-10 px-4">
@@ -335,12 +361,24 @@ const DatabasePage = () => {
         <CardHeader>
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-              <CardTitle>PVA Content Database</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                {selectedCountry === "Global" ? "Global Product Database" : `Products in ${selectedCountry}`}
+              </CardTitle>
               <CardDescription>
                 Search, filter and explore products to find PVA content information
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setCountrySelected(false)}
+                className="mr-2"
+              >
+                <Map className="h-4 w-4 mr-2" />
+                Change Region
+              </Button>
               <Button 
                 variant={chartView ? "default" : "outline"} 
                 size="sm"
@@ -451,57 +489,11 @@ const DatabasePage = () => {
           {chartView ? (
             <div>
               <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={limitedChartData}
-                    margin={{ top: 20, right: 150, left: 30, bottom: 100 }}
-                    layout="vertical"
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                    <XAxis 
-                      type="number"
-                      label={{ value: 'PVA Content (%)', position: 'insideBottom', offset: -10 }}
-                    />
-                    <YAxis 
-                      dataKey="name"
-                      type="category"
-                      width={150}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <Tooltip content={CustomTooltip} />
-                    <Legend />
-                    <Bar 
-                      dataKey={(data) => data.PVA === null ? 20 : data.PVA} 
-                      name="PVA Content (%)"
-                      barSize={20}
-                    >
-                      {limitedChartData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.PVA === null ? unknownValueColor : 
-                                (entry.name.includes("Pod") ? podKnownValueColor : knownValueColor)}
-                        />
-                      ))}
-                      <LabelList 
-                        dataKey="pvaMissing"
-                        position="right"
-                        formatter={(value: string) => value}
-                        fill="#666"
-                      />
-                      <LabelList 
-                        dataKey="PVA"
-                        position="right"
-                        formatter={(value: number | null) => value === null ? "" : `${value}%`}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="text-xs text-gray-500 italic mt-2 text-center">
-                  Gray bars = Unknown PVA content (shown at estimated 20% for reference), awaiting verification from suppliers
-                </div>
-                {filteredProducts.length > limitedChartData.length && (
-                  <div className="text-center text-sm text-muted-foreground mt-2">
-                    Showing top 25 products. Use table view to see all {filteredProducts.length} products.
+                {filteredProducts.length > 0 ? (
+                  <DataCharts products={filteredProducts.filter(isProductSubmission)} />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    No products found matching your criteria
                   </div>
                 )}
               </div>
