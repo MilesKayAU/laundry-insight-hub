@@ -14,6 +14,7 @@ import AdminPage from "./pages/AdminPage";
 import AboutPva from "./pages/AboutPva";
 import PvaFreePage from "./pages/PvaFreePage";
 import AuthPage from "./pages/AuthPage";
+import BrandProfilePage from "./pages/BrandProfilePage";
 import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
 import NotFound from "./pages/NotFound";
@@ -68,6 +69,7 @@ const App: React.FC = () => {
                     </AuthGuard>
                   } />
                   <Route path="/database" element={<DatabasePage />} />
+                  <Route path="/brand/:brandName" element={<BrandProfilePage />} />
                   <Route path="/admin" element={
                     <AdminGuard>
                       <AdminPage />

@@ -39,7 +39,8 @@ import {
   BadgeCheck,
   Shield,
   Eraser,
-  AlertTriangle
+  AlertTriangle,
+  Mail
 } from "lucide-react";
 import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
 import { 
@@ -93,6 +94,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const saveProductDetails = (productId: string, details: Partial<ProductSubmission>) => {
   const submissions = getProductSubmissions();
@@ -101,6 +103,26 @@ const saveProductDetails = (productId: string, details: Partial<ProductSubmissio
   );
   localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
 };
+
+interface BrandMessage {
+  id: string;
+  brand_id: string;
+  sender_email: string;
+  company_name: string;
+  message: string;
+  status: string;
+  admin_response: string | null;
+  created_at: string;
+}
+
+interface BrandProfile {
+  id: string;
+  name: string;
+  description: string | null;
+  website: string | null;
+  contact_email: string | null;
+  verified: boolean;
+}
 
 const AdminPage = () => {
   const { toast } = useToast();
@@ -112,6 +134,12 @@ const AdminPage = () => {
   const [pendingVerifications, setPendingVerifications] = useState<ProductSubmission[]>([]);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [brandMessages, setBrandMessages] = useState<BrandMessage[]>([]);
+  const [brandProfiles, setBrandProfiles] = useState<BrandProfile[]>([]);
+  const [selectedMessage, setSelectedMessage] = useState<BrandMessage | null>(null);
+  const [messageResponse, setMessageResponse] = useState("");
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [brandSearchTerm, setBrandSearchTerm] = useState("");
   
   const [productDetails, setProductDetails] = useState({
     description: "",
@@ -135,6 +163,8 @@ const AdminPage = () => {
 
   useEffect(() => {
     loadProductSubmissions();
+    loadBrandMessages();
+    loadBrandProfiles();
   }, []);
 
   const loadProductSubmissions = () => {
@@ -145,6 +175,42 @@ const AdminPage = () => {
     setPendingVerifications(submissions.filter(p => 
       p.approved && p.brandOwnershipRequested && !p.brandVerified
     ));
+  };
+  
+  const loadBrandMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('brand_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading brand messages:', error);
+        return;
+      }
+      
+      setBrandMessages(data || []);
+    } catch (error) {
+      console.error('Error in loadBrandMessages:', error);
+    }
+  };
+  
+  const loadBrandProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('brand_profiles')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error loading brand profiles:', error);
+        return;
+      }
+      
+      setBrandProfiles(data || []);
+    } catch (error) {
+      console.error('Error in loadBrandProfiles:', error);
+    }
   };
 
   const getAllKeywords = () => {
@@ -371,7 +437,7 @@ const AdminPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 max-w-3xl mx-auto">
+        <TabsList className="grid w-full grid-cols-6 max-w-4xl mx-auto">
           <TabsTrigger value="pending">Pending Approval</TabsTrigger>
           <TabsTrigger value="approved">Approved Products</TabsTrigger>
           <TabsTrigger value="verifications" className="relative">
@@ -379,6 +445,14 @@ const AdminPage = () => {
             {pendingVerifications.length > 0 && (
               <Badge className="ml-1 bg-orange-500" variant="default">
                 {pendingVerifications.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="messages" className="relative">
+            Brand Messages
+            {brandMessages.filter(m => !m.admin_response).length > 0 && (
+              <Badge className="ml-1 bg-orange-500" variant="default">
+                {brandMessages.filter(m => !m.admin_response).length}
               </Badge>
             )}
           </TabsTrigger>
@@ -885,182 +959,4 @@ const AdminPage = () => {
                                   This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleResetDatabase}>
-                                  Reset Database
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                          
-                          <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Eraser className="h-4 w-4 mr-2" />
-                                Clean Duplicates
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Clean Duplicate Products</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will scan the database and remove any duplicate products,
-                                  keeping only the most recently added version of each product.
-                                  This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleCleanDuplicates}>
-                                  Clean Duplicates
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end border-t pt-6">
-              <Button>Save Settings</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          {selectedProduct && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Edit Product Details</DialogTitle>
-                <DialogDescription>
-                  Update details for {selectedProduct.name} from {selectedProduct.brand}. These details will be displayed on the PVA-free products page if the product is verified free.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="pva-status" className="text-right">PVA Status</Label>
-                  <div className="col-span-3">
-                    <Select 
-                      defaultValue={selectedProduct.pvaStatus}
-                      onValueChange={(value: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive') => {
-                        saveProductDetails(selectedProduct.id, { pvaStatus: value });
-                        loadProductSubmissions();
-                        setSelectedProduct({...selectedProduct, pvaStatus: value});
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="contains">Contains PVA</SelectItem>
-                        <SelectItem value="verified-free">Verified Free (0% PVA)</SelectItem>
-                        <SelectItem value="needs-verification">Needs Verification</SelectItem>
-                        <SelectItem value="inconclusive">Inconclusive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="pva-percentage" className="text-right">PVA %</Label>
-                  <div className="col-span-3">
-                    <Input
-                      id="pva-percentage"
-                      type="number"
-                      min="0"
-                      max="100"
-                      placeholder="PVA percentage (if known)"
-                      defaultValue={selectedProduct.pvaPercentage || ""}
-                      onChange={(e) => {
-                        const value = e.target.value === "" ? null : parseFloat(e.target.value);
-                        saveProductDetails(selectedProduct.id, { pvaPercentage: value });
-                        loadProductSubmissions();
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="description" className="text-right">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Product description"
-                    className="col-span-3"
-                    value={productDetails.description}
-                    onChange={(e) => setProductDetails({...productDetails, description: e.target.value})}
-                  />
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <div className="text-right">
-                    <Label htmlFor="image-url" className="flex items-center justify-end gap-2">
-                      <Image className="h-4 w-4" /> Image URL
-                    </Label>
-                  </div>
-                  <Input
-                    id="image-url"
-                    type="url"
-                    placeholder="https://example.com/product-image.jpg"
-                    className="col-span-3"
-                    value={productDetails.imageUrl}
-                    onChange={(e) => setProductDetails({...productDetails, imageUrl: e.target.value})}
-                  />
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <div className="text-right">
-                    <Label htmlFor="video-url" className="flex items-center justify-end gap-2">
-                      <Video className="h-4 w-4" /> Video URL
-                    </Label>
-                  </div>
-                  <Input
-                    id="video-url"
-                    type="url"
-                    placeholder="https://youtube.com/embed/video-id"
-                    className="col-span-3"
-                    value={productDetails.videoUrl}
-                    onChange={(e) => setProductDetails({...productDetails, videoUrl: e.target.value})}
-                  />
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <div className="text-right">
-                    <Label htmlFor="website-url" className="flex items-center justify-end gap-2">
-                      <LinkIcon className="h-4 w-4" /> Website
-                    </Label>
-                  </div>
-                  <Input
-                    id="website-url"
-                    type="url"
-                    placeholder="https://example.com/product"
-                    className="col-span-3"
-                    value={productDetails.websiteUrl}
-                    onChange={(e) => setProductDetails({...productDetails, websiteUrl: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" onClick={handleSaveDetails}>
-                  Save changes
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default AdminPage;
+                              <AlertDialog

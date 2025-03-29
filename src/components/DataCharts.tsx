@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +32,7 @@ interface PvaChartItem {
 
 const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const [brandLimit, setBrandLimit] = useState("15");
+  const navigate = useNavigate();
 
   // Create brand-based PVA data
   const createBrandPvaData = () => {
@@ -99,6 +101,10 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   
   const brandPvaData = createBrandPvaData();
 
+  const handleBrandClick = (brand: string) => {
+    navigate(`/brand/${brand}`);
+  };
+
   const renderPvaChart = () => {
     if (products.length === 0) {
       return (
@@ -128,7 +134,18 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
             dataKey="brand"
             type="category"
             width={180}
-            tick={{ fontSize: 11 }}
+            tick={{ 
+              fontSize: 11,
+              cursor: 'pointer',
+              fill: '#2563eb',
+              textDecoration: 'underline'
+            }}
+            tickFormatter={(value) => value}
+            onClick={(data) => {
+              if (data && data.value) {
+                handleBrandClick(data.value);
+              }
+            }}
           />
           <Tooltip 
             content={({ active, payload }) => {
@@ -145,6 +162,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                         <span>Avg. PVA: {parseFloat(String(data.PVA)).toFixed(1)}%</span>
                       )}
                     </p>
+                    <p className="text-xs text-blue-500 mt-1">Click to view brand profile</p>
                   </div>
                 );
               }
@@ -157,6 +175,8 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
             name="PVA Content (%)" 
             barSize={20}
             fill={knownValueColor}
+            cursor="pointer"
+            onClick={(data) => handleBrandClick(data.brand)}
           >
             {brandPvaData.map((entry, index) => (
               <Cell 
@@ -179,7 +199,8 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
           </Bar>
         </BarChart>
         <div className="text-xs text-gray-500 italic mt-2 text-center">
-          Gray bars = Unknown PVA content (shown at estimated 20% for reference), awaiting verification from suppliers
+          Gray bars = Unknown PVA content (shown at estimated 20% for reference), awaiting verification from suppliers.
+          <span className="ml-1 text-blue-500">Click on any brand name to see detailed profile.</span>
         </div>
       </div>
     );
@@ -190,7 +211,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
       <CardHeader>
         <CardTitle>PVA Content by Brand</CardTitle>
         <CardDescription>
-          Average PVA content in products grouped by brand
+          Average PVA content in products grouped by brand. Click on any brand name to view its profile.
         </CardDescription>
         <div className="flex items-center gap-6 mt-4 flex-wrap">
           <div className="flex items-center gap-2">

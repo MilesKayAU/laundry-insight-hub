@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { 
   Card, 
   CardContent, 
@@ -546,7 +547,14 @@ const DatabasePage = () => {
                             {product.name}
                             {renderBrandVerification(product)}
                           </TableCell>
-                          <TableCell>{product.brand}</TableCell>
+                          <TableCell>
+                            <Link 
+                              to={`/brand/${product.brand}`}
+                              className="text-blue-600 hover:underline hover:text-blue-800"
+                            >
+                              {product.brand}
+                            </Link>
+                          </TableCell>
                           <TableCell>{product.type}</TableCell>
                           <TableCell className="text-right">
                             {renderPvaValue(product)}

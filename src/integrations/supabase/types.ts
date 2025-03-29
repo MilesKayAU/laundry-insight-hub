@@ -9,6 +9,113 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      brand_messages: {
+        Row: {
+          admin_response: string | null
+          brand_id: string
+          company_name: string
+          created_at: string | null
+          id: string
+          message: string
+          sender_email: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_response?: string | null
+          brand_id: string
+          company_name: string
+          created_at?: string | null
+          id?: string
+          message: string
+          sender_email: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_response?: string | null
+          brand_id?: string
+          company_name?: string
+          created_at?: string | null
+          id?: string
+          message?: string
+          sender_email?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_messages_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brand_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_profiles: {
+        Row: {
+          contact_email: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          verified: boolean | null
+          website: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          verified?: boolean | null
+          website?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          verified?: boolean | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      product_images: {
+        Row: {
+          brand_name: string
+          created_at: string | null
+          id: string
+          image_url: string
+          product_id: string
+          status: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          brand_name: string
+          created_at?: string | null
+          id?: string
+          image_url: string
+          product_id: string
+          status?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          brand_name?: string
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          product_id?: string
+          status?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
