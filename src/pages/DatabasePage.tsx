@@ -48,7 +48,8 @@ import {
   ChevronDown,
   BarChart as BarChartIcon,
   Globe,
-  Map
+  Map,
+  RefreshCw
 } from "lucide-react";
 import {
   Select,
@@ -82,6 +83,7 @@ const DatabasePage = () => {
   const [chartView, setChartView] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState("Global");
   const [countrySelected, setCountrySelected] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Added refresh key to force re-renders
   const itemsPerPage = 10;
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -90,6 +92,7 @@ const DatabasePage = () => {
   const [contactEmail, setContactEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  // Get fresh submissions data when the component mounts or when refreshKey changes
   const allSubmissions = getProductSubmissions();
   
   const approvedProducts = updatedMockProducts.filter(product => product.approved);
@@ -169,6 +172,15 @@ const DatabasePage = () => {
   
   const handleViewProducts = () => {
     setCountrySelected(true);
+  };
+
+  // Add refresh function
+  const handleRefreshData = () => {
+    setRefreshKey(prev => prev + 1);
+    toast({
+      title: "Data refreshed",
+      description: "The product database has been refreshed with the latest data.",
+    });
   };
 
   const handleBrandOwnershipRequest = () => {
@@ -373,6 +385,15 @@ const DatabasePage = () => {
               <Button 
                 variant="outline" 
                 size="sm"
+                onClick={handleRefreshData}
+                className="mr-2"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Data
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
                 onClick={() => setCountrySelected(false)}
                 className="mr-2"
               >
@@ -490,7 +511,7 @@ const DatabasePage = () => {
             <div>
               <div className="h-96">
                 {filteredProducts.length > 0 ? (
-                  <DataCharts products={filteredProducts.filter(isProductSubmission)} />
+                  <DataCharts key={refreshKey} products={filteredProducts.filter(isProductSubmission)} />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     No products found matching your criteria

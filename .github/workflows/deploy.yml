@@ -1,3 +1,4 @@
+
 name: Deploy to Server on Commit
 
 on:
@@ -21,10 +22,16 @@ jobs:
 
           echo "🔄 Pulling latest code..."
           git pull origin main
+          
+          echo "📦 Installing dependencies..."
           npm i
 
+          echo "🗑️ Clearing PM2 cache..."
+          pm2 flush laundryhub
+
           echo "♻️ Restarting app via PM2..."
-          pm2 restart laundryhub
+          pm2 restart laundryhub --update-env
 
           echo "✅ Deploy complete."
         EOF
+
