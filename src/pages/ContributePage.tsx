@@ -203,7 +203,7 @@ const ContributePage = () => {
       hasSDSFile: !!sdsFile,
       additionalNotes,
       userId: user?.id || null,
-      userName: user?.name || null,
+      userName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || null,
       mediaFiles: mediaFiles.map(f => f.name),
       approved: false,
       id: `submission_${Date.now()}`,
