@@ -28,9 +28,12 @@ const PvaFreePage = () => {
   const [pvaFreeProducts, setPvaFreeProducts] = useState([]);
   
   useEffect(() => {
-    // Get all approved products with 0% PVA (pvaStatus is 'verified-free')
+    // Get all approved products with 0% PVA or pvaStatus is 'verified-free'
     const products = getProductSubmissions().filter(
-      product => product.approved && product.pvaStatus === 'verified-free'
+      product => product.approved && (
+        product.pvaStatus === 'verified-free' || 
+        (product.pvaPercentage !== null && product.pvaPercentage === 0)
+      )
     );
     
     setPvaFreeProducts(products);

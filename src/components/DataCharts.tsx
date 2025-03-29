@@ -95,12 +95,13 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   // Create PVA data visualization
   const pvaData: PvaChartItem[] = products.map(p => ({
     name: p.name,
-    PVA: p.pvaPercentage,
+    PVA: p.pvaStatus === 'verified-free' ? 0 : p.pvaPercentage,
     brand: p.brand,
     pvaMissing: p.pvaPercentage === null ? "Unknown - Awaiting verification" : "",
     productId: p.id,
     displayValue: p.pvaPercentage === null ? 20 : p.pvaPercentage, // Default to 20% for visual representation
-    status: p.pvaPercentage === null ? "unknown" : 
+    status: p.pvaStatus === 'verified-free' ? "free" : 
+            p.pvaPercentage === null ? "unknown" : 
             p.pvaPercentage > 0 ? "contains" : "free"
   }));
 
@@ -115,9 +116,29 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   // Limit data to prevent overcrowding (show top 15)
   const limitedPvaData = sortedPvaData.slice(0, 15);
 
-  const formatPieChartLabel = ({ brand, count, pva }) => {
-    const percentage = pva !== null ? `${pva}% PVA` : "Unknown PVA";
-    return `${brand}: ${count} (${percentage})`;
+  // Format label for pie chart segments
+  const formatPieChartLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, index, payload }) => {
+    const RADIAN = Math.PI / 180;
+    const radius = 25 + innerRadius + (outerRadius - innerRadius);
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    const item = brandPvaData[index];
+    let pvaText = item.pva === null ? "(Unknown PVA)" : `(${item.pva.toFixed(1)}% PVA)`;
+    if (item.pva === 0) pvaText = "(0% PVA)";
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="#000" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+        fontSize={12}
+      >
+        {`${item.brand}: ${item.count} ${pvaText}`}
+      </text>
+    );
   };
 
   const renderPvaChart = () => {
@@ -248,9 +269,9 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
       </CardHeader>
       <CardContent>
         {chartType === "pie" ? (
-          <div className="h-[500px] w-full">
+          <div className="h-[600px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 0, right: 0, bottom: 40, left: 0 }}>
+              <PieChart margin={{ top: 20, right: 20, bottom: 120, left: 20 }}>
                 <Pie
                   data={brandPvaData}
                   dataKey="count"
@@ -259,8 +280,8 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                   cy="45%"
                   outerRadius={180}
                   fill="#8884d8"
-                  label={formatPieChartLabel}
                   labelLine={true}
+                  label={formatPieChartLabel}
                 >
                   {brandPvaData.map((entry, index) => (
                     <Cell 
@@ -280,6 +301,8 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                           <p>
                             {data.pva === null ? (
                               <span className="text-muted-foreground">PVA: Unknown</span>
+                            ) : data.pva === 0 ? (
+                              <span>PVA: 0% (PVA-Free)</span>
                             ) : (
                               <span>Avg. PVA: {data.pva.toFixed(1)}%</span>
                             )}
@@ -290,7 +313,12 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                     return null;
                   }}
                 />
-                <Legend wrapperStyle={{ paddingTop: "40px" }} />
+                <Legend 
+                  layout="horizontal" 
+                  verticalAlign="bottom" 
+                  align="center"
+                  wrapperStyle={{ paddingTop: "40px", bottom: 0 }}
+                />
               </PieChart>
             </ResponsiveContainer>
             <div className="text-xs text-gray-500 italic mt-2 text-center">
