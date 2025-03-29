@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -88,7 +87,6 @@ const DatabasePage = () => {
   const [contactEmail, setContactEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Reset country selection state when component mounts to ensure the country selector always shows first
   useEffect(() => {
     setCountrySelected(false);
     handleRefreshData();
@@ -120,7 +118,8 @@ const DatabasePage = () => {
   
   const availableCountries = Array.from(new Set([
     ...approvedProducts.map(p => p.country || "Global"),
-    ...approvedSubmissions.map(p => p.country || "Global")
+    ...approvedSubmissions.map(p => p.country || "Global"),
+    "Australia"
   ])).filter(country => country !== "Global").sort();
   
   const isProductSubmission = (product: any): product is ProductSubmission => {
@@ -331,7 +330,6 @@ const DatabasePage = () => {
     );
   };
 
-  // Show loading state while fetching data
   if (loading) {
     return (
       <div className="container mx-auto py-10 px-4 flex justify-center items-center">
@@ -342,7 +340,6 @@ const DatabasePage = () => {
     );
   }
 
-  // Always show the country selector first before showing the product data
   if (!countrySelected) {
     return (
       <div className="container mx-auto py-10 px-4">
@@ -364,7 +361,7 @@ const DatabasePage = () => {
   }
 
   return (
-    <div className="container mx-auto py-10 px-4">
+    <div className="container mx-auto py-10 px-4 pb-20">
       <div className="text-center mb-10">
         <h1 className="text-3xl font-bold">Product Database</h1>
         <p className="text-muted-foreground mt-2">

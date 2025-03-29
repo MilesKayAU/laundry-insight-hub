@@ -159,7 +159,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   };
 
   return (
-    <Card>
+    <Card className="mb-16"> {/* Add margin-bottom to prevent footer overlap */}
       <CardHeader>
         <CardTitle>Product Distribution</CardTitle>
         <CardDescription>
