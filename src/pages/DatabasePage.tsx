@@ -409,7 +409,7 @@ const DatabasePage = () => {
                 Change Region
               </Button>
               <Button 
-                variant={chartView ? "default" : "outline"} 
+                variant="default" 
                 size="sm"
                 onClick={() => setChartView(true)}
               >
