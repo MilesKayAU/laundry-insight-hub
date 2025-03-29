@@ -1,3 +1,4 @@
+
 export type ProductType = 'Laundry Sheet' | 'Laundry Pod';
 
 export interface Product {
