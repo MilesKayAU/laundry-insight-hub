@@ -1,4 +1,3 @@
-
 export type ProductType = 'Laundry Sheet' | 'Laundry Pod';
 
 export interface Product {
@@ -11,6 +10,7 @@ export interface Product {
   approved: boolean;
   submittedAt: string;
   imageUrl?: string;
+  country?: string;
 }
 
 export interface AdminSettings {
@@ -27,7 +27,8 @@ export const mockProducts: Product[] = [
     keywords: ['PVA', 'polyvinyl alcohol'],
     approved: true,
     submittedAt: '2023-10-15T10:30:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bGF1bmRyeSUyMGRldGVyZ2VudHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60'
+    imageUrl: 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bGF1bmRyeSUyMGRldGVyZ2VudHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60',
+    country: 'Global'
   },
   {
     id: '2',
@@ -38,7 +39,8 @@ export const mockProducts: Product[] = [
     keywords: ['PVA', 'polyvinyl alcohol'],
     approved: true,
     submittedAt: '2023-11-05T14:20:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1626806787461-102c1a7f1c62?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bGF1bmRyeSUyMHBvZHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60'
+    imageUrl: 'https://images.unsplash.com/photo-1626806787461-102c1a7f1c62?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bGF1bmRyeSUyMHBvZHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60',
+    country: 'Global'
   },
   {
     id: '3',
@@ -49,7 +51,8 @@ export const mockProducts: Product[] = [
     keywords: ['PVA', 'polyvinyl alcohol', 'PVOH'],
     approved: true,
     submittedAt: '2023-09-22T09:15:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1635107875259-bbd364c08360?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bGF1bmRyeSUyMHBvZHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60'
+    imageUrl: 'https://images.unsplash.com/photo-1635107875259-bbd364c08360?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bGF1bmRyeSUyMHBvZHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60',
+    country: 'Global'
   },
   {
     id: '4',
@@ -60,7 +63,8 @@ export const mockProducts: Product[] = [
     keywords: ['PVA', 'polyvinyl alcohol', 'PVOH'],
     approved: true,
     submittedAt: '2023-12-10T16:45:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1581539250439-c96689b516dd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Y2xlYW5pbmd8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60'
+    imageUrl: 'https://images.unsplash.com/photo-1581539250439-c96689b516dd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Y2xlYW5pbmd8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60',
+    country: 'Global'
   },
   {
     id: '5',
@@ -71,7 +75,8 @@ export const mockProducts: Product[] = [
     keywords: ['PVA', 'polyvinyl alcohol'],
     approved: false,
     submittedAt: '2024-01-05T11:30:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8bGF1bmRyeXxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60'
+    imageUrl: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8bGF1bmRyeXxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60',
+    country: 'Global'
   }
 ];
 
