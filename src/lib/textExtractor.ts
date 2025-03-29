@@ -1,3 +1,4 @@
+
 import { createHash } from "crypto";
 import Tesseract from 'tesseract.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -188,4 +189,43 @@ export const analyzePvaContent = (ingredients: string): {
     detectedTerms,
     isExplicitlyFree
   };
+};
+
+// New utility to analyze pasted ingredients text
+export const analyzePastedIngredients = (ingredients: string): {
+  pvaStatus: 'contains' | 'verified-free' | 'needs-verification';
+  detectedTerms: string[];
+  confidence: 'high' | 'medium' | 'low';
+} => {
+  if (!ingredients || ingredients.trim() === '') {
+    return {
+      pvaStatus: 'needs-verification',
+      detectedTerms: [],
+      confidence: 'low'
+    };
+  }
+
+  const analysis = analyzePvaContent(ingredients);
+  
+  // Determine status and confidence level
+  if (analysis.containsPva) {
+    return {
+      pvaStatus: 'contains',
+      detectedTerms: analysis.detectedTerms,
+      confidence: analysis.detectedTerms.length > 1 ? 'high' : 'medium'
+    };
+  } else if (analysis.isExplicitlyFree) {
+    return {
+      pvaStatus: 'verified-free',
+      detectedTerms: [],
+      confidence: 'high'
+    };
+  } else {
+    // No explicit mention found either way
+    return {
+      pvaStatus: 'needs-verification',
+      detectedTerms: [],
+      confidence: 'low'
+    };
+  }
 };
