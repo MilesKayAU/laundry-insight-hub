@@ -23,7 +23,8 @@ const HomePage = () => {
             </span>
           </h1>
           <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-gray-700">
-            Using advanced methods to analyze and validate laundry product ingredients, helping you make science-based choices.
+            Exposing the Plastic-Free Myth — Uncovering the Truth About PVA in Laundry Products.
+            We analyze ingredients, decode greenwashing, and empower you to choose truly plastic-free solutions.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-science-600 hover:bg-science-700 shadow-lg">
