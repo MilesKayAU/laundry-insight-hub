@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   Card, 
@@ -58,7 +57,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     
     setParseError(null);
 
-    // Only accept CSV files
     if (!file.name.toLowerCase().endsWith('.csv')) {
       toast({
         title: "Invalid file type",
@@ -76,7 +74,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       const content = event.target?.result as string;
       setCsvData(content);
       
-      // Show preview toast
       toast({
         title: "File loaded",
         description: `Successfully loaded ${file.name}. Review the content and click "Process CSV Data" to import.`,
@@ -107,7 +104,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         return;
       }
       
-      // Check if the CSV has valid format with headers
       if (!csvData.includes(',') && !csvData.includes(';')) {
         setParseError("Invalid CSV format. The file must use commas or semicolons as separators.");
         throw new Error("Invalid CSV format");
@@ -138,7 +134,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       }
       
       if (result.success.length > 0) {
-        // If at least one product was added successfully, trigger refresh
         onComplete();
       }
     } catch (error) {

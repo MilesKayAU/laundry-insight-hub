@@ -102,10 +102,10 @@ export const processBulkUpload = (data: BulkProductData[]): {
         videoUrl: item.videoUrl || "",
         websiteUrl: item.websiteUrl || "",
         submittedAt: new Date().toISOString(),
-        approved: false, // This is already set to false which is correct
+        approved: false, // Make sure products from bulk upload are not auto-approved
         dateSubmitted: new Date().toISOString(),
-        brandVerified: false, // Add brand verification status field
-        brandContactEmail: "" // Store contact email for brand verification
+        brandVerified: false,
+        brandContactEmail: ""
       };
 
       // Add to database
