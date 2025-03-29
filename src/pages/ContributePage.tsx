@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -342,7 +341,13 @@ const ContributePage: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="bulk">
-          <BulkUpload />
+          <BulkUpload onComplete={() => {
+            // Handle completion, perhaps reload data or show a success message
+            toast({
+              title: "Bulk upload complete",
+              description: "Your products have been submitted for review."
+            });
+          }} />
         </TabsContent>
       </Tabs>
       

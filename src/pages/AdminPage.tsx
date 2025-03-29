@@ -433,7 +433,11 @@ const AdminPage = () => {
                             {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
                           </TableCell>
                           <TableCell>
-                            {new Date(product.submittedAt || product.dateSubmitted).toLocaleDateString()}
+                            {product.submittedAt ? 
+                              new Date(product.submittedAt).toLocaleDateString() : 
+                              product.dateSubmitted ? 
+                                new Date(product.dateSubmitted).toLocaleDateString() : 
+                                'Unknown date'}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
@@ -641,10 +645,11 @@ const AdminPage = () => {
                         <TableRow key={product.id}>
                           <TableCell className="font-medium">{product.name}</TableCell>
                           <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.brandContactEmail}</TableCell>
+                          <TableCell>{product.brandContactEmail || "N/A"}</TableCell>
                           <TableCell>
-                            {product.brandOwnershipRequestDate && 
-                              new Date(product.brandOwnershipRequestDate).toLocaleDateString()}
+                            {product.brandOwnershipRequestDate ? 
+                              new Date(product.brandOwnershipRequestDate).toLocaleDateString() : 
+                              'Unknown date'}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">

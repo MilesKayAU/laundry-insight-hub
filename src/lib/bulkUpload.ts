@@ -6,7 +6,7 @@ export interface BulkProductData {
   name: string;
   type: string;
   ingredients?: string; // Primary field for PVA detection
-  pvaStatus?: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive'; // Now optional as it will be derived
+  pvaStatus?: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive'; // Now matches ProductSubmission
   pvaPercentage?: number;
   description?: string;
   imageUrl?: string;
@@ -136,8 +136,8 @@ export const processBulkUpload = (data: BulkProductData[]): {
         videoUrl: item.videoUrl || "",
         websiteUrl: item.productUrl || item.websiteUrl || "", // Use productUrl as websiteUrl if available
         submittedAt: new Date().toISOString(),
-        approved: false,
         dateSubmitted: new Date().toISOString(),
+        approved: false,
         brandVerified: false,
         brandContactEmail: "",
         ingredients: item.ingredients || "" // Store ingredients for later reference

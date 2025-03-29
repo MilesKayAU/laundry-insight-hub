@@ -1,3 +1,4 @@
+
 import { createHash } from "crypto";
 import Tesseract from 'tesseract.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -46,14 +47,35 @@ export interface ProductSubmission {
   type: string;
   ingredients?: string;
   approved: boolean;
-  pvaStatus: 'contains' | 'verified-free' | 'needs-verification';
+  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
   pvaPercentage: number | null;
   country?: string;
   websiteUrl?: string;
   comments?: string;
   brandVerified: boolean;
-  brandOwnershipRequested: boolean;
-  timestamp: number;
+  brandOwnershipRequested?: boolean;
+  timestamp?: number;
+  // Additional fields used throughout the codebase
+  description?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  submittedAt?: string;
+  dateSubmitted?: string;
+  brandContactEmail?: string;
+  brandOwnershipRequestDate?: string;
+  brandVerificationDate?: string;
+}
+
+// Now let's define the ProductSubmitData interface that's referenced elsewhere
+export interface ProductSubmitData {
+  name: string;
+  brand: string;
+  type: string;
+  ingredients?: string;
+  country?: string;
+  websiteUrl?: string;
+  comments?: string;
+  media?: File[];
 }
 
 // Extract text from image using Tesseract OCR
@@ -206,6 +228,7 @@ export const createProductSubmission = (submission: Partial<ProductSubmission>):
     ingredients: submission.ingredients || '',
     submittedAt: submission.submittedAt || new Date().toISOString(),
     approved: submission.approved || false,
+    brandVerified: submission.brandVerified || false,
     ...submission
   };
 };
@@ -263,7 +286,7 @@ export const analyzePvaContent = (ingredients: string): {
 
 // New utility to analyze pasted ingredients text
 export const analyzePastedIngredients = (ingredients: string): {
-  pvaStatus: 'contains' | 'verified-free' | 'needs-verification';
+  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
   detectedTerms: string[];
   confidence: 'high' | 'medium' | 'low';
 } => {
