@@ -1,4 +1,4 @@
-import { ProductSubmission, getProductSubmissions, updateProductSubmission } from "./textExtractor";
+import { ProductSubmission, getProductSubmissions } from "./textExtractor";
 
 // Define the expected format for the CSV/Excel data
 export interface BulkProductData {
@@ -65,9 +65,9 @@ export const processBulkUpload = (data: BulkProductData[]): {
         imageUrl: item.imageUrl || "",
         videoUrl: item.videoUrl || "",
         websiteUrl: item.websiteUrl || "",
-        ingredients: "",
         submittedAt: new Date().toISOString(),
-        approved: true // Auto-approve admin uploads
+        approved: true, // Auto-approve admin uploads
+        dateSubmitted: new Date().toISOString()
       };
 
       // Add to database

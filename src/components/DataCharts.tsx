@@ -105,9 +105,17 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
                     dataKey="brand"
-                    tick={{ angle: -45, textAnchor: 'end' }}
                     height={100}
-                  />
+                    tickFormatter={(value) => value}
+                  >
+                    <text 
+                      x={0} 
+                      y={0} 
+                      dy={16} 
+                      textAnchor="end" 
+                      transform="rotate(-45)"
+                    />
+                  </XAxis>
                   <YAxis />
                   <Tooltip />
                   <Legend />
