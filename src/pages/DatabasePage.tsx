@@ -369,7 +369,7 @@ const DatabasePage = () => {
   }
 
   return (
-    <div className="container mx-auto py-10 px-4 pb-20">
+    <div className="container mx-auto py-10 px-4 pb-32">
       <div className="text-center mb-10">
         <h1 className="text-3xl font-bold">Product Database</h1>
         <p className="text-muted-foreground mt-2">
@@ -377,7 +377,7 @@ const DatabasePage = () => {
         </p>
       </div>
       
-      <Card>
+      <Card className="mb-10">
         <CardHeader>
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
@@ -516,19 +516,17 @@ const DatabasePage = () => {
           </div>
           
           {chartView ? (
-            <div>
-              <div className="h-96">
-                {filteredProducts.length > 0 ? (
-                  <DataCharts key={refreshKey} products={filteredProducts.filter(isProductSubmission)} />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    No products found matching your criteria
-                  </div>
-                )}
-              </div>
+            <div className="mb-20">
+              {filteredProducts.length > 0 ? (
+                <DataCharts key={refreshKey} products={filteredProducts.filter(isProductSubmission)} />
+              ) : (
+                <div className="flex items-center justify-center h-96 text-muted-foreground">
+                  No products found matching your criteria
+                </div>
+              )}
             </div>
           ) : (
-            <div>
+            <div className="mb-20">
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>

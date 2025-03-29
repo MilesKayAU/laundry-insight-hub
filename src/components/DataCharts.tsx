@@ -84,17 +84,19 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
     }
 
     return (
-      <div className="h-[400px] w-full">
+      <div className="h-[450px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={limitedPvaData}
-            margin={{ top: 20, right: 150, left: 30, bottom: 10 }}
+            margin={{ top: 20, right: 150, left: 30, bottom: 20 }}
             layout="vertical"
           >
             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
             <XAxis 
               type="number"
-              label={{ value: 'PVA Content (%)', position: 'insideBottom', offset: -10 }}
+              label={{ value: 'PVA Content (%)', position: 'insideBottom', offset: -5 }}
+              domain={[0, 'dataMax']}
+              tickCount={6}
             />
             <YAxis 
               dataKey="name"
@@ -123,7 +125,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                 return null;
               }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ paddingTop: "10px" }} />
             <Bar 
               dataKey="displayValue" 
               name="PVA Content (%)" 
@@ -159,7 +161,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   };
 
   return (
-    <Card className="mb-24"> {/* Increased bottom margin to prevent footer overlap */}
+    <Card className="mb-32"> {/* Increased bottom margin to prevent footer overlap */}
       <CardHeader>
         <CardTitle>Product Distribution</CardTitle>
         <CardDescription>
@@ -200,15 +202,15 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
       </CardHeader>
       <CardContent>
         {chartType === "pie" ? (
-          <div className="h-[400px] w-full">
+          <div className="h-[450px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}>
                 <Pie
                   data={brandData}
                   dataKey="count"
                   nameKey="brand"
                   cx="50%"
-                  cy="50%"
+                  cy="45%"
                   outerRadius={150}
                   fill="#8884d8"
                   label={({brand, count, percent}) => 
@@ -220,7 +222,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ paddingTop: "10px" }} />
               </PieChart>
             </ResponsiveContainer>
           </div>

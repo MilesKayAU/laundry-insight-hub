@@ -60,7 +60,7 @@ const PvaFreePage = () => {
   }
 
   return (
-    <div className="container mx-auto py-10 px-4">
+    <div className="container mx-auto py-10 px-4 pb-32"> {/* Added pb-32 for more bottom padding */}
       <div className="text-center mb-10">
         <div className="inline-block bg-green-50 rounded-full px-4 py-2 mb-4">
           <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
@@ -87,7 +87,7 @@ const PvaFreePage = () => {
 
       {/* Products Grid */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20"> {/* Added mb-20 for more spacing */}
           {filteredProducts.map((product) => (
             <Card key={product.id} className="overflow-hidden flex flex-col h-full">
               {product.imageUrl && (
@@ -155,7 +155,7 @@ const PvaFreePage = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 bg-muted/50 rounded-lg">
+        <div className="text-center py-12 bg-muted/50 rounded-lg mb-20"> {/* Added mb-20 for more spacing */}
           <h3 className="text-lg font-medium mb-2">No PVA-free products found</h3>
           <p className="text-muted-foreground mb-4">
             We couldn't find any products matching your search criteria.
