@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ type AuthDialogProps = {
 const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
   const { login, register, isLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   
   // Login state
@@ -40,18 +42,10 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
     e.preventDefault();
     try {
       await login(loginEmail, loginPassword);
-      toast({
-        title: "Welcome back!",
-        description: "You've successfully logged in.",
-      });
       setOpen(false);
       if (onSuccess) onSuccess();
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
+      // Error handled in the AuthContext
     }
   };
   
@@ -59,18 +53,10 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
     e.preventDefault();
     try {
       await register(registerName, registerEmail, registerPassword);
-      toast({
-        title: "Account created!",
-        description: "Your account has been successfully created.",
-      });
       setOpen(false);
       if (onSuccess) onSuccess();
     } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: "There was an error creating your account.",
-        variant: "destructive",
-      });
+      // Error handled in the AuthContext
     }
   };
   

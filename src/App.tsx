@@ -13,6 +13,8 @@ import DatabasePage from "./pages/DatabasePage";
 import AdminPage from "./pages/AdminPage";
 import AboutPva from "./pages/AboutPva";
 import PvaFreePage from "./pages/PvaFreePage";
+import AuthPage from "./pages/AuthPage";
+import AuthGuard from "./components/AuthGuard";
 import NotFound from "./pages/NotFound";
 
 // Create a client
@@ -30,9 +32,18 @@ const App: React.FC = () => {
               <Routes>
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/contribute" element={<ContributePage />} />
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/contribute" element={
+                    <AuthGuard>
+                      <ContributePage />
+                    </AuthGuard>
+                  } />
                   <Route path="/database" element={<DatabasePage />} />
-                  <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/admin" element={
+                    <AuthGuard>
+                      <AdminPage />
+                    </AuthGuard>
+                  } />
                   <Route path="/about" element={<AboutPva />} />
                   <Route path="/pva-free" element={<PvaFreePage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

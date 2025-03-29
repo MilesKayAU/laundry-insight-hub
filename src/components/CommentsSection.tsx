@@ -1,10 +1,12 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthDialog from "./AuthDialog";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface Comment {
   id: string;
@@ -22,20 +24,35 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ productId = "demo" })
   const { user, isAuthenticated } = useAuth();
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmitComment = () => {
     if (!commentText.trim() || !user) return;
+    
+    setIsSubmitting(true);
 
+    // In a real app, this would save to Supabase
     const newComment: Comment = {
       id: `comment_${Date.now()}`,
       userId: user.id,
-      userName: user.name,
+      userName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Anonymous',
       content: commentText.trim(),
       createdAt: new Date(),
     };
 
-    setComments([newComment, ...comments]);
-    setCommentText("");
+    // Simulate network delay
+    setTimeout(() => {
+      setComments([newComment, ...comments]);
+      setCommentText("");
+      setIsSubmitting(false);
+      
+      toast({
+        title: "Comment posted",
+        description: "Your comment has been posted successfully.",
+      });
+    }, 500);
   };
 
   const formatDate = (date: Date): string => {
@@ -46,6 +63,10 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ productId = "demo" })
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
+  };
+
+  const handleLoginClick = () => {
+    navigate('/auth');
   };
 
   return (
@@ -63,10 +84,17 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ productId = "demo" })
           <div className="flex justify-end">
             <Button
               onClick={handleSubmitComment}
-              disabled={!commentText.trim()}
+              disabled={!commentText.trim() || isSubmitting}
               className="bg-science-600 hover:bg-science-700"
             >
-              Post Comment
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Posting...
+                </>
+              ) : (
+                "Post Comment"
+              )}
             </Button>
           </div>
         </div>
@@ -76,11 +104,13 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ productId = "demo" })
           <p className="text-gray-600 mb-2">
             Please login or create an account to leave comments
           </p>
-          <AuthDialog>
-            <Button variant="outline" className="border-science-300 text-science-700">
-              Login or Register
-            </Button>
-          </AuthDialog>
+          <Button 
+            variant="outline" 
+            className="border-science-300 text-science-700"
+            onClick={handleLoginClick}
+          >
+            Login or Register
+          </Button>
         </div>
       )}
       
