@@ -37,7 +37,9 @@ import {
   Upload,
   BarChart,
   BadgeCheck,
-  Shield
+  Shield,
+  Broom,
+  AlertTriangle
 } from "lucide-react";
 import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
 import { 
@@ -73,7 +75,24 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import BulkUpload from "@/components/BulkUpload";
 import DataCharts from "@/components/DataCharts";
-import { isDuplicateProduct, approveBrandOwnership, rejectBrandOwnership } from "@/lib/bulkUpload";
+import { 
+  isDuplicateProduct, 
+  approveBrandOwnership, 
+  rejectBrandOwnership,
+  cleanDuplicateProducts,
+  resetProductDatabase
+} from "@/lib/bulkUpload";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const saveProductDetails = (productId: string, details: Partial<ProductSubmission>) => {
   const submissions = getProductSubmissions();
@@ -91,6 +110,8 @@ const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("pending");
   const [bulkUploadMode, setBulkUploadMode] = useState(false);
   const [pendingVerifications, setPendingVerifications] = useState<ProductSubmission[]>([]);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   
   const [productDetails, setProductDetails] = useState({
     description: "",
@@ -309,6 +330,37 @@ const AdminPage = () => {
     });
   };
 
+  const handleCleanDuplicates = () => {
+    const count = cleanDuplicateProducts();
+    loadProductSubmissions();
+    
+    if (count > 0) {
+      toast({
+        title: "Duplicates removed",
+        description: `Successfully removed ${count} duplicate products from the database.`,
+      });
+    } else {
+      toast({
+        title: "No duplicates found",
+        description: "Your product database is already clean with no duplicates.",
+      });
+    }
+    
+    setShowCleanupDialog(false);
+  };
+  
+  const handleResetDatabase = () => {
+    resetProductDatabase();
+    loadProductSubmissions();
+    
+    toast({
+      title: "Database reset",
+      description: "All products have been removed from the database.",
+    });
+    
+    setShowResetDialog(false);
+  };
+
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="text-center mb-10">
@@ -458,6 +510,32 @@ const AdminPage = () => {
                     <Upload className="h-4 w-4" />
                     Bulk Upload
                   </Button>
+                  <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        title="Remove duplicate products"
+                      >
+                        <Broom className="h-4 w-4" />
+                        Clean Duplicates
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Clean Duplicate Products</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will scan the database and remove any duplicate products, keeping only the most recently added version of each product. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCleanDuplicates}>
+                          Clean Duplicates
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </CardHeader>
@@ -772,6 +850,71 @@ const AdminPage = () => {
                   <div className="flex items-center space-x-2">
                     <Checkbox id="notify-approved" defaultChecked />
                     <Label htmlFor="notify-approved">Email notifications when products are approved</Label>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-4">Database Maintenance</h3>
+                <div className="space-y-4">
+                  <div className="p-4 border rounded-md bg-yellow-50">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="text-yellow-600 h-5 w-5 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-yellow-800">Emergency Database Actions</h4>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          These actions will permanently modify your database. Use with caution.
+                        </p>
+                        <div className="flex gap-3 mt-4">
+                          <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                Reset Database
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Reset Entire Database</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete ALL products in the database.
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleResetDatabase}>
+                                  Reset Database
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          
+                          <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                Clean Duplicates
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Clean Duplicate Products</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will scan the database and remove any duplicate products,
+                                  keeping only the most recently added version of each product.
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleCleanDuplicates}>
+                                  Clean Duplicates
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

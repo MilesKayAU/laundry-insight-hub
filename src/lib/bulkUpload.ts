@@ -17,10 +17,13 @@ export interface BulkProductData {
   hasPva?: 'yes' | 'no' | 'unidentified';
 }
 
-// Check if product with same brand and name already exists
+// Check if product with same brand and name already exists in APPROVED products
 export const isDuplicateProduct = (brand: string, name: string): boolean => {
   const existingProducts = getProductSubmissions();
-  return existingProducts.some(
+  // Only check against approved products
+  const approvedProducts = existingProducts.filter(product => product.approved);
+  
+  return approvedProducts.some(
     product => 
       product.brand.toLowerCase() === brand.toLowerCase() && 
       product.name.toLowerCase() === name.toLowerCase()
@@ -551,4 +554,49 @@ export const rejectBrandOwnership = (productId: string): boolean => {
     console.error("Error rejecting brand ownership:", error);
     return false;
   }
+};
+
+// Function to clean duplicates from localStorage
+export const cleanDuplicateProducts = (): number => {
+  const submissions = getProductSubmissions();
+  const seen = new Map<string, string>();
+  let duplicatesRemoved = 0;
+  
+  // Filter out duplicates keeping only the most recent one
+  const uniqueSubmissions = submissions.filter(submission => {
+    const key = `${submission.brand.toLowerCase()}_${submission.name.toLowerCase()}`;
+    
+    // If we haven't seen this product before, mark it as seen
+    if (!seen.has(key)) {
+      seen.set(key, submission.id);
+      return true;
+    }
+    
+    // If this is a more recent version of a product we've seen,
+    // update the seen map and keep this one
+    const existingId = seen.get(key)!;
+    const existingSubmission = submissions.find(s => s.id === existingId);
+    
+    if (existingSubmission && 
+        new Date(submission.submittedAt) > new Date(existingSubmission.submittedAt)) {
+      seen.set(key, submission.id);
+      duplicatesRemoved++;
+      return true;
+    }
+    
+    // Otherwise, this is a duplicate to be removed
+    duplicatesRemoved++;
+    return false;
+  });
+  
+  if (duplicatesRemoved > 0) {
+    localStorage.setItem('product_submissions', JSON.stringify(uniqueSubmissions));
+  }
+  
+  return duplicatesRemoved;
+};
+
+// Function to completely reset product database (for admin use only)
+export const resetProductDatabase = (): void => {
+  localStorage.removeItem('product_submissions');
 };
