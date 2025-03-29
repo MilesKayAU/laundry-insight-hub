@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -427,6 +428,54 @@ const AdminPage = () => {
     setShowResetDialog(false);
   };
 
+  const handleMessageResponse = async () => {
+    if (!selectedMessage) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('brand_messages')
+        .update({
+          admin_response: messageResponse,
+          status: 'approved'
+        })
+        .eq('id', selectedMessage.id);
+      
+      if (error) {
+        console.error('Error updating message:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send response. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Refresh messages
+      loadBrandMessages();
+      
+      toast({
+        title: "Response sent",
+        description: "Your response has been recorded and will be sent to the brand contact.",
+      });
+      
+      setMessageDialogOpen(false);
+      setMessageResponse("");
+      setSelectedMessage(null);
+    } catch (error) {
+      console.error('Error in handleMessageResponse:', error);
+    }
+  };
+
+  const openMessageResponse = (message: BrandMessage) => {
+    setSelectedMessage(message);
+    setMessageResponse(message.admin_response || "");
+    setMessageDialogOpen(true);
+  };
+
+  const filteredBrandProfiles = brandProfiles.filter(profile =>
+    profile.name.toLowerCase().includes(brandSearchTerm.toLowerCase())
+  );
+
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="text-center mb-10">
@@ -761,6 +810,135 @@ const AdminPage = () => {
           </Card>
         </TabsContent>
         
+        <TabsContent value="messages" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Brand Messages</CardTitle>
+              <CardDescription>
+                Review and respond to messages from brand representatives
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {brandMessages.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Brand</TableHead>
+                        <TableHead>Company Name</TableHead>
+                        <TableHead>Contact Email</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {brandMessages.map((message) => (
+                        <TableRow key={message.id}>
+                          <TableCell className="font-medium">
+                            {brandProfiles.find(b => b.id === message.brand_id)?.name || "Unknown Brand"}
+                          </TableCell>
+                          <TableCell>{message.company_name}</TableCell>
+                          <TableCell>{message.sender_email}</TableCell>
+                          <TableCell>
+                            {new Date(message.created_at).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {message.admin_response ? (
+                              <Badge variant="outline" className="bg-green-100 text-green-800">Responded</Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Pending</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openMessageResponse(message)}
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              title="View & Respond"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-10 text-muted-foreground">
+                  No brand messages received
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Brand Message</DialogTitle>
+                <DialogDescription>
+                  Review and respond to the brand representative
+                </DialogDescription>
+              </DialogHeader>
+              {selectedMessage && (
+                <div className="space-y-4 py-4">
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <div className="grid grid-cols-2 gap-4 mb-2">
+                      <div>
+                        <p className="text-sm font-semibold">Brand</p>
+                        <p className="text-sm">
+                          {brandProfiles.find(b => b.id === selectedMessage.brand_id)?.name || "Unknown Brand"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Company</p>
+                        <p className="text-sm">{selectedMessage.company_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Email</p>
+                        <p className="text-sm">{selectedMessage.sender_email}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Date</p>
+                        <p className="text-sm">{new Date(selectedMessage.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Message</p>
+                      <p className="text-sm mt-1 whitespace-pre-wrap">{selectedMessage.message}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="response">Your Response</Label>
+                    <Textarea
+                      id="response"
+                      placeholder="Type your response to the brand representative..."
+                      rows={6}
+                      value={messageResponse}
+                      onChange={(e) => setMessageResponse(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This response will be stored and can be emailed to the brand contact.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button
+                  type="submit"
+                  onClick={handleMessageResponse}
+                  disabled={!messageResponse.trim()}
+                >
+                  Save Response
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+        
         <TabsContent value="bulk" className="mt-6">
           <BulkUpload onComplete={handleBulkUploadComplete} />
         </TabsContent>
@@ -959,4 +1137,141 @@ const AdminPage = () => {
                                   This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
-                              <AlertDialog
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleResetDatabase}>
+                                  Reset Database
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[625px]">
+          <DialogHeader>
+            <DialogTitle>Product Details</DialogTitle>
+            <DialogDescription>
+              View and edit product information
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProduct && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="brand" className="text-right">
+                  Brand
+                </Label>
+                <Input
+                  id="brand"
+                  value={selectedProduct.brand}
+                  className="col-span-3"
+                  readOnly
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Product Name
+                </Label>
+                <Input
+                  id="name"
+                  value={selectedProduct.name}
+                  className="col-span-3"
+                  readOnly
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder="Enter product description"
+                  value={productDetails.description}
+                  onChange={(e) => setProductDetails({...productDetails, description: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="imageUrl" className="text-right flex items-center gap-2">
+                  <Image className="h-4 w-4" /> Image URL
+                </Label>
+                <Input
+                  id="imageUrl"
+                  placeholder="Enter image URL"
+                  value={productDetails.imageUrl}
+                  onChange={(e) => setProductDetails({...productDetails, imageUrl: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="videoUrl" className="text-right flex items-center gap-2">
+                  <Video className="h-4 w-4" /> Video URL
+                </Label>
+                <Input
+                  id="videoUrl"
+                  placeholder="Enter video URL"
+                  value={productDetails.videoUrl}
+                  onChange={(e) => setProductDetails({...productDetails, videoUrl: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="websiteUrl" className="text-right flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4" /> Website URL
+                </Label>
+                <Input
+                  id="websiteUrl"
+                  placeholder="Enter website URL"
+                  value={productDetails.websiteUrl}
+                  onChange={(e) => setProductDetails({...productDetails, websiteUrl: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="pvaStatus" className="text-right">
+                  PVA Status
+                </Label>
+                <div className="col-span-3">
+                  {selectedProduct.pvaStatus === 'contains' && (
+                    <Badge variant="destructive">Contains PVA</Badge>
+                  )}
+                  {selectedProduct.pvaStatus === 'verified-free' && (
+                    <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
+                  )}
+                  {selectedProduct.pvaStatus === 'needs-verification' && (
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
+                  )}
+                  {selectedProduct.pvaStatus === 'inconclusive' && (
+                    <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button type="submit" onClick={handleSaveDetails}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminPage;
