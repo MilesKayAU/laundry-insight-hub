@@ -13,6 +13,7 @@ export interface BulkProductData {
   websiteUrl?: string;
   additionalNotes?: string;
   country?: string; // Add country field to BulkProductData interface
+  hasPva?: 'yes' | 'no' | 'unidentified'; // New explicit field for PVA presence
 }
 
 // Check if product with same brand and name already exists
@@ -49,20 +50,31 @@ export const processBulkUpload = (data: BulkProductData[]): {
         return;
       }
 
-      // Determine PVA status based on percentage or additional notes
+      // Determine PVA status based on hasPva field first, then percentage or additional notes
       let pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive' = 'needs-verification';
       
-      // Check additional notes for PVA indicators
-      if (item.additionalNotes) {
-        const notes = item.additionalNotes.toLowerCase();
-        if (notes.includes('contains polyvinyl alcohol') || 
-            notes.includes('contains pva') || 
-            notes.includes('pva listed in ingredients')) {
+      // If the explicit hasPva field is provided, use it to determine status
+      if (item.hasPva) {
+        if (item.hasPva === 'yes') {
           pvaStatus = 'contains';
-        } else if (notes.includes('pva-free') || 
-                  notes.includes('no pva') || 
-                  notes.includes('verified free')) {
+        } else if (item.hasPva === 'no') {
           pvaStatus = 'verified-free';
+        } else if (item.hasPva === 'unidentified') {
+          pvaStatus = 'inconclusive';
+        }
+      } else {
+        // Otherwise, use the notes to try and determine status
+        if (item.additionalNotes) {
+          const notes = item.additionalNotes.toLowerCase();
+          if (notes.includes('contains polyvinyl alcohol') || 
+              notes.includes('contains pva') || 
+              notes.includes('pva listed in ingredients')) {
+            pvaStatus = 'contains';
+          } else if (notes.includes('pva-free') || 
+                    notes.includes('no pva') || 
+                    notes.includes('verified free')) {
+            pvaStatus = 'verified-free';
+          }
         }
       }
       
@@ -131,11 +143,24 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
       if (fieldName === 'producttype') fieldName = 'type';
       if (fieldName === 'pvapercentage(ifknown)') fieldName = 'pvaPercentage';
       if (fieldName === 'additionalnotes') fieldName = 'additionalNotes';
+      if (fieldName === 'haspva' || fieldName === 'containspva') fieldName = 'hasPva';
       
       if (fieldName === 'pvaPercentage') {
         const numValue = parseFloat(values[index]);
         item[fieldName] = isNaN(numValue) ? undefined : numValue;
-      } else {
+      } 
+      // Special handling for the hasPva field
+      else if (fieldName === 'hasPva') {
+        const value = values[index].toLowerCase();
+        if (value === 'yes' || value === 'true' || value === '1') {
+          item[fieldName] = 'yes';
+        } else if (value === 'no' || value === 'false' || value === '0') {
+          item[fieldName] = 'no';
+        } else {
+          item[fieldName] = 'unidentified';
+        }
+      }
+      else {
         item[fieldName] = values[index];
       }
     });
@@ -146,8 +171,8 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
 
 // Get sample CSV template content
 export const getSampleCSVTemplate = (): string => {
-  return 'Brand Name,Product Name,Product Type,PVA Percentage (if known),Additional Notes,Country\n' +
-    'Example Brand,Product Name,Laundry Sheets,0,Product contains no PVA. Verified by manufacturer.,Australia';
+  return 'Brand Name,Product Name,Product Type,Has PVA,PVA Percentage (if known),Additional Notes,Country\n' +
+    'Example Brand,Product Name,Laundry Sheets,no,0,Product contains no PVA. Verified by manufacturer.,Australia';
 };
 
 // Group products by brand for chart visualization

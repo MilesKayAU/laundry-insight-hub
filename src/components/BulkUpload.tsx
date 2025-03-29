@@ -195,6 +195,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                   <li><strong>Brand Name</strong> - Company or brand name (required)</li>
                   <li><strong>Product Name</strong> - Product name (required)</li>
                   <li><strong>Product Type</strong> - Must match exactly (e.g., "Laundry Sheets") (required)</li>
+                  <li><strong>Has PVA</strong> - Enter "yes", "no", or leave blank for "unidentified" (optional)</li>
                   <li><strong>PVA Percentage (if known)</strong> - Numerical percentage (optional)</li>
                   <li><strong>Additional Notes</strong> - Product description, sources, etc. (optional)</li>
                   <li><strong>Country</strong> - Country or region where the product is available (optional, defaults to "Global")</li>
@@ -230,6 +231,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                       <TableHead>PVA Status</TableHead>
                       <TableHead>PVA %</TableHead>
                       <TableHead>Notes</TableHead>
+                      <TableHead>Country</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -252,6 +254,9 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                         </TableCell>
                         <TableCell className="max-w-xs truncate">
                           {item.additionalNotes || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          {item.country || 'Global'}
                         </TableCell>
                       </TableRow>
                     ))}
