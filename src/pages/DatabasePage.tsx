@@ -89,6 +89,8 @@ const DatabasePage = () => {
   
   useEffect(() => {
     handleRefreshData();
+    setCountrySelected(false);
+    
     const intervalId = setInterval(() => {
       handleRefreshData();
     }, 30000);
@@ -322,6 +324,11 @@ const DatabasePage = () => {
     );
   };
 
+  const resetCountryFilter = () => {
+    setCountrySelected(false);
+    setSelectedCountry("Global");
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-10 px-4 flex justify-center items-center">
@@ -386,7 +393,7 @@ const DatabasePage = () => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => setCountrySelected(false)}
+                onClick={resetCountryFilter}
                 className="mr-2"
               >
                 <Map className="h-4 w-4 mr-2" />
