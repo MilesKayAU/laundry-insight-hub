@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # Fetch complete history to ensure all data files are included
+
     - name: Install sshpass
       run: sudo apt-get update && sudo apt-get install -y sshpass
 
@@ -21,10 +26,13 @@ jobs:
           cd /root/laundry-insight-hub
 
           echo "🔄 Pulling latest code..."
-          git pull origin main
+          git pull origin main --force
           
           echo "📦 Installing dependencies..."
           npm i
+          
+          echo "🧹 Clearing build cache..."
+          rm -rf .cache dist build
 
           echo "🗑️ Clearing PM2 cache..."
           pm2 flush laundryhub
@@ -34,4 +42,3 @@ jobs:
 
           echo "✅ Deploy complete."
         EOF
-
