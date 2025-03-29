@@ -141,7 +141,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   };
 
   // Fix the MouseEvent type issue here
-  const handlePieClick = (e: React.MouseEvent<SVGElement>) => {
+  const handlePieClick = () => {
     // No longer accessing e.value which doesn't exist on MouseEvent
     console.log('Pie segment clicked');
   };

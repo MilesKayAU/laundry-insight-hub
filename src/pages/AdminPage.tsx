@@ -1,101 +1,18 @@
-
 import { useState, useEffect } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
-  Trash, 
-  Search, 
-  Plus, 
-  PlusCircle,
-  Image,
-  Video,
-  Link as LinkIcon,
-  X,
-  Upload,
-  BarChart,
-  BadgeCheck,
-  Shield,
-  Eraser,
-  AlertTriangle,
-  Mail
-} from "lucide-react";
-import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
-import { 
-  PVA_KEYWORDS_CATEGORIES, 
-  getProductSubmissions, 
-  ProductSubmission,
-  updateProductApproval,
-  deleteProductSubmission
-} from "@/lib/textExtractor";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { PVA_KEYWORDS_CATEGORIES, getProductSubmissions, ProductSubmission, updateProductApproval, deleteProductSubmission } from "@/lib/textExtractor";
+import { isDuplicateProduct, approveBrandOwnership, rejectBrandOwnership, cleanDuplicateProducts, resetProductDatabase } from "@/lib/bulkUpload";
 import BulkUpload from "@/components/BulkUpload";
-import DataCharts from "@/components/DataCharts";
-import { 
-  isDuplicateProduct, 
-  approveBrandOwnership, 
-  rejectBrandOwnership,
-  cleanDuplicateProducts,
-  resetProductDatabase
-} from "@/lib/bulkUpload";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+
+import PendingProducts from "@/components/admin/PendingProducts";
+import ApprovedProducts from "@/components/admin/ApprovedProducts";
+import BrandVerifications from "@/components/admin/BrandVerifications";
+import BrandMessages from "@/components/admin/BrandMessages";
+import AdminSettings from "@/components/admin/AdminSettings";
+import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
 
 const saveProductDetails = (productId: string, details: Partial<ProductSubmission>) => {
   const submissions = getProductSubmissions();
@@ -476,6 +393,11 @@ const AdminPage = () => {
     profile.name.toLowerCase().includes(brandSearchTerm.toLowerCase())
   );
 
+  const handleBulkUploadClick = () => {
+    setActiveTab("bulk");
+    setBulkUploadMode(true);
+  };
+
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="text-center mb-10">
@@ -510,433 +432,49 @@ const AdminPage = () => {
         </TabsList>
         
         <TabsContent value="pending" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Submissions</CardTitle>
-              <CardDescription>
-                Review and approve user-submitted product information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingProducts.length > 0 ? (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>PVA Status</TableHead>
-                        <TableHead>PVA %</TableHead>
-                        <TableHead>Submitted</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pendingProducts.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.type}</TableCell>
-                          <TableCell>
-                            {product.pvaStatus === 'contains' && (
-                              <Badge variant="destructive">Contains PVA</Badge>
-                            )}
-                            {product.pvaStatus === 'verified-free' && (
-                              <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
-                            )}
-                            {product.pvaStatus === 'needs-verification' && (
-                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
-                            )}
-                            {product.pvaStatus === 'inconclusive' && (
-                              <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {product.submittedAt ? 
-                              new Date(product.submittedAt).toLocaleDateString() : 
-                              product.dateSubmitted ? 
-                                new Date(product.dateSubmitted).toLocaleDateString() : 
-                                'Unknown date'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => openProductDetails(product)}
-                                title="View Details"
-                              >
-                                <Eye className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleApprove(product.id)}
-                                className="text-green-500 hover:text-green-700 hover:bg-green-50"
-                                title="Approve"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleReject(product.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                title="Reject"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No pending submissions to review
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PendingProducts 
+            products={pendingProducts}
+            onViewDetails={openProductDetails}
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
         </TabsContent>
         
         <TabsContent value="approved" className="mt-6">
-          <Card>
-            <CardHeader className="space-y-1">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Approved Products</CardTitle>
-                  <CardDescription>
-                    All products that have been approved and are displayed in the database
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search products..."
-                      className="pl-8 w-[250px]"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    onClick={() => {
-                      setActiveTab("bulk");
-                      setBulkUploadMode(true);
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Bulk Upload
-                  </Button>
-                  <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex items-center gap-2"
-                        title="Remove duplicate products"
-                      >
-                        <Eraser className="h-4 w-4" />
-                        Clean Duplicates
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Clean Duplicate Products</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will scan the database and remove any duplicate products, keeping only the most recently added version of each product. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCleanDuplicates}>
-                          Clean Duplicates
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {approvedProducts.length > 0 ? (
-                <>
-                  <DataCharts products={approvedProducts} />
-                  <div className="rounded-md border mt-6">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Product</TableHead>
-                          <TableHead>Brand</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>PVA Status</TableHead>
-                          <TableHead>PVA %</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredApprovedProducts.map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell className="font-medium">{product.name}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
-                            <TableCell>{product.type}</TableCell>
-                            <TableCell>
-                              {product.pvaStatus === 'contains' && (
-                                <Badge variant="destructive">Contains PVA</Badge>
-                              )}
-                              {product.pvaStatus === 'verified-free' && (
-                                <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
-                              )}
-                              {product.pvaStatus === 'needs-verification' && (
-                                <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
-                              )}
-                              {product.pvaStatus === 'inconclusive' && (
-                                <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  onClick={() => openProductDetails(product)}
-                                  title="Edit Details"
-                                  className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  onClick={() => handleDelete(product.id)}
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  title="Delete"
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No approved products in the database
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ApprovedProducts 
+            products={approvedProducts}
+            filteredProducts={filteredApprovedProducts}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onViewDetails={openProductDetails}
+            onDelete={handleDelete}
+            onBulkUpload={handleBulkUploadClick}
+            showCleanupDialog={showCleanupDialog}
+            setShowCleanupDialog={setShowCleanupDialog}
+            onCleanDuplicates={handleCleanDuplicates}
+          />
         </TabsContent>
         
         <TabsContent value="verifications" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Brand Verification Requests</CardTitle>
-              <CardDescription>
-                Review and approve brand ownership verification requests
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingVerifications.length > 0 ? (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead>Contact Email</TableHead>
-                        <TableHead>Requested</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pendingVerifications.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.brandContactEmail || "N/A"}</TableCell>
-                          <TableCell>
-                            {product.brandOwnershipRequestDate ? 
-                              new Date(product.brandOwnershipRequestDate).toLocaleDateString() : 
-                              'Unknown date'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleApproveBrandOwnership(product.id)}
-                                className="text-green-500 hover:text-green-700 hover:bg-green-50"
-                                title="Approve Verification"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleRejectBrandOwnership(product.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                title="Reject Verification"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No pending brand verification requests
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <BrandVerifications 
+            verifications={pendingVerifications}
+            onApproveVerification={handleApproveBrandOwnership}
+            onRejectVerification={handleRejectBrandOwnership}
+          />
         </TabsContent>
         
         <TabsContent value="messages" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Brand Messages</CardTitle>
-              <CardDescription>
-                Review and respond to messages from brand representatives
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {brandMessages.length > 0 ? (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Brand</TableHead>
-                        <TableHead>Company Name</TableHead>
-                        <TableHead>Contact Email</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {brandMessages.map((message) => (
-                        <TableRow key={message.id}>
-                          <TableCell className="font-medium">
-                            {brandProfiles.find(b => b.id === message.brand_id)?.name || "Unknown Brand"}
-                          </TableCell>
-                          <TableCell>{message.company_name}</TableCell>
-                          <TableCell>{message.sender_email}</TableCell>
-                          <TableCell>
-                            {new Date(message.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            {message.admin_response ? (
-                              <Badge variant="outline" className="bg-green-100 text-green-800">Responded</Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Pending</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => openMessageResponse(message)}
-                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                              title="View & Respond"
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No brand messages received
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Brand Message</DialogTitle>
-                <DialogDescription>
-                  Review and respond to the brand representative
-                </DialogDescription>
-              </DialogHeader>
-              {selectedMessage && (
-                <div className="space-y-4 py-4">
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    <div className="grid grid-cols-2 gap-4 mb-2">
-                      <div>
-                        <p className="text-sm font-semibold">Brand</p>
-                        <p className="text-sm">
-                          {brandProfiles.find(b => b.id === selectedMessage.brand_id)?.name || "Unknown Brand"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Company</p>
-                        <p className="text-sm">{selectedMessage.company_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Email</p>
-                        <p className="text-sm">{selectedMessage.sender_email}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Date</p>
-                        <p className="text-sm">{new Date(selectedMessage.created_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">Message</p>
-                      <p className="text-sm mt-1 whitespace-pre-wrap">{selectedMessage.message}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="response">Your Response</Label>
-                    <Textarea
-                      id="response"
-                      placeholder="Type your response to the brand representative..."
-                      rows={6}
-                      value={messageResponse}
-                      onChange={(e) => setMessageResponse(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      This response will be stored and can be emailed to the brand contact.
-                    </p>
-                  </div>
-                </div>
-              )}
-              <DialogFooter>
-                <Button
-                  type="submit"
-                  onClick={handleMessageResponse}
-                  disabled={!messageResponse.trim()}
-                >
-                  Save Response
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <BrandMessages 
+            messages={brandMessages}
+            profiles={brandProfiles}
+            selectedMessage={selectedMessage}
+            messageResponse={messageResponse}
+            dialogOpen={messageDialogOpen}
+            onDialogOpenChange={setMessageDialogOpen}
+            onMessageSelect={openMessageResponse}
+            onResponseChange={setMessageResponse}
+            onSendResponse={handleMessageResponse}
+          />
         </TabsContent>
         
         <TabsContent value="bulk" className="mt-6">
@@ -944,332 +482,30 @@ const AdminPage = () => {
         </TabsContent>
         
         <TabsContent value="settings" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Admin Settings</CardTitle>
-              <CardDescription>
-                Configure application settings and scan parameters
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-4">PVA Scan Keywords</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  These keywords will be used to scan uploaded documents for PVA-related ingredients
-                </p>
-                
-                <Accordion type="single" collapsible className="w-full mb-4">
-                  <AccordionItem value="common-names">
-                    <AccordionTrigger className="text-md font-medium hover:no-underline">
-                      ✅ Common Names & Abbreviations
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {keywordCategories.commonNames.map((keyword, index) => (
-                          <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
-                            {keyword}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                              onClick={() => handleRemoveKeyword(keyword, 'commonNames')}
-                            >
-                              <XCircle className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        These are primary trigger terms in your scan.
-                      </p>
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="chemical-synonyms">
-                    <AccordionTrigger className="text-md font-medium hover:no-underline">
-                      ✅ Chemical Synonyms
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {keywordCategories.chemicalSynonyms.map((keyword, index) => (
-                          <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
-                            {keyword}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                              onClick={() => handleRemoveKeyword(keyword, 'chemicalSynonyms')}
-                            >
-                              <XCircle className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Useful for detecting in scientific SDS or INCI-type declarations.
-                      </p>
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="inci-terms">
-                    <AccordionTrigger className="text-md font-medium hover:no-underline">
-                      ✅ INCI (Cosmetic Labeling Terms)
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {keywordCategories.inciTerms.map((keyword, index) => (
-                          <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
-                            {keyword}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                              onClick={() => handleRemoveKeyword(keyword, 'inciTerms')}
-                            >
-                              <XCircle className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        These show up often in personal care products, wipes, and cleaning sprays.
-                      </p>
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="additional-terms">
-                    <AccordionTrigger className="text-md font-medium hover:no-underline">
-                      Additional Terms
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {keywordCategories.additional.map((keyword, index) => (
-                          <Badge key={index} variant="outline" className="gap-1 px-3 py-1">
-                            {keyword}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                              onClick={() => handleRemoveKeyword(keyword, 'additional')}
-                            >
-                              <XCircle className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-                
-                <div className="flex flex-col space-y-2 mt-6">
-                  <h4 className="font-medium">Add New Keyword</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="md:col-span-2">
-                      <Input
-                        placeholder="Enter new keyword or abbreviation..."
-                        value={newKeyword}
-                        onChange={(e) => setNewKeyword(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddKeyword();
-                          }
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="commonNames">Common Names & Abbreviations</SelectItem>
-                          <SelectItem value="chemicalSynonyms">Chemical Synonyms</SelectItem>
-                          <SelectItem value="inciTerms">INCI Terms</SelectItem>
-                          <SelectItem value="additional">Additional Terms</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button onClick={handleAddKeyword} className="w-full md:w-auto self-end">
-                    <PlusCircle className="h-4 w-4 mr-2" /> Add Keyword
-                  </Button>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-medium mb-4">Notification Settings</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="notify-new" defaultChecked />
-                    <Label htmlFor="notify-new">Email notifications for new submissions</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="notify-approved" defaultChecked />
-                    <Label htmlFor="notify-approved">Email notifications when products are approved</Label>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-medium mb-4">Database Maintenance</h3>
-                <div className="space-y-4">
-                  <div className="p-4 border rounded-md bg-yellow-50">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="text-yellow-600 h-5 w-5 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-yellow-800">Emergency Database Actions</h4>
-                        <p className="text-sm text-yellow-700 mt-1">
-                          These actions will permanently modify your database. Use with caution.
-                        </p>
-                        <div className="flex gap-3 mt-4">
-                          <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm">
-                                Reset Database
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Reset Entire Database</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete ALL products in the database.
-                                  This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleResetDatabase}>
-                                  Reset Database
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <AdminSettings 
+            keywordCategories={keywordCategories}
+            newKeyword={newKeyword}
+            selectedCategory={selectedCategory}
+            showResetDialog={showResetDialog}
+            setShowResetDialog={setShowResetDialog}
+            onNewKeywordChange={setNewKeyword}
+            onCategoryChange={setSelectedCategory}
+            onAddKeyword={handleAddKeyword}
+            onRemoveKeyword={handleRemoveKeyword}
+            onResetDatabase={handleResetDatabase}
+            getCategoryDisplayName={getCategoryDisplayName}
+          />
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[625px]">
-          <DialogHeader>
-            <DialogTitle>Product Details</DialogTitle>
-            <DialogDescription>
-              View and edit product information
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedProduct && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="brand" className="text-right">
-                  Brand
-                </Label>
-                <Input
-                  id="brand"
-                  value={selectedProduct.brand}
-                  className="col-span-3"
-                  readOnly
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Product Name
-                </Label>
-                <Input
-                  id="name"
-                  value={selectedProduct.name}
-                  className="col-span-3"
-                  readOnly
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="text-right">
-                  Description
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter product description"
-                  value={productDetails.description}
-                  onChange={(e) => setProductDetails({...productDetails, description: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="imageUrl" className="text-right flex items-center gap-2">
-                  <Image className="h-4 w-4" /> Image URL
-                </Label>
-                <Input
-                  id="imageUrl"
-                  placeholder="Enter image URL"
-                  value={productDetails.imageUrl}
-                  onChange={(e) => setProductDetails({...productDetails, imageUrl: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="videoUrl" className="text-right flex items-center gap-2">
-                  <Video className="h-4 w-4" /> Video URL
-                </Label>
-                <Input
-                  id="videoUrl"
-                  placeholder="Enter video URL"
-                  value={productDetails.videoUrl}
-                  onChange={(e) => setProductDetails({...productDetails, videoUrl: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="websiteUrl" className="text-right flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4" /> Website URL
-                </Label>
-                <Input
-                  id="websiteUrl"
-                  placeholder="Enter website URL"
-                  value={productDetails.websiteUrl}
-                  onChange={(e) => setProductDetails({...productDetails, websiteUrl: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="pvaStatus" className="text-right">
-                  PVA Status
-                </Label>
-                <div className="col-span-3">
-                  {selectedProduct.pvaStatus === 'contains' && (
-                    <Badge variant="destructive">Contains PVA</Badge>
-                  )}
-                  {selectedProduct.pvaStatus === 'verified-free' && (
-                    <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
-                  )}
-                  {selectedProduct.pvaStatus === 'needs-verification' && (
-                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
-                  )}
-                  {selectedProduct.pvaStatus === 'inconclusive' && (
-                    <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button type="submit" onClick={handleSaveDetails}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProductDetailsDialog 
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        product={selectedProduct}
+        details={productDetails}
+        onDetailsChange={setProductDetails}
+        onSave={handleSaveDetails}
+      />
     </div>
   );
 };
