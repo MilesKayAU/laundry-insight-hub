@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -69,7 +68,6 @@ import {
 import DataCharts from "@/components/DataCharts";
 import CountrySelector from "@/components/CountrySelector";
 
-// Update mock products to include country field
 const updatedMockProducts = mockProducts.map(product => ({
   ...product,
   country: "Global"
@@ -83,7 +81,7 @@ const DatabasePage = () => {
   const [chartView, setChartView] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState("Global");
   const [countrySelected, setCountrySelected] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // Added refresh key to force re-renders
+  const [refreshKey, setRefreshKey] = useState(0);
   const itemsPerPage = 10;
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -92,24 +90,29 @@ const DatabasePage = () => {
   const [contactEmail, setContactEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Get fresh submissions data when the component mounts or when refreshKey changes
+  useEffect(() => {
+    handleRefreshData();
+    const intervalId = setInterval(() => {
+      handleRefreshData();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+  
   const allSubmissions = getProductSubmissions();
   
   const approvedProducts = updatedMockProducts.filter(product => product.approved);
   const approvedSubmissions = allSubmissions.filter(submission => submission.approved);
   
-  // Create a list of all available countries
   const availableCountries = Array.from(new Set([
     ...approvedProducts.map(p => p.country || "Global"),
     ...approvedSubmissions.map(p => p.country || "Global")
   ])).filter(country => country !== "Global").sort();
   
-  // Type guard for ProductSubmission
   const isProductSubmission = (product: any): product is ProductSubmission => {
     return 'pvaStatus' in product;
   };
   
-  // Combine products and filter by country
   const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions].filter(product => {
     return selectedCountry === "Global" || product.country === selectedCountry;
   });
@@ -135,7 +138,6 @@ const DatabasePage = () => {
         matchesPvaStatus = true;
       }
     } else {
-      // Handle non-ProductSubmission products differently if needed
       if (filterPvaStatus === "contains" && product.pvaPercentage !== null && product.pvaPercentage > 0) {
         matchesPvaStatus = true;
       } else if (filterPvaStatus === "free" && product.pvaPercentage === 0) {
@@ -174,9 +176,11 @@ const DatabasePage = () => {
     setCountrySelected(true);
   };
 
-  // Add refresh function
   const handleRefreshData = () => {
     setRefreshKey(prev => prev + 1);
+    const freshData = getProductSubmissions();
+    console.info(`Refreshed data: Found ${freshData.length} submission(s)`);
+    
     toast({
       title: "Data refreshed",
       description: "The product database has been refreshed with the latest data.",

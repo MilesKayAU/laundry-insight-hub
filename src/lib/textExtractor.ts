@@ -111,8 +111,14 @@ export const deleteProductSubmission = (productId: string) => {
 // Get stored product submissions from local storage
 export const getProductSubmissions = (): ProductSubmission[] => {
   try {
-    const storedSubmissions = localStorage.getItem("product_submissions");
-    return storedSubmissions ? JSON.parse(storedSubmissions) : [];
+    // Force a fresh read from localStorage
+    const storageString = localStorage.getItem('productSubmissions');
+    if (!storageString) return [];
+    
+    // Parse and return the data
+    const submissions = JSON.parse(storageString) as ProductSubmission[];
+    console.info(`Retrieved ${submissions.length} product submissions`);
+    return submissions;
   } catch (error) {
     console.error("Error retrieving product submissions:", error);
     return [];

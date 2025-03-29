@@ -1,10 +1,10 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import MainLayout from "./layouts/MainLayout";
 import HomePage from "./pages/HomePage";
@@ -18,18 +18,46 @@ import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
 import NotFound from "./pages/NotFound";
 
-// Create a client
-const queryClient = new QueryClient();
+// Create a client with more aggressive stale time settings
+const createQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0, // Consider data stale immediately
+      cacheTime: 5 * 60 * 1000, // Cache for 5 minutes
+      refetchOnWindowFocus: true, // Refetch when window gains focus
+      refetchOnMount: true, // Refetch when component mounts
+    },
+  },
+});
+
+const QueryClientWrapper = ({ children }) => {
+  const location = useLocation();
+  const [queryClient] = useState(() => createQueryClient());
+  
+  // Reset query cache when navigating to the database page
+  React.useEffect(() => {
+    if (location.pathname === '/database') {
+      queryClient.resetQueries();
+      console.info("Query cache reset for database page");
+    }
+  }, [location.pathname, queryClient]);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+};
 
 const App: React.FC = () => {
   return (
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+      <BrowserRouter>
+        <QueryClientWrapper>
+          <TooltipProvider>
+            <AuthProvider>
+              <Toaster />
+              <Sonner />
               <Routes>
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<HomePage />} />
@@ -51,10 +79,10 @@ const App: React.FC = () => {
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>
-            </BrowserRouter>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
+            </AuthProvider>
+          </TooltipProvider>
+        </QueryClientWrapper>
+      </BrowserRouter>
     </React.StrictMode>
   );
 };
