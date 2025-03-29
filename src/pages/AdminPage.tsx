@@ -34,7 +34,9 @@ import {
   Image,
   Video,
   Link,
-  X
+  X,
+  Upload,
+  BarChart
 } from "lucide-react";
 import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
 import { 
@@ -68,6 +70,9 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import BulkUpload from "@/components/BulkUpload";
+import DataCharts from "@/components/DataCharts";
+import { isDuplicateProduct } from "@/lib/bulkUpload";
 
 // Helper function to save additional product details
 const saveProductDetails = (productId: string, details: Partial<ProductSubmission>) => {
@@ -83,6 +88,8 @@ const AdminPage = () => {
   const [pendingProducts, setPendingProducts] = useState<ProductSubmission[]>([]);
   const [approvedProducts, setApprovedProducts] = useState<ProductSubmission[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
+  const [activeTab, setActiveTab] = useState("pending");
+  const [bulkUploadMode, setBulkUploadMode] = useState(false);
   
   // State for product details form
   const [productDetails, setProductDetails] = useState({
@@ -129,6 +136,17 @@ const AdminPage = () => {
   };
 
   const handleApprove = (productId: string) => {
+    // Check for duplicates before approving
+    const product = pendingProducts.find(p => p.id === productId);
+    if (product && isDuplicateProduct(product.brand, product.name)) {
+      toast({
+        title: "Duplicate product",
+        description: `A product with brand "${product.brand}" and name "${product.name}" already exists in the approved products.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     updateProductApproval(productId, true);
     loadProductSubmissions();
     
@@ -246,6 +264,17 @@ const AdminPage = () => {
     product.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleBulkUploadComplete = () => {
+    loadProductSubmissions();
+    setBulkUploadMode(false);
+    setActiveTab("approved");
+    
+    toast({
+      title: "Bulk upload complete",
+      description: "The approved products list has been updated.",
+    });
+  };
+
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="text-center mb-10">
@@ -255,10 +284,11 @@ const AdminPage = () => {
         </p>
       </div>
       
-      <Tabs defaultValue="pending">
-        <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
+      <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto">
           <TabsTrigger value="pending">Pending Approval</TabsTrigger>
           <TabsTrigger value="approved">Approved Products</TabsTrigger>
+          <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
@@ -367,82 +397,100 @@ const AdminPage = () => {
                     All products that have been approved and are displayed in the database
                   </CardDescription>
                 </div>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search products..."
-                    className="pl-8 w-[250px]"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Search products..."
+                      className="pl-8 w-[250px]"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      setActiveTab("bulk");
+                      setBulkUploadMode(true);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Bulk Upload
+                  </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               {approvedProducts.length > 0 ? (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>PVA Status</TableHead>
-                        <TableHead>PVA %</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredApprovedProducts.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.type}</TableCell>
-                          <TableCell>
-                            {product.pvaStatus === 'contains' && (
-                              <Badge variant="destructive">Contains PVA</Badge>
-                            )}
-                            {product.pvaStatus === 'verified-free' && (
-                              <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
-                            )}
-                            {product.pvaStatus === 'needs-verification' && (
-                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
-                            )}
-                            {product.pvaStatus === 'inconclusive' && (
-                              <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => openProductDetails(product)}
-                                title="Edit Details"
-                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleDelete(product.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                title="Delete"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                <>
+                  {/* Data Visualization Charts */}
+                  <DataCharts products={approvedProducts} />
+                  
+                  {/* Products Table */}
+                  <div className="rounded-md border mt-6">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product</TableHead>
+                          <TableHead>Brand</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>PVA Status</TableHead>
+                          <TableHead>PVA %</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredApprovedProducts.map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell>{product.brand}</TableCell>
+                            <TableCell>{product.type}</TableCell>
+                            <TableCell>
+                              {product.pvaStatus === 'contains' && (
+                                <Badge variant="destructive">Contains PVA</Badge>
+                              )}
+                              {product.pvaStatus === 'verified-free' && (
+                                <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
+                              )}
+                              {product.pvaStatus === 'needs-verification' && (
+                                <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
+                              )}
+                              {product.pvaStatus === 'inconclusive' && (
+                                <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => openProductDetails(product)}
+                                  title="Edit Details"
+                                  className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => handleDelete(product.id)}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  title="Delete"
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
                   No approved products in the database
@@ -450,6 +498,11 @@ const AdminPage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        {/* Bulk Upload Tab */}
+        <TabsContent value="bulk" className="mt-6">
+          <BulkUpload onComplete={handleBulkUploadComplete} />
         </TabsContent>
         
         {/* Settings Tab */}
