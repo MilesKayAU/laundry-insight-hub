@@ -112,7 +112,7 @@ export const deleteProductSubmission = (productId: string) => {
 export const getProductSubmissions = (): ProductSubmission[] => {
   try {
     // Force a fresh read from localStorage
-    const storageString = localStorage.getItem('productSubmissions');
+    const storageString = localStorage.getItem('product_submissions');
     if (!storageString) return [];
     
     // Parse and return the data

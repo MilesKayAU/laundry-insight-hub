@@ -23,7 +23,7 @@ const createQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 0, // Consider data stale immediately
-      cacheTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 5 * 60 * 1000, // Cache for 5 minutes (renamed from cacheTime)
       refetchOnWindowFocus: true, // Refetch when window gains focus
       refetchOnMount: true, // Refetch when component mounts
     },
