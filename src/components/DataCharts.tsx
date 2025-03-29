@@ -15,11 +15,11 @@ const STATUS_COLORS = {
 };
 
 const PRODUCT_TYPES = [
-  'Hair Care',
-  'Skin Care',
-  'Makeup',
-  'Cleaners',
-  'Detergent',
+  'Laundry Sheet',
+  'Laundry Pod',
+  'Dishwasher Pod',
+  'Dishwasher Sheet',
+  'Tablet',
   'Other'
 ];
 
@@ -102,18 +102,11 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
     brandCounts[brand] = (brandCounts[brand] || 0) + 1;
   });
 
-  // Get top 5 brands and group the rest as "Other"
+  // Sort brands by count and prepare data
   const sortedBrands = Object.entries(brandCounts)
     .sort((a, b) => b[1] - a[1]);
   
-  const topBrands = sortedBrands.slice(0, 5);
-  const otherBrandsCount = sortedBrands.slice(5)
-    .reduce((sum, [_, count]) => sum + count, 0);
-
-  const brandData = [
-    ...topBrands.map(([name, value]) => ({ name, value })),
-    ...(otherBrandsCount > 0 ? [{ name: 'Other Brands', value: otherBrandsCount }] : [])
-  ];
+  const brandData = sortedBrands.map(([name, value]) => ({ name, value }));
 
   // Create data for status by type
   const statusByTypeData = PRODUCT_TYPES.map(type => {
@@ -140,9 +133,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
     setActivePieIndex(index);
   };
 
-  // Fix the MouseEvent type issue here
   const handlePieClick = () => {
-    // No longer accessing e.value which doesn't exist on MouseEvent
     console.log('Pie segment clicked');
   };
 
@@ -159,7 +150,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="status">PVA Status</TabsTrigger>
             <TabsTrigger value="type">Product Types</TabsTrigger>
-            <TabsTrigger value="brand">Top Brands</TabsTrigger>
+            <TabsTrigger value="brand">Brands</TabsTrigger>
             <TabsTrigger value="combined">Status by Type</TabsTrigger>
           </TabsList>
           

@@ -156,7 +156,7 @@ const DatabasePage = () => {
         matchesPvaStatus = true;
       } else if (filterPvaStatus === "free" && product.pvaStatus === 'verified-free') {
         matchesPvaStatus = true;
-      } else if (filterPvaStatus === "unknown" && product.pvaStatus === 'needs-verification') {
+      } else if (filterPvaStatus === "unknown" && (product.pvaStatus === 'needs-verification' || product.pvaStatus === 'inconclusive')) {
         matchesPvaStatus = true;
       }
     } else {
@@ -283,7 +283,9 @@ const DatabasePage = () => {
   };
 
   const renderPvaValue = (product) => {
-    if (product.pvaPercentage !== null && product.pvaPercentage !== undefined) {
+    if (isProductSubmission(product)) {
+      return product.pvaPercentage ? `${product.pvaPercentage}%` : 'Unknown';
+    } else if (product.pvaPercentage !== null && product.pvaPercentage !== undefined) {
       return `${product.pvaPercentage}%`;
     } else {
       return (
