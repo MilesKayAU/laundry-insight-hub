@@ -30,6 +30,11 @@ const Footer = () => {
                   Product Database
                 </Link>
               </li>
+              <li>
+                <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">
+                  About PVA
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
