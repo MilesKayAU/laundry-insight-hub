@@ -1,5 +1,4 @@
-
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -33,7 +32,10 @@ import {
   findKeywordsInText, 
   PVA_KEYWORDS,
   determinePvaStatus,
-  PvaStatus
+  PvaStatus,
+  saveProductSubmission,
+  getVerifiedBrands,
+  ProductSubmission
 } from "@/lib/textExtractor";
 import { mockAdminSettings } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
@@ -55,15 +57,17 @@ const ContributePage = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pvaStatus, setPvaStatus] = useState<PvaStatus | null>(null);
+  const [verifiedBrands, setVerifiedBrands] = useState<string[]>([]);
 
-  // Mock data for previously verified brands (this would come from backend/database in production)
-  const verifiedBrands = ["EcoClean", "GreenWash", "NaturalFresh"];
+  useEffect(() => {
+    const savedVerifiedBrands = getVerifiedBrands();
+    setVerifiedBrands([...savedVerifiedBrands, "EcoClean", "GreenWash", "NaturalFresh"]);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       
-      // Check if file type matches selected upload type
       if (uploadType === "image" && !selectedFile.type.startsWith("image/")) {
         toast({
           title: "Invalid file type",
@@ -85,7 +89,6 @@ const ContributePage = () => {
       setFoundKeywords([]);
       setPvaStatus(null);
       
-      // Start upload simulation
       simulateUpload(selectedFile);
     }
   };
@@ -128,7 +131,6 @@ const ContributePage = () => {
       
       setExtractedText(extractedTextData.text);
       
-      // Find PVA-related keywords in extracted text
       const keywords = findKeywordsInText(
         extractedTextData.text, 
         PVA_KEYWORDS
@@ -136,7 +138,6 @@ const ContributePage = () => {
       
       setFoundKeywords(keywords);
       
-      // Determine PVA status
       const status = determinePvaStatus(keywords, verifiedBrands, brand);
       setPvaStatus(status);
       
@@ -185,10 +186,33 @@ const ContributePage = () => {
       });
       return;
     }
+
+    if (!pvaStatus) {
+      toast({
+        title: "Analysis required",
+        description: "Please analyze the file for PVA content first",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsSubmitting(true);
     
-    // Simulate submission process
+    const newSubmission: ProductSubmission = {
+      id: `sub_${Date.now()}`,
+      brand,
+      name: productName,
+      type: productType,
+      pvaPercentage: pvaPercentage ? pvaPercentage : null,
+      pvaStatus,
+      extractedText,
+      foundKeywords,
+      approved: false,
+      submittedAt: new Date().toISOString()
+    };
+    
+    saveProductSubmission(newSubmission);
+    
     setTimeout(() => {
       setIsSubmitting(false);
       
@@ -198,7 +222,6 @@ const ContributePage = () => {
         variant: "default"
       });
       
-      // Reset form
       setBrand("");
       setProductName("");
       setProductType("Laundry Sheet");
@@ -283,7 +306,6 @@ const ContributePage = () => {
           <CardContent>
             <form onSubmit={handleSubmit}>
               <div className="space-y-6">
-                {/* Product Details Section */}
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -341,7 +363,6 @@ const ContributePage = () => {
                   </div>
                 </div>
                 
-                {/* File Upload Section */}
                 <div>
                   <Tabs defaultValue="image" onValueChange={(value) => setUploadType(value)}>
                     <TabsList className="grid w-full grid-cols-2">
@@ -439,10 +460,8 @@ const ContributePage = () => {
                   )}
                 </div>
                 
-                {/* PVA Status Indicator */}
                 {renderPvaStatusBadge()}
                 
-                {/* Analysis Results */}
                 {extractedText && (
                   <div className="border rounded-lg p-4 bg-muted/30">
                     <h3 className="font-medium mb-2 flex items-center">

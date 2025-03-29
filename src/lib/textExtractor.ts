@@ -1,4 +1,3 @@
-
 import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist';
 
@@ -12,6 +11,19 @@ export type ExtractedText = {
 };
 
 export type PvaStatus = 'contains' | 'inconclusive' | 'verified-free' | 'needs-verification';
+
+export type ProductSubmission = {
+  id: string;
+  brand: string;
+  name: string;
+  type: "Laundry Sheet" | "Laundry Pod";
+  pvaPercentage: string | null;
+  pvaStatus: PvaStatus;
+  extractedText: string;
+  foundKeywords: string[];
+  approved: boolean;
+  submittedAt: string;
+};
 
 // PVA-related keywords to scan for, organized by category
 export const PVA_KEYWORDS_CATEGORIES = {
@@ -182,4 +194,73 @@ export const determinePvaStatus = (foundKeywords: string[], previouslyVerifiedBr
   }
   
   return 'inconclusive';
+};
+
+// Local storage functions for product submissions
+export const saveProductSubmission = (submission: ProductSubmission): void => {
+  try {
+    // Get current submissions from local storage
+    const currentSubmissionsString = localStorage.getItem('productSubmissions');
+    const currentSubmissions: ProductSubmission[] = currentSubmissionsString 
+      ? JSON.parse(currentSubmissionsString) 
+      : [];
+    
+    // Add new submission
+    currentSubmissions.push(submission);
+    
+    // Save back to local storage
+    localStorage.setItem('productSubmissions', JSON.stringify(currentSubmissions));
+    
+    console.log('Submission saved to local storage:', submission);
+  } catch (error) {
+    console.error('Error saving submission to local storage:', error);
+  }
+};
+
+export const getProductSubmissions = (): ProductSubmission[] => {
+  try {
+    const submissionsString = localStorage.getItem('productSubmissions');
+    return submissionsString ? JSON.parse(submissionsString) : [];
+  } catch (error) {
+    console.error('Error retrieving submissions from local storage:', error);
+    return [];
+  }
+};
+
+export const updateProductApproval = (productId: string, approved: boolean): void => {
+  try {
+    const submissions = getProductSubmissions();
+    const updatedSubmissions = submissions.map(submission => 
+      submission.id === productId ? { ...submission, approved } : submission
+    );
+    localStorage.setItem('productSubmissions', JSON.stringify(updatedSubmissions));
+  } catch (error) {
+    console.error('Error updating product approval status:', error);
+  }
+};
+
+export const deleteProductSubmission = (productId: string): void => {
+  try {
+    const submissions = getProductSubmissions();
+    const filteredSubmissions = submissions.filter(submission => submission.id !== productId);
+    localStorage.setItem('productSubmissions', JSON.stringify(filteredSubmissions));
+  } catch (error) {
+    console.error('Error deleting product submission:', error);
+  }
+};
+
+export const getVerifiedBrands = (): string[] => {
+  try {
+    const submissions = getProductSubmissions();
+    // Extract unique brand names from approved submissions
+    const verifiedBrands = [...new Set(
+      submissions
+        .filter(submission => submission.approved && submission.pvaStatus !== 'contains')
+        .map(submission => submission.brand)
+    )];
+    return verifiedBrands;
+  } catch (error) {
+    console.error('Error getting verified brands:', error);
+    return [];
+  }
 };

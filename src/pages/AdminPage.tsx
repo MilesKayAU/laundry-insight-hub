@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -33,7 +33,13 @@ import {
   PlusCircle 
 } from "lucide-react";
 import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
-import { PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
+import { 
+  PVA_KEYWORDS_CATEGORIES, 
+  getProductSubmissions, 
+  ProductSubmission,
+  updateProductApproval,
+  deleteProductSubmission
+} from "@/lib/textExtractor";
 import { 
   Select,
   SelectContent,
@@ -50,12 +56,8 @@ import {
 
 const AdminPage = () => {
   const { toast } = useToast();
-  const [pendingProducts, setPendingProducts] = useState<Product[]>(
-    mockProducts.filter(p => !p.approved)
-  );
-  const [approvedProducts, setApprovedProducts] = useState<Product[]>(
-    mockProducts.filter(p => p.approved)
-  );
+  const [pendingProducts, setPendingProducts] = useState<ProductSubmission[]>([]);
+  const [approvedProducts, setApprovedProducts] = useState<ProductSubmission[]>([]);
   
   // Initialize keyword state from our categorized keywords
   const [keywordCategories, setKeywordCategories] = useState({
@@ -69,6 +71,17 @@ const AdminPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("commonNames");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Load submissions from local storage when the component mounts
+  useEffect(() => {
+    loadProductSubmissions();
+  }, []);
+
+  const loadProductSubmissions = () => {
+    const submissions = getProductSubmissions();
+    setPendingProducts(submissions.filter(p => !p.approved));
+    setApprovedProducts(submissions.filter(p => p.approved));
+  };
+
   // Get all keywords as a flat array for scanning functionality
   const getAllKeywords = () => {
     return [
@@ -80,24 +93,18 @@ const AdminPage = () => {
   };
 
   const handleApprove = (productId: string) => {
-    const productToApprove = pendingProducts.find(p => p.id === productId);
-    if (productToApprove) {
-      // Update product to approved status
-      const updatedProduct = { ...productToApprove, approved: true };
-      
-      // Update state
-      setPendingProducts(pendingProducts.filter(p => p.id !== productId));
-      setApprovedProducts([...approvedProducts, updatedProduct]);
-      
-      toast({
-        title: "Product approved",
-        description: `${updatedProduct.name} has been added to the database.`,
-      });
-    }
+    updateProductApproval(productId, true);
+    loadProductSubmissions();
+    
+    toast({
+      title: "Product approved",
+      description: `Product has been added to the database.`,
+    });
   };
 
   const handleReject = (productId: string) => {
-    setPendingProducts(pendingProducts.filter(p => p.id !== productId));
+    deleteProductSubmission(productId);
+    loadProductSubmissions();
     
     toast({
       title: "Product rejected",
@@ -106,7 +113,8 @@ const AdminPage = () => {
   };
 
   const handleDelete = (productId: string) => {
-    setApprovedProducts(approvedProducts.filter(p => p.id !== productId));
+    deleteProductSubmission(productId);
+    loadProductSubmissions();
     
     toast({
       title: "Product deleted",
@@ -209,6 +217,7 @@ const AdminPage = () => {
                         <TableHead>Product</TableHead>
                         <TableHead>Brand</TableHead>
                         <TableHead>Type</TableHead>
+                        <TableHead>PVA Status</TableHead>
                         <TableHead>PVA %</TableHead>
                         <TableHead>Submitted</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -221,7 +230,21 @@ const AdminPage = () => {
                           <TableCell>{product.brand}</TableCell>
                           <TableCell>{product.type}</TableCell>
                           <TableCell>
-                            {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'N/A'}
+                            {product.pvaStatus === 'contains' && (
+                              <Badge variant="destructive">Contains PVA</Badge>
+                            )}
+                            {product.pvaStatus === 'verified-free' && (
+                              <Badge variant="success" className="bg-green-100 text-green-800">Verified Free</Badge>
+                            )}
+                            {product.pvaStatus === 'needs-verification' && (
+                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
+                            )}
+                            {product.pvaStatus === 'inconclusive' && (
+                              <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
                           </TableCell>
                           <TableCell>
                             {new Date(product.submittedAt).toLocaleDateString()}
@@ -302,6 +325,7 @@ const AdminPage = () => {
                         <TableHead>Product</TableHead>
                         <TableHead>Brand</TableHead>
                         <TableHead>Type</TableHead>
+                        <TableHead>PVA Status</TableHead>
                         <TableHead>PVA %</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -313,7 +337,21 @@ const AdminPage = () => {
                           <TableCell>{product.brand}</TableCell>
                           <TableCell>{product.type}</TableCell>
                           <TableCell>
-                            {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'N/A'}
+                            {product.pvaStatus === 'contains' && (
+                              <Badge variant="destructive">Contains PVA</Badge>
+                            )}
+                            {product.pvaStatus === 'verified-free' && (
+                              <Badge variant="success" className="bg-green-100 text-green-800">Verified Free</Badge>
+                            )}
+                            {product.pvaStatus === 'needs-verification' && (
+                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
+                            )}
+                            {product.pvaStatus === 'inconclusive' && (
+                              <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button 
