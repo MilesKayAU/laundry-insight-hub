@@ -15,6 +15,7 @@ import AboutPva from "./pages/AboutPva";
 import PvaFreePage from "./pages/PvaFreePage";
 import AuthPage from "./pages/AuthPage";
 import AuthGuard from "./components/AuthGuard";
+import AdminGuard from "./components/AdminGuard";
 import NotFound from "./pages/NotFound";
 
 // Create a client
@@ -40,9 +41,9 @@ const App: React.FC = () => {
                   } />
                   <Route path="/database" element={<DatabasePage />} />
                   <Route path="/admin" element={
-                    <AuthGuard>
+                    <AdminGuard>
                       <AdminPage />
-                    </AuthGuard>
+                    </AdminGuard>
                   } />
                   <Route path="/about" element={<AboutPva />} />
                   <Route path="/pva-free" element={<PvaFreePage />} />
