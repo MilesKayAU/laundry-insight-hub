@@ -31,6 +31,7 @@ interface DataChartsProps {
 interface ChartDataItem {
   brand: string;
   count: number;
+  pva: number | null;
   color?: string;
 }
 
@@ -48,7 +49,47 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const [brandLimit, setBrandLimit] = useState("10");
   const [chartType, setChartType] = useState("pie");
 
-  // Get data for brand visualization
+  // Create brand distribution data that includes PVA percentages
+  const createBrandPvaData = () => {
+    const brandMap = new Map<string, { count: number, pvaTotal: number, pvaCount: number }>();
+    
+    // Group products by brand and calculate PVA
+    products.forEach(product => {
+      const brand = product.brand;
+      if (!brandMap.has(brand)) {
+        brandMap.set(brand, { count: 0, pvaTotal: 0, pvaCount: 0 });
+      }
+      
+      const brandData = brandMap.get(brand)!;
+      brandData.count += 1;
+      
+      if (product.pvaPercentage !== null && product.pvaPercentage !== undefined) {
+        brandData.pvaTotal += product.pvaPercentage;
+        brandData.pvaCount += 1;
+      }
+    });
+    
+    // Convert map to array and calculate average PVA
+    let brandData = Array.from(brandMap.entries()).map(([brand, data]) => {
+      const avgPva = data.pvaCount > 0 ? data.pvaTotal / data.pvaCount : null;
+      return {
+        brand,
+        count: data.count,
+        pva: avgPva
+      };
+    });
+    
+    // Sort by count (descending)
+    brandData.sort((a, b) => b.count - a.count);
+    
+    // Limit to the specified number of brands
+    return brandData.slice(0, parseInt(brandLimit));
+  };
+  
+  // Get data for brand visualization with PVA information
+  const brandPvaData = createBrandPvaData();
+  
+  // Traditional brand count data (for backward compatibility)
   const brandData = getBrandCategories(products, parseInt(brandLimit));
 
   // Create PVA data visualization
@@ -74,6 +115,11 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   // Limit data to prevent overcrowding (show top 15)
   const limitedPvaData = sortedPvaData.slice(0, 15);
 
+  const formatPieChartLabel = ({ brand, count, pva }) => {
+    const percentage = pva !== null ? `${pva}% PVA` : "Unknown PVA";
+    return `${brand}: ${count} (${percentage})`;
+  };
+
   const renderPvaChart = () => {
     if (products.length === 0) {
       return (
@@ -84,11 +130,11 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
     }
 
     return (
-      <div className="h-[450px] w-full">
+      <div className="h-[500px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={limitedPvaData}
-            margin={{ top: 20, right: 150, left: 30, bottom: 20 }}
+            margin={{ top: 20, right: 180, left: 30, bottom: 20 }}
             layout="vertical"
           >
             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
@@ -101,7 +147,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
             <YAxis 
               dataKey="name"
               type="category"
-              width={150}
+              width={180}
               tick={{ fontSize: 11 }}
             />
             <Tooltip 
@@ -171,7 +217,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
           <div className="flex items-center gap-2">
             <Label htmlFor="chart-type">Chart Type:</Label>
             <Select value={chartType} onValueChange={setChartType}>
-              <SelectTrigger id="chart-type" className="w-32">
+              <SelectTrigger id="chart-type" className="w-40">
                 <SelectValue placeholder="Chart Type" />
               </SelectTrigger>
               <SelectContent>
@@ -202,29 +248,54 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
       </CardHeader>
       <CardContent>
         {chartType === "pie" ? (
-          <div className="h-[450px] w-full">
+          <div className="h-[500px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}>
+              <PieChart margin={{ top: 0, right: 0, bottom: 40, left: 0 }}>
                 <Pie
-                  data={brandData}
+                  data={brandPvaData}
                   dataKey="count"
                   nameKey="brand"
                   cx="50%"
                   cy="45%"
-                  outerRadius={150}
+                  outerRadius={180}
                   fill="#8884d8"
-                  label={({brand, count, percent}) => 
-                    `${brand}: ${count} (${(percent * 100).toFixed(0)}%)`
-                  }
+                  label={formatPieChartLabel}
+                  labelLine={true}
                 >
-                  {brandData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {brandPvaData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.pva === null ? unknownValueColor : COLORS[index % COLORS.length]} 
+                    />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend wrapperStyle={{ paddingTop: "10px" }} />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length > 0) {
+                      const data = payload[0].payload as ChartDataItem;
+                      return (
+                        <div className="p-3 bg-background border border-border rounded shadow-md">
+                          <p className="font-medium">{data.brand}</p>
+                          <p>Products: {data.count}</p>
+                          <p>
+                            {data.pva === null ? (
+                              <span className="text-muted-foreground">PVA: Unknown</span>
+                            ) : (
+                              <span>Avg. PVA: {data.pva.toFixed(1)}%</span>
+                            )}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend wrapperStyle={{ paddingTop: "40px" }} />
               </PieChart>
             </ResponsiveContainer>
+            <div className="text-xs text-gray-500 italic mt-2 text-center">
+              Gray slices = Unknown PVA content, awaiting verification from suppliers
+            </div>
           </div>
         ) : (
           renderPvaChart()

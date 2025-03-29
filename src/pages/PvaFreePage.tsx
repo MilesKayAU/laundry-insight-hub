@@ -25,15 +25,18 @@ const PvaFreePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [pvaFreeProducts, setPvaFreeProducts] = useState([]);
   
-  // Get all approved products with 0% PVA (pvaStatus is 'verified-free')
-  const pvaFreeProducts = getProductSubmissions().filter(
-    product => product.approved && product.pvaStatus === 'verified-free'
-  );
-
   useEffect(() => {
+    // Get all approved products with 0% PVA (pvaStatus is 'verified-free')
+    const products = getProductSubmissions().filter(
+      product => product.approved && product.pvaStatus === 'verified-free'
+    );
+    
+    setPvaFreeProducts(products);
+    
     // Check if we have products
-    if (pvaFreeProducts.length === 0) {
+    if (products.length === 0) {
       toast({
         title: "Data Loading",
         description: "Loading product data from our database...",
@@ -41,7 +44,7 @@ const PvaFreePage = () => {
     } else {
       setLoading(false);
     }
-  }, [pvaFreeProducts.length, toast]);
+  }, [toast]);
 
   // Filter products based on search term
   const filteredProducts = pvaFreeProducts.filter(product => 
