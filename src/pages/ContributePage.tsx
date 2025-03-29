@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { 
   Card, 
@@ -203,7 +204,7 @@ const ContributePage = () => {
       brand,
       name: productName,
       type: productType,
-      pvaPercentage: pvaPercentage ? pvaPercentage : null,
+      pvaPercentage: pvaPercentage ? parseFloat(pvaPercentage) : null,
       pvaStatus,
       extractedText,
       foundKeywords,
