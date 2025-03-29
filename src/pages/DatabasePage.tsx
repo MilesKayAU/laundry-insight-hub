@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -87,9 +88,10 @@ const DatabasePage = () => {
   const [contactEmail, setContactEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  // Reset country selection state when component mounts to ensure the country selector always shows first
   useEffect(() => {
-    handleRefreshData();
     setCountrySelected(false);
+    handleRefreshData();
     
     const intervalId = setInterval(() => {
       handleRefreshData();
@@ -142,11 +144,11 @@ const DatabasePage = () => {
     let matchesPvaStatus = filterPvaStatus === "all";
     
     if (isProductSubmission(product)) {
-      if (filterPvaStatus === "contains" && product.pvaPercentage !== null && product.pvaPercentage > 0) {
+      if (filterPvaStatus === "contains" && product.pvaStatus === 'contains') {
         matchesPvaStatus = true;
-      } else if (filterPvaStatus === "free" && product.pvaPercentage === 0) {
+      } else if (filterPvaStatus === "free" && product.pvaStatus === 'verified-free') {
         matchesPvaStatus = true;
-      } else if (filterPvaStatus === "unknown" && product.pvaPercentage === null) {
+      } else if (filterPvaStatus === "unknown" && product.pvaStatus === 'needs-verification') {
         matchesPvaStatus = true;
       }
     } else {
@@ -186,6 +188,11 @@ const DatabasePage = () => {
   
   const handleViewProducts = () => {
     setCountrySelected(true);
+  };
+
+  const resetCountryFilter = () => {
+    setCountrySelected(false);
+    setSelectedCountry("Global");
   };
 
   const handleBrandOwnershipRequest = () => {
@@ -324,11 +331,7 @@ const DatabasePage = () => {
     );
   };
 
-  const resetCountryFilter = () => {
-    setCountrySelected(false);
-    setSelectedCountry("Global");
-  };
-
+  // Show loading state while fetching data
   if (loading) {
     return (
       <div className="container mx-auto py-10 px-4 flex justify-center items-center">
@@ -339,6 +342,7 @@ const DatabasePage = () => {
     );
   }
 
+  // Always show the country selector first before showing the product data
   if (!countrySelected) {
     return (
       <div className="container mx-auto py-10 px-4">
