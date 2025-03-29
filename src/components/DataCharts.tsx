@@ -64,8 +64,12 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
       brandData.count += 1;
       
       if (product.pvaPercentage !== null && product.pvaPercentage !== undefined) {
-        brandData.pvaTotal += product.pvaPercentage;
-        brandData.pvaCount += 1;
+        // Make sure we're storing valid numbers
+        const pvaValue = parseFloat(String(product.pvaPercentage));
+        if (!isNaN(pvaValue) && isFinite(pvaValue)) {
+          brandData.pvaTotal += pvaValue;
+          brandData.pvaCount += 1;
+        }
       }
     });
     
@@ -116,25 +120,39 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   // Limit data to prevent overcrowding (show top 15)
   const limitedPvaData = sortedPvaData.slice(0, 15);
 
-  // Format label for pie chart segments
+  // Format label for pie chart segments - Modified to fix label placement
   const formatPieChartLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, index, payload }) => {
     const RADIAN = Math.PI / 180;
-    const radius = 25 + innerRadius + (outerRadius - innerRadius);
+    const radius = innerRadius + (outerRadius - innerRadius) * 1.4; // Adjusted to keep inside container
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+    
+    if (index >= brandPvaData.length) return null;
+    
     const item = brandPvaData[index];
-    let pvaText = item.pva === null ? "(Unknown PVA)" : `(${item.pva.toFixed(1)}% PVA)`;
-    if (item.pva === 0) pvaText = "(0% PVA)";
+    let pvaText;
+    
+    if (item.pva === null) {
+      pvaText = "(Unknown PVA)";
+    } else if (item.pva === 0) {
+      pvaText = "(0% PVA)";
+    } else {
+      // Format PVA to 1 decimal place and ensure it's a valid number
+      const pvaNum = parseFloat(String(item.pva));
+      pvaText = isNaN(pvaNum) ? "(Unknown PVA)" : `(${pvaNum.toFixed(1)}% PVA)`;
+    }
 
+    // Calculate text anchor based on angle to prevent text from going outside container
+    const textAnchor = x > cx ? 'start' : 'end';
+    
     return (
       <text 
         x={x} 
         y={y} 
         fill="#000" 
-        textAnchor={x > cx ? 'start' : 'end'} 
+        textAnchor={textAnchor} 
         dominantBaseline="central"
-        fontSize={12}
+        fontSize={10} // Smaller font size to fit better
       >
         {`${item.brand}: ${item.count} ${pvaText}`}
       </text>
@@ -269,7 +287,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
       </CardHeader>
       <CardContent>
         {chartType === "pie" ? (
-          <div className="h-[600px] w-full">
+          <div className="h-[600px] w-full overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 20, right: 20, bottom: 120, left: 20 }}>
                 <Pie
@@ -304,7 +322,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
                             ) : data.pva === 0 ? (
                               <span>PVA: 0% (PVA-Free)</span>
                             ) : (
-                              <span>Avg. PVA: {data.pva.toFixed(1)}%</span>
+                              <span>Avg. PVA: {parseFloat(String(data.pva)).toFixed(1)}%</span>
                             )}
                           </p>
                         </div>
