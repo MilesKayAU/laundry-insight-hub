@@ -3,21 +3,33 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Globe, MapPin } from "lucide-react";
+import { Globe, MapPin, Flag } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
 
 interface CountrySelectorProps {
   selectedCountry: string;
   countries: string[];
   onCountrySelect: (country: string) => void;
   onSubmit: () => void;
+  allowCustomCountry?: boolean;
+  customCountryInput?: React.ReactNode;
 }
 
 const CountrySelector: React.FC<CountrySelectorProps> = ({
   selectedCountry,
   countries,
   onCountrySelect,
-  onSubmit
+  onSubmit,
+  allowCustomCountry = false,
+  customCountryInput
 }) => {
+  const form = useForm({
+    defaultValues: {
+      country: selectedCountry
+    }
+  });
+  
   // Ensure all countries are properly normalized
   const normalizedCountries = countries.map(country => 
     typeof country === 'string' ? country.trim() : country
@@ -33,6 +45,21 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   const displayCountries = hasAustralia ? 
     normalizedCountries : 
     [...normalizedCountries, 'Australia'];
+
+  // Add any additional common countries if they don't exist
+  const commonCountries = ['United States', 'United Kingdom', 'Canada', 'New Zealand'];
+  commonCountries.forEach(country => {
+    if (!displayCountries.includes(country)) {
+      displayCountries.push(country);
+    }
+  });
+
+  // Sort alphabetically except for Global which should be first
+  const sortedCountries = displayCountries.sort((a, b) => {
+    if (a === 'Global') return -1;
+    if (b === 'Global') return 1;
+    return a.localeCompare(b);
+  });
 
   return (
     <Card className="w-full max-w-md mx-auto mt-8">
@@ -55,10 +82,10 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                   Global (All Products)
                 </div>
               </SelectItem>
-              {displayCountries.map((country) => (
+              {sortedCountries.map((country) => (
                 <SelectItem key={country} value={country}>
                   <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-2" />
+                    <Flag className="w-4 h-4 mr-2" />
                     {country}
                   </div>
                 </SelectItem>
@@ -66,6 +93,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
             </SelectContent>
           </Select>
         </div>
+        
+        {allowCustomCountry && customCountryInput}
         
         <Button 
           onClick={onSubmit} 

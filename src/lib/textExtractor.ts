@@ -44,22 +44,16 @@ export interface ProductSubmission {
   name: string;
   brand: string;
   type: string;
-  country: string; 
-  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
-  pvaPercentage?: number | null;
-  imageUrl?: string;
-  videoUrl?: string;
-  websiteUrl?: string;
-  description?: string;
-  ingredients?: string; // Added ingredients field
-  submittedAt: string;
-  dateSubmitted?: string;
+  ingredients?: string;
   approved: boolean;
-  brandVerified?: boolean;
-  brandOwnershipRequested?: boolean;
-  brandContactEmail?: string;
-  brandOwnershipRequestDate?: string;
-  brandVerificationDate?: string;
+  pvaStatus: 'contains' | 'verified-free' | 'needs-verification';
+  pvaPercentage: number | null;
+  country?: string;
+  websiteUrl?: string;
+  comments?: string;
+  brandVerified: boolean;
+  brandOwnershipRequested: boolean;
+  timestamp: number;
 }
 
 // Extract text from image using Tesseract OCR
@@ -303,5 +297,69 @@ export const analyzePastedIngredients = (ingredients: string): {
       detectedTerms: [],
       confidence: 'low'
     };
+  }
+};
+
+// Simulate product submission
+export const submitProduct = async (data: ProductSubmitData): Promise<boolean> => {
+  // Simulated product submission
+  console.info("Product submission:", data);
+  
+  try {
+    // In a real application, this would send the data to the server
+    // For now, we'll add it to local storage
+    
+    const newSubmission: ProductSubmission = {
+      id: `sub_${Date.now()}`,
+      name: data.name,
+      brand: data.brand,
+      type: data.type,
+      ingredients: data.ingredients,
+      country: data.country,
+      websiteUrl: data.websiteUrl,
+      comments: data.comments,
+      approved: false,
+      pvaStatus: 'needs-verification',
+      pvaPercentage: null,
+      brandVerified: false,
+      brandOwnershipRequested: false,
+      timestamp: Date.now()
+    };
+    
+    // Simulating PVA detection from ingredients if available
+    if (data.ingredients) {
+      const ingredientsLower = data.ingredients.toLowerCase();
+      if (ingredientsLower.includes('polyvinyl alcohol') || 
+          ingredientsLower.includes('pva') || 
+          ingredientsLower.includes('poly(vinyl alcohol)')) {
+        newSubmission.pvaStatus = 'contains';
+        // Simulate finding a percentage from the text
+        const percentMatch = ingredientsLower.match(/pva[^\d]*(\d+(?:\.\d+)?)%/);
+        if (percentMatch) {
+          newSubmission.pvaPercentage = parseFloat(percentMatch[1]);
+        } else {
+          newSubmission.pvaPercentage = 5; // Default assumption if PVA is mentioned but no percentage
+        }
+      }
+    }
+    
+    // Simulating image analysis (would be server-side in production)
+    if (data.media && data.media.length > 0) {
+      // Simulate delay for "processing" images
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Set a timestamp to make it feel like we did something with the images
+      newSubmission.timestamp = Date.now();
+    }
+    
+    // Store submission in local storage
+    const existingSubmissions = getProductSubmissions();
+    const updatedSubmissions = [...existingSubmissions, newSubmission];
+    localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
+    
+    return true;
+  } catch (error) {
+    console.error("Error submitting product:", error);
+    return false;
   }
 };
