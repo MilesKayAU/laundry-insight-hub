@@ -56,7 +56,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
     name: p.name,
     PVA: p.pvaPercentage,
     brand: p.brand,
-    pvaMissing: p.pvaPercentage === null ? "Unknown" : "",
+    pvaMissing: p.pvaPercentage === null ? "Unknown - Awaiting verification" : "",
     productId: p.id,
     displayValue: p.pvaPercentage === null ? 20 : p.pvaPercentage, // Default to 20% for visual representation
     status: p.pvaPercentage === null ? "unknown" : 
@@ -88,7 +88,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={limitedPvaData}
-            margin={{ top: 20, right: 50, left: 30, bottom: 10 }}
+            margin={{ top: 20, right: 150, left: 30, bottom: 10 }}
             layout="vertical"
           >
             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
@@ -140,7 +140,8 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
               <LabelList 
                 dataKey="pvaMissing"
                 position="right"
-                formatter={(value: string) => value === "Unknown" ? "Unknown - Awaiting verification" : ""}
+                formatter={(value: string) => value}
+                fill="#666"
               />
               <LabelList 
                 dataKey="PVA"

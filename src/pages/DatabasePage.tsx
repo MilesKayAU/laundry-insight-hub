@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -97,7 +96,7 @@ const DatabasePage = () => {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterPvaStatus, setFilterPvaStatus] = useState<string>("all");
   const [chartView, setChartView] = useState(true);
-  const itemsPerPage = 10; // Increased items per page
+  const itemsPerPage = 10;
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   
@@ -112,20 +111,16 @@ const DatabasePage = () => {
   
   const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions];
   
-  // Apply filters
   const filteredProducts = combinedApprovedProducts.filter(product => {
-    // Search filter
     const matchesSearch = 
       searchTerm === "" || 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       product.brand.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Type filter
     const matchesType = 
       filterType === "all" || 
       product.type === filterType;
     
-    // PVA status filter
     const matchesPvaStatus = 
       filterPvaStatus === "all" || 
       (filterPvaStatus === "contains" && product.pvaPercentage !== null && product.pvaPercentage > 0) ||
@@ -135,7 +130,6 @@ const DatabasePage = () => {
     return matchesSearch && matchesType && matchesPvaStatus;
   });
   
-  // Get unique product types for filter
   const productTypes = Array.from(new Set(combinedApprovedProducts.map(p => p.type)));
   
   const paginateData = (data) => {
@@ -154,16 +148,14 @@ const DatabasePage = () => {
     setCurrentPage(page);
   };
   
-  // All products combined for the chart view
   const chartData: ChartDataItem[] = filteredProducts.map(p => ({
     name: p.name,
     PVA: p.pvaPercentage,
     brand: p.brand,
-    pvaMissing: p.pvaPercentage === null ? "?" : "",
+    pvaMissing: p.pvaPercentage === null ? "Unknown - Awaiting verification" : "",
     productId: p.id
   }));
 
-  // Sort chart data by PVA percentage (with nulls at the end)
   chartData.sort((a, b) => {
     if (a.PVA === null && b.PVA === null) return 0;
     if (a.PVA === null) return 1;
@@ -171,12 +163,11 @@ const DatabasePage = () => {
     return a.PVA - b.PVA;
   });
 
-  // Limit chart data to prevent overcrowding (show top 25)
   const limitedChartData = chartData.slice(0, 25);
 
   const knownValueColor = "#3cca85";
   const podKnownValueColor = "#4799ff";
-  const unknownValueColor = "#8E9196"; // Gray color for unknown values
+  const unknownValueColor = "#8E9196";
 
   const handleBrandOwnershipRequest = () => {
     if (!selectedProduct) return;
@@ -371,7 +362,6 @@ const DatabasePage = () => {
         </CardHeader>
         <CardContent>
           <div className="mb-6 space-y-4">
-            {/* Search and filter controls */}
             <div className="flex flex-col md:flex-row gap-3">
               <div className="relative flex-1">
                 <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -458,78 +448,66 @@ const DatabasePage = () => {
             </div>
           </div>
           
-          {/* Conditional rendering based on view selection */}
           {chartView ? (
             <div>
-              {/* Chart view */}
-              {limitedChartData.length > 0 ? (
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={limitedChartData}
-                      margin={{ top: 20, right: 30, left: 30, bottom: 100 }}
-                      layout="vertical"
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={limitedChartData}
+                    margin={{ top: 20, right: 150, left: 30, bottom: 100 }}
+                    layout="vertical"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <XAxis 
+                      type="number"
+                      label={{ value: 'PVA Content (%)', position: 'insideBottom', offset: -10 }}
+                    />
+                    <YAxis 
+                      dataKey="name"
+                      type="category"
+                      width={150}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <Tooltip content={CustomTooltip} />
+                    <Legend />
+                    <Bar 
+                      dataKey={(data) => data.PVA === null ? 20 : data.PVA} 
+                      name="PVA Content (%)"
+                      barSize={20}
                     >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                      <XAxis 
-                        type="number"
-                        label={{ value: 'PVA Content (%)', position: 'insideBottom', offset: -10 }}
-                      />
-                      <YAxis 
-                        dataKey="name"
-                        type="category"
-                        width={150}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar 
-                        dataKey="PVA" 
-                        name="PVA Content (%)" 
-                        barSize={20}
-                      >
-                        {limitedChartData.map((entry, index) => {
-                          // For unknown values, create a visual representation at 20%
-                          const visualValue = entry.PVA === null ? 20 : entry.PVA;
-                          
-                          return (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={entry.PVA === null ? unknownValueColor : 
-                                    (entry.name.includes("Pod") ? podKnownValueColor : knownValueColor)}
-                            />
-                          );
-                        })}
-                        <LabelList 
-                          dataKey="pvaMissing"
-                          position="right"
+                      {limitedChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.PVA === null ? unknownValueColor : 
+                                (entry.name.includes("Pod") ? podKnownValueColor : knownValueColor)}
                         />
-                        <LabelList 
-                          dataKey="PVA"
-                          position="right"
-                          formatter={(value) => value === null ? "Unknown" : `${value}%`}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="text-xs text-gray-500 italic mt-2 text-center">
-                    ? = Unknown PVA content (displayed at 20% as reference), awaiting verification from suppliers
+                      ))}
+                      <LabelList 
+                        dataKey="pvaMissing"
+                        position="right"
+                        formatter={(value: string) => value}
+                        fill="#666"
+                      />
+                      <LabelList 
+                        dataKey="PVA"
+                        position="right"
+                        formatter={(value: number | null) => value === null ? "" : `${value}%`}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="text-xs text-gray-500 italic mt-2 text-center">
+                  Gray bars = Unknown PVA content (shown at estimated 20% for reference), awaiting verification from suppliers
+                </div>
+                {filteredProducts.length > limitedChartData.length && (
+                  <div className="text-center text-sm text-muted-foreground mt-2">
+                    Showing top 25 products. Use table view to see all {filteredProducts.length} products.
                   </div>
-                  {filteredProducts.length > limitedChartData.length && (
-                    <div className="text-center text-sm text-muted-foreground mt-2">
-                      Showing top 25 products. Use table view to see all {filteredProducts.length} products.
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  No products matching your search criteria
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ) : (
             <div>
-              {/* Table view */}
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
