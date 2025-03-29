@@ -1,4 +1,3 @@
-
 import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -89,17 +88,25 @@ const HomePage = () => {
             <div className="md:w-1/2">
               <div className="mb-4 inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800">
                 <Info className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">The PVA Problem</span>
+                <span className="text-sm font-medium">Understanding PVA</span>
               </div>
-              <h2 className="text-3xl font-bold mb-6 text-science-800">Understanding PVA in Laundry Products</h2>
+              <h2 className="text-3xl font-bold mb-6 text-science-800">Understanding Polyvinyl Alcohol (PVA) in Your Laundry Products</h2>
               <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-                Polyvinyl Alcohol (PVA) is commonly used in laundry sheets and pods as a dissolving film. 
-                However, recent studies show it persists in the environment and doesn't break down in wastewater treatment.
+                Polyvinyl Alcohol, or PVA, is a synthetic polymer commonly found in many laundry sheets and pods. 
+                It's primarily used as a dissolvable film that conveniently disappears in water. While marketed as 
+                fully biodegradable, recent research suggests concerns that PVA may not break down as effectively as 
+                manufacturers claim.
               </p>
-              <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-                The substance can remain as microplastics in waterways, potentially causing harm to aquatic ecosystems 
-                and entering the food chain.
-              </p>
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold mb-3 text-science-700">What's the Potential Issue with PVA?</h3>
+                <p className="text-lg text-gray-700 mb-4 leading-relaxed">
+                  Once dissolved, PVA often remains invisible in wastewater and may persist as potential microplastics. 
+                  These small particles have been detected in various aquatic environments, raising concerns about their 
+                  contribution to pollution in rivers, lakes, and oceans. Some popular laundry products contain up to 
+                  40% PVA, meaning a single kilogram of laundry sheets or pods could potentially introduce roughly 400ml 
+                  of invisible PVA into waterways.
+                </p>
+              </div>
               <Button asChild variant="outline" className="bg-white border-amber-300 hover:bg-amber-50 text-amber-800">
                 <Link to="/about">
                   Learn More About PVA Impact
@@ -129,20 +136,41 @@ const HomePage = () => {
           <div className="glass-effect p-10 rounded-2xl max-w-4xl mx-auto">
             <div className="flex items-center justify-center mb-6">
               <Microscope className="h-8 w-8 text-science-600 mr-3" />
-              <h2 className="text-3xl font-bold text-science-800">The Science of PVA</h2>
+              <h2 className="text-3xl font-bold text-science-800">Why Should We Be Concerned?</h2>
             </div>
-            <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-              Polyvinyl Alcohol (PVA) is a synthetic polymer widely used in laundry products. Our scientific analysis 
-              reveals concerns about its environmental persistence and potential impact on aquatic ecosystems. 
-              PVAFree.com employs molecular-level analysis to provide you with accurate data.
-            </p>
-            <div className="text-center">
-              <Button asChild variant="outline" className="bg-white border-science-200 hover:bg-science-50 text-science-700">
-                <Link to="/about" className="inline-flex items-center">
-                  Explore the Research
-                  <MoveRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-science-700">Environmental Persistence</h3>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  PVA may not fully degrade in typical wastewater treatment plants or in private septic systems. 
+                  Wastewater treatment facilities and septic tanks often lack the specific conditions or enzymes 
+                  required to break down this synthetic polymer effectively, potentially allowing it to accumulate 
+                  and eventually contaminate local ecosystems.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-science-700">Potential Microplastic Pollution</h3>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  If PVA breaks down into microplastics, these particles could harm aquatic life and enter the food 
+                  chain, potentially impacting wildlife and human health. Traces of PVA have reportedly been detected 
+                  in human breast milk, raising further concerns about environmental exposure.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-science-700">Impact on Plants and Ecosystems</h3>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  As PVA slowly breaks down, it may release compounds such as ethylene. While ethylene is naturally 
+                  consumed by plants, excessive amounts released from synthetic sources could disrupt plant growth 
+                  cycles and alter the balance of natural ecosystems.
+                </p>
+              </div>
+            </div>
+            <div className="mt-8 text-center">
+              <p className="text-xl text-science-700 font-medium mb-6">
+                Making truly eco-friendly choices involves more than convenience—it means understanding the hidden 
+                impacts of the products we use every day. By being aware of substances like PVA and their broader 
+                implications, we can make informed decisions to protect our health, waterways, and planet.
+              </p>
             </div>
           </div>
         </div>
