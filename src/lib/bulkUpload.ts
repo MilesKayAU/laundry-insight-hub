@@ -1,4 +1,3 @@
-
 import { ProductSubmission, getProductSubmissions } from "./textExtractor";
 
 // Define the expected format for the CSV/Excel data
@@ -13,8 +12,8 @@ export interface BulkProductData {
   videoUrl?: string;
   websiteUrl?: string;
   additionalNotes?: string;
-  country?: string; // Add country field to BulkProductData interface
-  hasPva?: 'yes' | 'no' | 'unidentified'; // New explicit field for PVA presence
+  country?: string;
+  hasPva?: 'yes' | 'no' | 'unidentified';
 }
 
 // Check if product with same brand and name already exists
@@ -94,7 +93,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
         brand: item.brand,
         name: item.name,
         type: item.type,
-        country: item.country || 'Global', // Use provided country or default to Global
+        country: item.country || 'Global',
         pvaStatus: item.pvaStatus,
         pvaPercentage: item.pvaPercentage,
         description: item.additionalNotes || item.description || "",
@@ -102,7 +101,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
         videoUrl: item.videoUrl || "",
         websiteUrl: item.websiteUrl || "",
         submittedAt: new Date().toISOString(),
-        approved: false, // Make sure products from bulk upload are not auto-approved
+        approved: false,
         dateSubmitted: new Date().toISOString(),
         brandVerified: false,
         brandContactEmail: ""
@@ -125,7 +124,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
   return result;
 };
 
-// Parse CSV data with improved error handling
+// Parse CSV data with improved error handling and more flexible header detection
 export const parseCSV = (csvText: string): BulkProductData[] => {
   try {
     const lines = csvText.trim().split('\n');
@@ -138,22 +137,89 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
     const delimiter = headerLine.includes(';') ? ';' : ',';
     const headers = headerLine.split(delimiter).map(h => h.trim());
     
-    // Validate expected headers
-    const requiredHeaders = ['brand', 'name', 'type'];
-    const lowercaseHeaders = headers.map(h => h.toLowerCase());
-    const missingRequiredHeaders = requiredHeaders.filter(
-      required => !lowercaseHeaders.some(h => 
-        h === required || 
-        h === required + 'name' || 
-        h === 'product' + required ||
-        h === required.replace('brand', 'manufacturer')
-      )
-    );
+    // Map various possible header names to our standardized field names
+    const headerMap: Record<string, string> = {
+      // Brand variations
+      'brand': 'brand',
+      'brandname': 'brand',
+      'brand name': 'brand',
+      'manufacturer': 'brand',
+      'company': 'brand',
+      
+      // Name variations
+      'name': 'name',
+      'productname': 'name',
+      'product name': 'name',
+      'product': 'name',
+      
+      // Type variations
+      'type': 'type',
+      'producttype': 'type',
+      'product type': 'type',
+      'category': 'type',
+      
+      // PVA Status variations
+      'pvastatus': 'hasPva',
+      'haspva': 'hasPva',
+      'has pva': 'hasPva',
+      'containspva': 'hasPva',
+      'contains pva': 'hasPva',
+      
+      // PVA Percentage variations
+      'pvapercentage': 'pvaPercentage',
+      'pva percentage': 'pvaPercentage',
+      'pva percentage (if known)': 'pvaPercentage',
+      'pva %': 'pvaPercentage',
+      
+      // Notes variations
+      'additionalnotes': 'additionalNotes',
+      'additional notes': 'additionalNotes',
+      'notes': 'additionalNotes',
+      'description': 'additionalNotes',
+      
+      // Country variations
+      'country': 'country',
+      'region': 'country',
+      'market': 'country',
+      'availability': 'country'
+    };
+    
+    // Create a mapping from the actual headers to our field names
+    const fieldMapping: Record<number, string> = {};
+    const foundRequiredFields: Record<string, boolean> = {
+      'brand': false,
+      'name': false,
+      'type': false
+    };
+    
+    headers.forEach((header, index) => {
+      const lowerHeader = header.toLowerCase();
+      
+      // Check if this header maps to a known field
+      for (const [possibleName, fieldName] of Object.entries(headerMap)) {
+        if (lowerHeader === possibleName) {
+          fieldMapping[index] = fieldName;
+          
+          // Mark if we found a required field
+          if (fieldName in foundRequiredFields) {
+            foundRequiredFields[fieldName] = true;
+          }
+          
+          break;
+        }
+      }
+    });
+    
+    // Check if all required fields were found
+    const missingRequiredHeaders = Object.entries(foundRequiredFields)
+      .filter(([_, found]) => !found)
+      .map(([field]) => field);
     
     if (missingRequiredHeaders.length > 0) {
       throw new Error(`Missing required headers: ${missingRequiredHeaders.join(', ')}. Please use the template.`);
     }
     
+    // Process each data row
     return lines.slice(1).map((line, lineIndex) => {
       // Skip empty lines
       if (!line.trim()) {
@@ -194,30 +260,23 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
         }
       }
       
-      const item: any = {};
+      // Create an empty product data object
+      const item: Partial<BulkProductData> = {};
       
+      // Populate the item using the field mapping
       headers.forEach((header, index) => {
-        // Convert headers to match our expected format
-        let fieldName = header.toLowerCase().replace(/\s+/g, '');
-        const value = values[index] ? values[index].replace(/^"(.*)"$/, '$1') : ''; // Remove quotes if present
+        const fieldName = fieldMapping[index];
+        if (!fieldName) return; // Skip unknown headers
         
-        // Map CSV headers to our interface properties
-        if (fieldName === 'brandname' || fieldName === 'manufacturer') fieldName = 'brand';
-        if (fieldName === 'productname') fieldName = 'name';
-        if (fieldName === 'producttype') fieldName = 'type';
-        if (fieldName === 'pvapercentage(ifknown)' || fieldName === 'pvapercentage') fieldName = 'pvaPercentage';
-        if (fieldName === 'additionalnotes' || fieldName === 'notes') fieldName = 'additionalNotes';
-        if (fieldName === 'haspva' || fieldName === 'containspva' || fieldName === 'pvastatus') fieldName = 'hasPva';
+        const value = values[index] ? values[index].replace(/^"(.*)"$/, '$1') : '';
         
         if (fieldName === 'pvaPercentage') {
-          // More flexible parsing of percentages
           if (value) {
-            const cleanValue = value.replace(/[^0-9.]/g, ''); // Remove non-numeric characters except dot
+            const cleanValue = value.replace(/[^0-9.]/g, '');
             const numValue = parseFloat(cleanValue);
             item[fieldName] = isNaN(numValue) ? undefined : numValue;
           }
         } 
-        // Special handling for the hasPva field
         else if (fieldName === 'hasPva') {
           const lowValue = value.toLowerCase();
           if (['yes', 'true', '1', 'y', 'contains'].includes(lowValue)) {
@@ -229,12 +288,17 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
           }
         }
         else {
-          item[fieldName] = value;
+          (item as any)[fieldName] = value;
         }
       });
       
+      // Ensure required fields are present
+      if (!item.brand || !item.name || !item.type) {
+        console.warn(`Row ${lineIndex + 2} is missing required fields`);
+      }
+      
       return item as BulkProductData;
-    }).filter(Boolean) as BulkProductData[]; // Remove null entries from empty lines
+    }).filter(Boolean) as BulkProductData[];
   } catch (error) {
     console.error("CSV parsing error:", error);
     throw new Error(`Error parsing CSV: ${error instanceof Error ? error.message : 'Unknown error'}`);

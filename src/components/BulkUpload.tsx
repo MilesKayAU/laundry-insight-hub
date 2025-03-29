@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { 
   Card, 
@@ -109,7 +110,11 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         throw new Error("Invalid CSV format");
       }
       
+      // Add more detailed logging to help debug parsing issues
+      console.log("Processing CSV data:", csvData.substring(0, 100) + "...");
+      
       const parsedData = parseCSV(csvData);
+      console.log("Parsed data:", parsedData.length, "rows");
       
       if (parsedData.length === 0) {
         setParseError("No valid data rows found in the CSV. Please check the format and try again.");
@@ -137,6 +142,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         onComplete();
       }
     } catch (error) {
+      console.error("CSV processing error:", error);
       toast({
         title: "Error processing file",
         description: error instanceof Error ? error.message : "Failed to process the file",
@@ -185,6 +191,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       <CardContent>
         {!results ? (
           <div className="space-y-6">
+            {/* File upload section */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="space-y-1 w-full">
                 <Label htmlFor="csv-file">Upload CSV File</Label>
@@ -209,6 +216,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
               </div>
             </div>
             
+            {/* CSV preview section */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <Label htmlFor="csv-preview">CSV Content Preview</Label>
@@ -237,6 +245,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
               )}
             </div>
             
+            {/* Action buttons */}
             <div className="flex items-center space-x-4">
               <Button 
                 onClick={handleProcessData} 
@@ -267,6 +276,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
               </Button>
             </div>
             
+            {/* Help information */}
             <Alert variant="default" className="bg-muted">
               <HelpCircle className="h-4 w-4" />
               <AlertTitle>Expected Format</AlertTitle>
@@ -282,7 +292,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                   <li><strong>Country</strong> - Country or region where the product is available (optional, defaults to "Global")</li>
                 </ul>
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                  <p>Note: Duplicates are detected based on having the same Brand Name AND Product Name</p>
+                  <p>Note: The column headers can be flexible (e.g., "Brand", "Brand Name", "Company", etc.)</p>
                   <p>Tip: Download the template for a properly formatted example</p>
                 </div>
               </AlertDescription>
