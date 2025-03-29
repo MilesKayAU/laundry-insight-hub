@@ -1,3 +1,4 @@
+
 import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -123,7 +124,7 @@ const HomePage = () => {
                 />
               </div>
               <div className="absolute -bottom-4 -right-4 bg-amber-100 text-amber-800 px-4 py-2 rounded-lg shadow-md text-sm font-medium">
-                PVA residue doesn't fully dissolve
+                Yes it vanishes, but to where?
               </div>
             </div>
           </div>
