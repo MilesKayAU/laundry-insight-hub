@@ -102,7 +102,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
         videoUrl: item.videoUrl || "",
         websiteUrl: item.websiteUrl || "",
         submittedAt: new Date().toISOString(),
-        approved: false, // Changed from true to false to require admin approval
+        approved: false, // This is already set to false which is correct
         dateSubmitted: new Date().toISOString(),
         brandVerified: false, // Add brand verification status field
         brandContactEmail: "" // Store contact email for brand verification
@@ -125,49 +125,120 @@ export const processBulkUpload = (data: BulkProductData[]): {
   return result;
 };
 
-// Parse CSV data
+// Parse CSV data with improved error handling
 export const parseCSV = (csvText: string): BulkProductData[] => {
-  const lines = csvText.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
-  
-  return lines.slice(1).map(line => {
-    const values = line.split(',').map(v => v.trim());
-    const item: any = {};
+  try {
+    const lines = csvText.trim().split('\n');
+    if (lines.length <= 1) {
+      throw new Error("CSV file is empty or contains only headers");
+    }
     
-    headers.forEach((header, index) => {
-      // Convert headers to match our expected format
-      let fieldName = header.toLowerCase().replace(/\s+/g, '');
+    // Clean up the header row and detect delimiter (comma or semicolon)
+    const headerLine = lines[0].trim();
+    const delimiter = headerLine.includes(';') ? ';' : ',';
+    const headers = headerLine.split(delimiter).map(h => h.trim());
+    
+    // Validate expected headers
+    const requiredHeaders = ['brand', 'name', 'type'];
+    const lowercaseHeaders = headers.map(h => h.toLowerCase());
+    const missingRequiredHeaders = requiredHeaders.filter(
+      required => !lowercaseHeaders.some(h => 
+        h === required || 
+        h === required + 'name' || 
+        h === 'product' + required ||
+        h === required.replace('brand', 'manufacturer')
+      )
+    );
+    
+    if (missingRequiredHeaders.length > 0) {
+      throw new Error(`Missing required headers: ${missingRequiredHeaders.join(', ')}. Please use the template.`);
+    }
+    
+    return lines.slice(1).map((line, lineIndex) => {
+      // Skip empty lines
+      if (!line.trim()) {
+        return null;
+      }
       
-      // Map CSV headers to our interface properties
-      if (fieldName === 'brandname') fieldName = 'brand';
-      if (fieldName === 'productname') fieldName = 'name';
-      if (fieldName === 'producttype') fieldName = 'type';
-      if (fieldName === 'pvapercentage(ifknown)') fieldName = 'pvaPercentage';
-      if (fieldName === 'additionalnotes') fieldName = 'additionalNotes';
-      if (fieldName === 'haspva' || fieldName === 'containspva') fieldName = 'hasPva';
+      // Handle quoted values properly (in case commas are in quoted strings)
+      let values: string[] = [];
+      let inQuote = false;
+      let currentValue = '';
+      let i = 0;
       
-      if (fieldName === 'pvaPercentage') {
-        const numValue = parseFloat(values[index]);
-        item[fieldName] = isNaN(numValue) ? undefined : numValue;
-      } 
-      // Special handling for the hasPva field
-      else if (fieldName === 'hasPva') {
-        const value = values[index].toLowerCase();
-        if (value === 'yes' || value === 'true' || value === '1') {
-          item[fieldName] = 'yes';
-        } else if (value === 'no' || value === 'false' || value === '0') {
-          item[fieldName] = 'no';
+      while (i < line.length) {
+        const char = line[i];
+        
+        if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
+          inQuote = !inQuote;
+        } else if ((char === delimiter) && !inQuote) {
+          values.push(currentValue.trim());
+          currentValue = '';
         } else {
-          item[fieldName] = 'unidentified';
+          currentValue += char;
+        }
+        
+        i++;
+      }
+      
+      // Add the last value
+      values.push(currentValue.trim());
+      
+      // Ensure we have the right number of values
+      if (values.length !== headers.length) {
+        // Try to fix by adding empty values or truncating
+        if (values.length < headers.length) {
+          values = [...values, ...Array(headers.length - values.length).fill('')];
+        } else {
+          values = values.slice(0, headers.length);
         }
       }
-      else {
-        item[fieldName] = values[index];
-      }
-    });
-    
-    return item as BulkProductData;
-  });
+      
+      const item: any = {};
+      
+      headers.forEach((header, index) => {
+        // Convert headers to match our expected format
+        let fieldName = header.toLowerCase().replace(/\s+/g, '');
+        const value = values[index] ? values[index].replace(/^"(.*)"$/, '$1') : ''; // Remove quotes if present
+        
+        // Map CSV headers to our interface properties
+        if (fieldName === 'brandname' || fieldName === 'manufacturer') fieldName = 'brand';
+        if (fieldName === 'productname') fieldName = 'name';
+        if (fieldName === 'producttype') fieldName = 'type';
+        if (fieldName === 'pvapercentage(ifknown)' || fieldName === 'pvapercentage') fieldName = 'pvaPercentage';
+        if (fieldName === 'additionalnotes' || fieldName === 'notes') fieldName = 'additionalNotes';
+        if (fieldName === 'haspva' || fieldName === 'containspva' || fieldName === 'pvastatus') fieldName = 'hasPva';
+        
+        if (fieldName === 'pvaPercentage') {
+          // More flexible parsing of percentages
+          if (value) {
+            const cleanValue = value.replace(/[^0-9.]/g, ''); // Remove non-numeric characters except dot
+            const numValue = parseFloat(cleanValue);
+            item[fieldName] = isNaN(numValue) ? undefined : numValue;
+          }
+        } 
+        // Special handling for the hasPva field
+        else if (fieldName === 'hasPva') {
+          const lowValue = value.toLowerCase();
+          if (['yes', 'true', '1', 'y', 'contains'].includes(lowValue)) {
+            item[fieldName] = 'yes';
+          } else if (['no', 'false', '0', 'n', 'free', 'pva-free'].includes(lowValue)) {
+            item[fieldName] = 'no';
+          } else {
+            item[fieldName] = 'unidentified';
+          }
+        }
+        else {
+          item[fieldName] = value;
+        }
+      });
+      
+      return item as BulkProductData;
+    }).filter(Boolean) as BulkProductData[]; // Remove null entries from empty lines
+  } catch (error) {
+    console.error("CSV parsing error:", error);
+    throw new Error(`Error parsing CSV: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 // Get sample CSV template content

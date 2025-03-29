@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { 
   Card, 
@@ -30,7 +31,8 @@ import {
   Check, 
   X, 
   AlertTriangle,
-  FileText
+  FileText,
+  HelpCircle
 } from "lucide-react";
 import { BulkProductData, parseCSV, processBulkUpload, getSampleCSVTemplate } from '@/lib/bulkUpload';
 
@@ -42,6 +44,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
   const { toast } = useToast();
   const [csvData, setCsvData] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
   const [results, setResults] = useState<{
     success: BulkProductData[];
     duplicates: BulkProductData[];
@@ -52,6 +55,21 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    setParseError(null);
+
+    // Only accept CSV files
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a CSV file (.csv)",
+        variant: "destructive",
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -64,21 +82,60 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         description: `Successfully loaded ${file.name}. Review the content and click "Process CSV Data" to import.`,
       });
     };
+    reader.onerror = () => {
+      toast({
+        title: "Error reading file",
+        description: "There was an error reading the file. Please try again.",
+        variant: "destructive",
+      });
+    };
     reader.readAsText(file);
   };
 
   const handleProcessData = () => {
     try {
       setIsProcessing(true);
+      setParseError(null);
+      
+      if (!csvData.trim()) {
+        toast({
+          title: "No data",
+          description: "Please upload or paste CSV data before processing.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Check if the CSV has valid format with headers
+      if (!csvData.includes(',') && !csvData.includes(';')) {
+        setParseError("Invalid CSV format. The file must use commas or semicolons as separators.");
+        throw new Error("Invalid CSV format");
+      }
+      
       const parsedData = parseCSV(csvData);
+      
+      if (parsedData.length === 0) {
+        setParseError("No valid data rows found in the CSV. Please check the format and try again.");
+        throw new Error("No valid data rows");
+      }
+      
       const result = processBulkUpload(parsedData);
       setResults(result);
       
-      toast({
-        title: "Upload processed",
-        description: `Successfully added ${result.success.length} products for review. Found ${result.duplicates.length} duplicates and ${result.errors.length} errors.`,
-        variant: result.success.length > 0 ? "default" : "destructive",
-      });
+      if (result.success.length === 0 && (result.errors.length > 0 || result.duplicates.length > 0)) {
+        toast({
+          title: "Upload issues",
+          description: `Found ${result.duplicates.length} duplicates and ${result.errors.length} errors. No new products were added.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Upload processed",
+          description: `Successfully added ${result.success.length} products for review. Found ${result.duplicates.length} duplicates and ${result.errors.length} errors.`,
+          variant: result.success.length > 0 ? "default" : "destructive",
+        });
+      }
       
       if (result.success.length > 0) {
         // If at least one product was added successfully, trigger refresh
@@ -106,18 +163,22 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Template downloaded",
+      description: "CSV template has been downloaded. Use this format for your data.",
+    });
   };
 
   const resetForm = () => {
     setCsvData('');
     setResults(null);
+    setParseError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
   
-  const csvPreview = csvData.split('\n').slice(0, 5).join('\n');
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -129,25 +190,28 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       <CardContent>
         {!results ? (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-1 w-full">
                 <Label htmlFor="csv-file">Upload CSV File</Label>
-                <Input 
-                  id="csv-file" 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={handleFileUpload}
-                  ref={fileInputRef}
-                />
+                <div className="flex items-center gap-2">
+                  <Input 
+                    id="csv-file" 
+                    type="file" 
+                    accept=".csv" 
+                    onChange={handleFileUpload}
+                    ref={fileInputRef}
+                    className="flex-grow"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={downloadTemplate}
+                    className="whitespace-nowrap"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Template
+                  </Button>
+                </div>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={downloadTemplate}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Download Template
-              </Button>
             </div>
             
             <div className="space-y-1">
@@ -163,8 +227,19 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                 placeholder="CSV data will appear here after file upload, or you can paste it directly"
                 className="font-mono text-sm h-64"
                 value={csvData}
-                onChange={(e) => setCsvData(e.target.value)}
+                onChange={(e) => {
+                  setCsvData(e.target.value);
+                  setParseError(null);
+                }}
               />
+              
+              {parseError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error in CSV data</AlertTitle>
+                  <AlertDescription>{parseError}</AlertDescription>
+                </Alert>
+              )}
             </div>
             
             <div className="flex items-center space-x-4">
@@ -173,8 +248,20 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                 disabled={!csvData.trim() || isProcessing}
                 className="flex items-center gap-2"
               >
-                <FileUp className="h-4 w-4" />
-                Process CSV Data
+                {isProcessing ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <FileUp className="h-4 w-4" />
+                    Process CSV Data
+                  </>
+                )}
               </Button>
               <Button 
                 variant="outline" 
@@ -186,7 +273,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
             </div>
             
             <Alert variant="default" className="bg-muted">
-              <AlertCircle className="h-4 w-4" />
+              <HelpCircle className="h-4 w-4" />
               <AlertTitle>Expected Format</AlertTitle>
               <AlertDescription>
                 <p className="mb-2">Your CSV should have the following columns:</p>
@@ -199,9 +286,10 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                   <li><strong>Additional Notes</strong> - Product description, sources, etc. (optional)</li>
                   <li><strong>Country</strong> - Country or region where the product is available (optional, defaults to "Global")</li>
                 </ul>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Note: Duplicates are detected based on having the same Brand Name AND Product Name
-                </p>
+                <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                  <p>Note: Duplicates are detected based on having the same Brand Name AND Product Name</p>
+                  <p>Tip: Download the template for a properly formatted example</p>
+                </div>
               </AlertDescription>
             </Alert>
           </div>
