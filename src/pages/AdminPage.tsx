@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -74,7 +75,7 @@ const saveProductDetails = (productId: string, details: Partial<ProductSubmissio
   const updatedSubmissions = submissions.map(submission => 
     submission.id === productId ? { ...submission, ...details } : submission
   );
-  localStorage.setItem('productSubmissions', JSON.stringify(updatedSubmissions));
+  localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
 };
 
 const AdminPage = () => {
@@ -90,6 +91,9 @@ const AdminPage = () => {
     videoUrl: "",
     websiteUrl: ""
   });
+  
+  // State to control dialog open/close
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   // Initialize keyword state from our categorized keywords
   const [keywordCategories, setKeywordCategories] = useState({
@@ -163,6 +167,7 @@ const AdminPage = () => {
       videoUrl: product.videoUrl || "",
       websiteUrl: product.websiteUrl || ""
     });
+    setIsDialogOpen(true);
   };
 
   // Save product details
@@ -176,6 +181,8 @@ const AdminPage = () => {
       title: "Details updated",
       description: "The product details have been saved.",
     });
+    
+    setIsDialogOpen(false);
   };
 
   const handleAddKeyword = () => {
@@ -303,14 +310,14 @@ const AdminPage = () => {
                             {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
                           </TableCell>
                           <TableCell>
-                            {new Date(product.submittedAt).toLocaleDateString()}
+                            {new Date(product.submittedAt || product.dateSubmitted).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button 
                                 variant="ghost" 
                                 size="icon"
-                                onClick={() => {}}
+                                onClick={() => openProductDetails(product)}
                                 title="View Details"
                               >
                                 <Eye className="h-4 w-4 text-muted-foreground" />
@@ -622,10 +629,7 @@ const AdminPage = () => {
       </Tabs>
 
       {/* Product Details Dialog */}
-      <Dialog>
-        <DialogTrigger asChild>
-          <span className="hidden">Edit Product</span>
-        </DialogTrigger>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           {selectedProduct && (
             <>
@@ -741,16 +745,12 @@ const AdminPage = () => {
               </div>
 
               <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" type="button">
-                    Cancel
-                  </Button>
-                </DialogClose>
-                <DialogClose asChild>
-                  <Button type="submit" onClick={handleSaveDetails}>
-                    Save changes
-                  </Button>
-                </DialogClose>
+                <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" onClick={handleSaveDetails}>
+                  Save changes
+                </Button>
               </DialogFooter>
             </>
           )}
