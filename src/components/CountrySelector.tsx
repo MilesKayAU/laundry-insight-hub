@@ -18,6 +18,22 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   onCountrySelect,
   onSubmit
 }) => {
+  // Ensure all countries are properly lowercase for consistent comparison
+  const normalizedCountries = countries.map(country => 
+    typeof country === 'string' ? country.trim() : country
+  );
+
+  // Check if Australia exists in the normalized countries array
+  const hasAustralia = normalizedCountries.some(
+    country => country.toLowerCase() === 'australia'
+  );
+
+  // If Australia doesn't exist in the list but it's the selected country,
+  // we need to add it to ensure it can be selected
+  const displayCountries = hasAustralia ? 
+    normalizedCountries : 
+    [...normalizedCountries, 'Australia'];
+
   return (
     <Card className="w-full max-w-md mx-auto mt-8">
       <CardHeader className="text-center">
@@ -39,7 +55,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                   Global (All Products)
                 </div>
               </SelectItem>
-              {countries.map((country) => (
+              {displayCountries.map((country) => (
                 <SelectItem key={country} value={country}>
                   <div className="flex items-center">
                     <MapPin className="w-4 h-4 mr-2" />

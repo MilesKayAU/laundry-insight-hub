@@ -116,9 +116,14 @@ const DatabasePage = () => {
   
   const approvedProducts = approvedSubmissions.length > 0 ? [] : mockProducts.filter(product => product.approved);
   
+  const normalizeCountry = (country) => {
+    if (!country) return "Global";
+    return country.trim();
+  };
+  
   const availableCountries = Array.from(new Set([
-    ...approvedProducts.map(p => p.country || "Global"),
-    ...approvedSubmissions.map(p => p.country || "Global"),
+    ...approvedProducts.map(p => normalizeCountry(p.country || "Global")),
+    ...approvedSubmissions.map(p => normalizeCountry(p.country || "Global")),
     "Australia"
   ])).filter(country => country !== "Global").sort();
   
@@ -127,7 +132,10 @@ const DatabasePage = () => {
   };
   
   const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions].filter(product => {
-    return selectedCountry === "Global" || product.country === selectedCountry;
+    if (selectedCountry === "Global") return true;
+    
+    const productCountry = normalizeCountry(product.country);
+    return productCountry.toLowerCase() === selectedCountry.toLowerCase();
   });
   
   const filteredProducts = combinedApprovedProducts.filter(product => {
