@@ -65,6 +65,7 @@ interface ChartDataItem {
   name: string;
   PVA: number | null;
   brand: string;
+  pvaMissing?: string;
 }
 
 const DatabasePage = () => {
@@ -125,13 +126,15 @@ const DatabasePage = () => {
   const sheetChartData: ChartDataItem[] = sheetProducts.map(p => ({
     name: p.name,
     PVA: p.pvaPercentage,
-    brand: p.brand
+    brand: p.brand,
+    pvaMissing: p.pvaPercentage === null ? "?" : ""
   }));
   
   const podChartData: ChartDataItem[] = podProducts.map(p => ({
     name: p.name,
     PVA: p.pvaPercentage,
-    brand: p.brand
+    brand: p.brand,
+    pvaMissing: p.pvaPercentage === null ? "?" : ""
   }));
 
   const knownValueColor = "#3cca85";
@@ -372,7 +375,7 @@ const DatabasePage = () => {
                           />
                         ))}
                         <LabelList 
-                          dataKey={(entry: ChartDataItem) => entry.PVA === null ? "?" : ""}
+                          dataKey="pvaMissing"
                           position="top"
                         />
                       </Bar>
@@ -476,7 +479,7 @@ const DatabasePage = () => {
                           />
                         ))}
                         <LabelList 
-                          dataKey={(entry: ChartDataItem) => entry.PVA === null ? "?" : ""}
+                          dataKey="pvaMissing"
                           position="top"
                         />
                       </Bar>
