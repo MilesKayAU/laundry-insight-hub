@@ -38,7 +38,7 @@ import {
   BarChart,
   BadgeCheck,
   Shield,
-  Broom,
+  Eraser,
   AlertTriangle
 } from "lucide-react";
 import { mockProducts, mockAdminSettings, Product } from "@/lib/mockData";
@@ -517,7 +517,7 @@ const AdminPage = () => {
                         className="flex items-center gap-2"
                         title="Remove duplicate products"
                       >
-                        <Broom className="h-4 w-4" />
+                        <Eraser className="h-4 w-4" />
                         Clean Duplicates
                       </Button>
                     </AlertDialogTrigger>
@@ -892,6 +892,7 @@ const AdminPage = () => {
                           <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm">
+                                <Eraser className="h-4 w-4 mr-2" />
                                 Clean Duplicates
                               </Button>
                             </AlertDialogTrigger>
