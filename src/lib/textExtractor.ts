@@ -73,6 +73,7 @@ export interface ProductSubmitData {
   type: string;
   ingredients?: string;
   country?: string;
+  countries?: string[]; // Added countries array for multi-select functionality
   websiteUrl?: string;
   comments?: string;
   media?: File[];
@@ -338,7 +339,7 @@ export const submitProduct = async (data: ProductSubmitData): Promise<boolean> =
       brand: data.brand,
       type: data.type,
       ingredients: data.ingredients,
-      country: data.country,
+      country: data.countries?.length ? data.countries.join(', ') : data.country, // Use joined countries if available
       websiteUrl: data.websiteUrl,
       comments: data.comments,
       approved: false,

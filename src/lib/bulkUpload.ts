@@ -1,3 +1,4 @@
+
 import { ProductSubmission, getProductSubmissions, analyzePvaContent, getAllPvaPatterns } from "./textExtractor";
 
 // Define the expected format for the CSV/Excel data
@@ -14,6 +15,7 @@ export interface BulkProductData {
   websiteUrl?: string;
   additionalNotes?: string;
   country?: string;
+  countries?: string[]; // Added countries array for multi-select functionality
   hasPva?: 'yes' | 'no' | 'unidentified';
   productUrl?: string; // New field for product URL
 }
