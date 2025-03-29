@@ -76,7 +76,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       
       toast({
         title: "Upload processed",
-        description: `Successfully added ${result.success.length} products. Found ${result.duplicates.length} duplicates and ${result.errors.length} errors.`,
+        description: `Successfully added ${result.success.length} products for review. Found ${result.duplicates.length} duplicates and ${result.errors.length} errors.`,
         variant: result.success.length > 0 ? "default" : "destructive",
       });
       
@@ -116,7 +116,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     }
   };
   
-  // Extract first few lines of CSV for preview
   const csvPreview = csvData.split('\n').slice(0, 5).join('\n');
 
   return (
@@ -124,7 +123,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       <CardHeader>
         <CardTitle>Bulk Upload Products</CardTitle>
         <CardDescription>
-          Upload a CSV file with product information to add multiple products at once
+          Upload a CSV file with product information to add multiple products for review
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -222,46 +221,56 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
             
             <TabsContent value="success" className="mt-4">
               {results.success.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Brand</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>PVA Status</TableHead>
-                      <TableHead>PVA %</TableHead>
-                      <TableHead>Notes</TableHead>
-                      <TableHead>Country</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.success.map((item, index) => (
-                      <TableRow key={`success-${index}`}>
-                        <TableCell>{item.brand}</TableCell>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell>{item.type}</TableCell>
-                        <TableCell>
-                          <Badge variant={item.pvaStatus === 'verified-free' ? 'outline' : 'secondary'} className={
-                            item.pvaStatus === 'verified-free' ? 'bg-green-100 text-green-800' : 
-                            item.pvaStatus === 'contains' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }>
-                            {item.pvaStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {item.pvaPercentage !== undefined ? `${item.pvaPercentage}%` : 'N/A'}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {item.additionalNotes || 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          {item.country || 'Global'}
-                        </TableCell>
+                <>
+                  <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <AlertTitle className="text-yellow-800">Products Pending Approval</AlertTitle>
+                    <AlertDescription className="text-yellow-700">
+                      The uploaded products require admin approval before appearing in the database. 
+                      They will be available in the "Pending Approval" tab.
+                    </AlertDescription>
+                  </Alert>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Brand</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>PVA Status</TableHead>
+                        <TableHead>PVA %</TableHead>
+                        <TableHead>Notes</TableHead>
+                        <TableHead>Country</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {results.success.map((item, index) => (
+                        <TableRow key={`success-${index}`}>
+                          <TableCell>{item.brand}</TableCell>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell>{item.type}</TableCell>
+                          <TableCell>
+                            <Badge variant={item.pvaStatus === 'verified-free' ? 'outline' : 'secondary'} className={
+                              item.pvaStatus === 'verified-free' ? 'bg-green-100 text-green-800' : 
+                              item.pvaStatus === 'contains' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }>
+                              {item.pvaStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {item.pvaPercentage !== undefined ? `${item.pvaPercentage}%` : 'N/A'}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {item.additionalNotes || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {item.country || 'Global'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   No products were successfully added

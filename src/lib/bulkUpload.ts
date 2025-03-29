@@ -1,3 +1,4 @@
+
 import { ProductSubmission, getProductSubmissions } from "./textExtractor";
 
 // Define the expected format for the CSV/Excel data
@@ -101,7 +102,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
         videoUrl: item.videoUrl || "",
         websiteUrl: item.websiteUrl || "",
         submittedAt: new Date().toISOString(),
-        approved: true, // Auto-approve admin uploads
+        approved: false, // Changed from true to false to require admin approval
         dateSubmitted: new Date().toISOString(),
         brandVerified: false, // Add brand verification status field
         brandContactEmail: "" // Store contact email for brand verification
