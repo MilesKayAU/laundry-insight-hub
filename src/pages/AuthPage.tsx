@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, Microscope } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const AuthPage = () => {
   const { login, register, isAuthenticated, isLoading } = useAuth();
@@ -25,8 +26,20 @@ const AuthPage = () => {
   // Error state
   const [error, setError] = useState<string | null>(null);
   
+  // Verification state
+  const [verificationSent, setVerificationSent] = useState(false);
+  
   // Get the return URL from location state
   const returnUrl = location.state?.returnUrl || '/';
+  
+  // Check if we have a hash in the URL (for auth redirects)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('access_token') || hash.includes('error')) {
+      // This is an auth redirect, let AuthContext handle it
+      console.log('Auth redirect detected in AuthPage');
+    }
+  }, []);
   
   useEffect(() => {
     // If user is already authenticated, redirect to the return URL
@@ -51,6 +64,7 @@ const AuthPage = () => {
     setError(null);
     try {
       await register(registerName, registerEmail, registerPassword);
+      setVerificationSent(true);
       // Navigation happens in useEffect when isAuthenticated changes
     } catch (error: any) {
       // Error is handled in the AuthContext
@@ -72,100 +86,120 @@ const AuthPage = () => {
         </div>
         
         <div className="bg-white shadow-lg rounded-lg p-6 border border-gray-200">
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <form onSubmit={handleLogin}>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input 
-                      id="login-email" 
-                      type="email" 
-                      placeholder="you@example.com" 
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      required
-                    />
+          {verificationSent ? (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-center">Check Your Email</h2>
+              <Alert>
+                <AlertDescription>
+                  We've sent a verification link to your email. Please check your inbox and click the link to verify your account.
+                </AlertDescription>
+              </Alert>
+              <p className="text-sm text-gray-500 text-center">
+                After verification, you can return here to log in.
+              </p>
+              <Button 
+                onClick={() => setVerificationSent(false)} 
+                className="w-full"
+              >
+                Return to Login
+              </Button>
+            </div>
+          ) : (
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Register</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="login">
+                <form onSubmit={handleLogin}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Email</Label>
+                      <Input 
+                        id="login-email" 
+                        type="email" 
+                        placeholder="you@example.com" 
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Password</Label>
+                      <Input 
+                        id="login-password" 
+                        type="password" 
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Logging in...
+                        </>
+                      ) : (
+                        "Login"
+                      )}
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <Input 
-                      id="login-password" 
-                      type="password" 
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      required
-                    />
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="register">
+                <form onSubmit={handleRegister}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="register-name">Name</Label>
+                      <Input 
+                        id="register-name" 
+                        placeholder="Your name" 
+                        value={registerName}
+                        onChange={(e) => setRegisterName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-email">Email</Label>
+                      <Input 
+                        id="register-email" 
+                        type="email" 
+                        placeholder="you@example.com" 
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-password">Password</Label>
+                      <Input 
+                        id="register-password" 
+                        type="password" 
+                        value={registerPassword}
+                        onChange={(e) => setRegisterPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        "Create account"
+                      )}
+                    </Button>
                   </div>
-                  
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Logging in...
-                      </>
-                    ) : (
-                      "Login"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="register">
-              <form onSubmit={handleRegister}>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="register-name">Name</Label>
-                    <Input 
-                      id="register-name" 
-                      placeholder="Your name" 
-                      value={registerName}
-                      onChange={(e) => setRegisterName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
-                    <Input 
-                      id="register-email" 
-                      type="email" 
-                      placeholder="you@example.com" 
-                      value={registerEmail}
-                      onChange={(e) => setRegisterEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
-                    <Input 
-                      id="register-password" 
-                      type="password" 
-                      value={registerPassword}
-                      onChange={(e) => setRegisterPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : (
-                      "Create account"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </TabsContent>
-          </Tabs>
+                </form>
+              </TabsContent>
+            </Tabs>
+          )}
           
           {error && (
             <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
