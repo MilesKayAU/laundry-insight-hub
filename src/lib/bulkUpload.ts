@@ -1,3 +1,4 @@
+
 import { ProductSubmission, getProductSubmissions } from "./textExtractor";
 
 // Define the expected format for the CSV/Excel data
@@ -127,6 +128,8 @@ export const processBulkUpload = (data: BulkProductData[]): {
 // Parse CSV data with improved error handling and more flexible header detection
 export const parseCSV = (csvText: string): BulkProductData[] => {
   try {
+    console.log("Starting CSV parsing process...");
+    
     const lines = csvText.trim().split('\n');
     if (lines.length <= 1) {
       throw new Error("CSV file is empty or contains only headers");
@@ -135,7 +138,32 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
     // Clean up the header row and detect delimiter (comma or semicolon)
     const headerLine = lines[0].trim();
     const delimiter = headerLine.includes(';') ? ';' : ',';
-    const headers = headerLine.split(delimiter).map(h => h.trim());
+    
+    // Handle quoted header values properly
+    let headers: string[] = [];
+    let inQuote = false;
+    let currentHeader = '';
+    let i = 0;
+    
+    while (i < headerLine.length) {
+      const char = headerLine[i];
+      
+      if (char === '"' && (i === 0 || headerLine[i-1] !== '\\')) {
+        inQuote = !inQuote;
+      } else if ((char === delimiter) && !inQuote) {
+        headers.push(currentHeader.trim().replace(/^"(.*)"$/, '$1'));
+        currentHeader = '';
+      } else {
+        currentHeader += char;
+      }
+      
+      i++;
+    }
+    
+    // Add the last header
+    headers.push(currentHeader.trim().replace(/^"(.*)"$/, '$1'));
+    
+    console.log("Detected headers:", headers);
     
     // Map various possible header names to our standardized field names
     const headerMap: Record<string, string> = {
@@ -193,7 +221,8 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
     };
     
     headers.forEach((header, index) => {
-      const lowerHeader = header.toLowerCase();
+      const lowerHeader = header.toLowerCase().trim();
+      console.log(`Processing header: "${lowerHeader}" at index ${index}`);
       
       // Check if this header maps to a known field
       for (const [possibleName, fieldName] of Object.entries(headerMap)) {
@@ -205,10 +234,34 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
             foundRequiredFields[fieldName] = true;
           }
           
+          console.log(`Mapped "${lowerHeader}" to "${fieldName}"`);
           break;
         }
       }
+      
+      // Special case handling for specific headers
+      if (!fieldMapping[index]) {
+        if (lowerHeader.includes('brand')) {
+          fieldMapping[index] = 'brand';
+          foundRequiredFields['brand'] = true;
+          console.log(`Special mapped "${lowerHeader}" to "brand"`);
+        } else if (lowerHeader.includes('product name') || lowerHeader === 'product') {
+          fieldMapping[index] = 'name';
+          foundRequiredFields['name'] = true;
+          console.log(`Special mapped "${lowerHeader}" to "name"`);
+        } else if (lowerHeader.includes('product type')) {
+          fieldMapping[index] = 'type';
+          foundRequiredFields['type'] = true;
+          console.log(`Special mapped "${lowerHeader}" to "type"`);
+        } else if (lowerHeader.includes('pva') && lowerHeader.includes('has')) {
+          fieldMapping[index] = 'hasPva';
+          console.log(`Special mapped "${lowerHeader}" to "hasPva"`);
+        }
+      }
     });
+    
+    console.log("Field mappings:", fieldMapping);
+    console.log("Found required fields:", foundRequiredFields);
     
     // Check if all required fields were found
     const missingRequiredHeaders = Object.entries(foundRequiredFields)
@@ -279,8 +332,12 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
         } 
         else if (fieldName === 'hasPva') {
           const lowValue = value.toLowerCase();
-          if (['yes', 'true', '1', 'y', 'contains'].includes(lowValue)) {
-            item[fieldName] = 'yes';
+          if (['yes', 'true', '1', 'y', 'contains', 'contains pva', 'unknown pva'].includes(lowValue)) {
+            if (lowValue === 'unknown pva') {
+              item[fieldName] = 'unidentified';
+            } else {
+              item[fieldName] = 'yes';
+            }
           } else if (['no', 'false', '0', 'n', 'free', 'pva-free'].includes(lowValue)) {
             item[fieldName] = 'no';
           } else {
@@ -307,8 +364,8 @@ export const parseCSV = (csvText: string): BulkProductData[] => {
 
 // Get sample CSV template content
 export const getSampleCSVTemplate = (): string => {
-  return 'Brand Name,Product Name,Product Type,Has PVA,PVA Percentage (if known),Additional Notes,Country\n' +
-    'Example Brand,Product Name,Laundry Sheets,no,0,Product contains no PVA. Verified by manufacturer.,Australia';
+  return '"Brand Name","Product Name","Product Type","Has PVA","PVA Percentage (if known)","Additional Notes","Country"\n' +
+    '"Example Brand","Product Name","Laundry Sheets","no","0","Product contains no PVA. Verified by manufacturer.","Australia"';
 };
 
 // Group products by brand for chart visualization

@@ -32,7 +32,8 @@ import {
   X, 
   AlertTriangle,
   FileText,
-  HelpCircle
+  HelpCircle,
+  Info
 } from "lucide-react";
 import { BulkProductData, parseCSV, processBulkUpload, getSampleCSVTemplate } from '@/lib/bulkUpload';
 
@@ -45,6 +46,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
   const [csvData, setCsvData] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [headerWarning, setHeaderWarning] = useState<string | null>(null);
   const [results, setResults] = useState<{
     success: BulkProductData[];
     duplicates: BulkProductData[];
@@ -57,6 +59,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     if (!file) return;
     
     setParseError(null);
+    setHeaderWarning(null);
 
     if (!file.name.toLowerCase().endsWith('.csv')) {
       toast({
@@ -75,10 +78,25 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       const content = event.target?.result as string;
       setCsvData(content);
       
-      toast({
-        title: "File loaded",
-        description: `Successfully loaded ${file.name}. Review the content and click "Process CSV Data" to import.`,
-      });
+      // Preview content to check for potential header issues
+      const firstLine = content.split('\n')[0].toLowerCase();
+      
+      // Check for quoted headers - common in Excel exports
+      if (firstLine.startsWith('"brand') || firstLine.includes('"brand name"')) {
+        // Headers look good
+        toast({
+          title: "File loaded",
+          description: `Successfully loaded ${file.name}. Review the content and click "Process CSV Data" to import.`,
+        });
+      } else {
+        // Possible header issue
+        setHeaderWarning("Your CSV headers might not match our template. Please ensure you have Brand Name, Product Name, and Product Type columns.");
+        toast({
+          title: "File loaded - check headers",
+          description: "File loaded, but headers might not match our template. Please review.",
+          variant: "warning",
+        });
+      }
     };
     reader.onerror = () => {
       toast({
@@ -94,6 +112,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     try {
       setIsProcessing(true);
       setParseError(null);
+      setHeaderWarning(null);
       
       if (!csvData.trim()) {
         toast({
@@ -111,7 +130,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       }
       
       // Add more detailed logging to help debug parsing issues
-      console.log("Processing CSV data:", csvData.substring(0, 100) + "...");
+      console.log("Processing CSV data:", csvData.substring(0, 300) + "...");
       
       const parsedData = parseCSV(csvData);
       console.log("Parsed data:", parsedData.length, "rows");
@@ -175,6 +194,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     setCsvData('');
     setResults(null);
     setParseError(null);
+    setHeaderWarning(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -216,6 +236,17 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
               </div>
             </div>
             
+            {headerWarning && (
+              <Alert variant="warning" className="bg-amber-50 border-amber-200">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800">CSV Header Warning</AlertTitle>
+                <AlertDescription className="text-amber-700">
+                  {headerWarning}<br/>
+                  <span className="text-xs mt-1 block">If your file uses different header names, the system will try to match them based on common variations.</span>
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {/* CSV preview section */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
@@ -233,6 +264,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                 onChange={(e) => {
                   setCsvData(e.target.value);
                   setParseError(null);
+                  setHeaderWarning(null);
                 }}
               />
               
@@ -276,7 +308,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
               </Button>
             </div>
             
-            {/* Help information */}
+            {/* Help information with clearer formatting */}
             <Alert variant="default" className="bg-muted">
               <HelpCircle className="h-4 w-4" />
               <AlertTitle>Expected Format</AlertTitle>
@@ -294,6 +326,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
                 <div className="text-xs text-muted-foreground mt-2 space-y-1">
                   <p>Note: The column headers can be flexible (e.g., "Brand", "Brand Name", "Company", etc.)</p>
                   <p>Tip: Download the template for a properly formatted example</p>
+                  <p className="font-semibold mt-1">When exporting from Excel or Google Sheets, headers may be automatically enclosed in quotes - this is okay!</p>
                 </div>
               </AlertDescription>
             </Alert>
