@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Card, 
@@ -103,31 +104,35 @@ const DatabasePage = () => {
     setCurrentPage(page);
   };
   
-  const sheetChartData = sheetProducts.map(p => ({
+  // Updated to properly handle unknown values with a default 25% for visualization
+  const sheetChartData: ChartDataItem[] = sheetProducts.map(p => ({
     name: p.name,
     PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25,
     isUnknown: p.pvaPercentage === null
   }));
   
-  const podChartData = podProducts.map(p => ({
+  // Updated to properly handle unknown values with a default 25% for visualization
+  const podChartData: ChartDataItem[] = podProducts.map(p => ({
     name: p.name,
     PVA: p.pvaPercentage !== null ? p.pvaPercentage : 25,
     isUnknown: p.pvaPercentage === null
   }));
 
+  // Colors for chart bars
   const knownValueColor = "#3cca85";
   const podKnownValueColor = "#4799ff";
-  const unknownValueColor = "#8E9196";
+  const unknownValueColor = "#8E9196"; // Gray color for unknown values
 
+  // Custom tooltip component with proper typing
   const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
-      const isUnknown = payload[0].payload.isUnknown;
+      const dataItem = payload[0].payload as ChartDataItem;
       
       return (
         <div className="p-2 bg-white border border-gray-200 rounded shadow-md">
           <p className="font-medium">{label}</p>
           <p>
-            {isUnknown ? (
+            {dataItem.isUnknown ? (
               <span className="text-gray-600">PVA: Unknown (Awaiting Verification)</span>
             ) : (
               <span>PVA: {payload[0].value}%</span>
