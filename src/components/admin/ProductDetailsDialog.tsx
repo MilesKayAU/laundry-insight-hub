@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from 'react-router-dom';
-import { Image, Video, Link as LinkIcon, Percent, AlertCircle, MapPin, Search, Loader2, ExternalLink, Check, X } from "lucide-react";
+import { Image, Video, Link as LinkIcon, Percent, AlertCircle, MapPin, Search, Loader2, ExternalLink, Check, X, FileText } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { verifyProductUrl } from "@/lib/urlVerification";
