@@ -1,4 +1,3 @@
-
 import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -19,12 +18,12 @@ const HomePage = () => {
           </div>
           <h1 className="text-5xl md:text-6xl font-bold mb-6">
             <span className="bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
-              PVAFree.com
+              Community-Powered Transparency
             </span>
           </h1>
           <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-gray-700">
             Exposing the Plastic-Free Myth — Uncovering the Truth About PVA in Laundry Products.
-            We analyze ingredients, decode greenwashing, and empower you to choose truly plastic-free solutions.
+            Join our community to analyze ingredients, decode greenwashing, and empower others to choose truly plastic-free solutions.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-science-600 hover:bg-science-700 shadow-lg">
@@ -45,7 +44,7 @@ const HomePage = () => {
       <section className="py-20 px-4 bg-science-50">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4 text-science-800">How PVAFree Works</h2>
+            <h2 className="text-3xl font-bold mb-4 text-science-800">How Our Community Works</h2>
             <div className="w-20 h-1 bg-gradient-to-r from-science-400 to-tech-400 mx-auto"></div>
           </div>
           <div className="grid md:grid-cols-3 gap-10">
@@ -184,7 +183,7 @@ const HomePage = () => {
         <div className="container mx-auto text-center">
           <h2 className="text-3xl font-bold mb-6">Join Our Research Community</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Help us expand our molecular database and bring scientific transparency to household products.
+            Together, we can expand our molecular database and bring scientific transparency to household products. Your contributions make all the difference.
           </p>
           <Button asChild size="lg" variant="secondary" className="bg-white text-science-700 hover:bg-gray-100">
             <Link to="/contribute">
@@ -198,4 +197,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-
