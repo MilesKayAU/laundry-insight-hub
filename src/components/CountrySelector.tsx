@@ -4,8 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Globe, MapPin, Flag } from "lucide-react";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
 
 interface CountrySelectorProps {
   selectedCountry: string;
@@ -24,13 +22,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   allowCustomCountry = false,
   customCountryInput
 }) => {
-  const form = useForm({
-    defaultValues: {
-      country: selectedCountry
-    }
-  });
-  
-  // Ensure all countries are properly normalized
+  // Standardize country names and ensure they're all trimmed
   const normalizedCountries = countries.map(country => 
     typeof country === 'string' ? country.trim() : country
   );
@@ -46,7 +38,17 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     normalizedCountries : 
     [...normalizedCountries, 'Australia'];
 
-  // Add any additional common countries if they don't exist
+  // Add well-known country names and ensure standard naming
+  const standardCountryNames = {
+    'usa': 'United States',
+    'us': 'United States',
+    'united states of america': 'United States',
+    'uk': 'United Kingdom',
+    'great britain': 'United Kingdom',
+    'nz': 'New Zealand'
+  };
+
+  // Add common countries if they don't exist, using standard naming
   const commonCountries = ['United States', 'United Kingdom', 'Canada', 'New Zealand'];
   commonCountries.forEach(country => {
     if (!displayCountries.some(c => c.toLowerCase() === country.toLowerCase())) {
@@ -62,8 +64,10 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   });
 
   const handleCountryChange = (value: string) => {
-    console.log("Selected country:", value); // Debug log
-    onCountrySelect(value);
+    // Standardize the country name if it's a well-known variant
+    const standardizedCountry = standardCountryNames[value.toLowerCase()] || value;
+    console.log("Selected country:", value, "Standardized to:", standardizedCountry);
+    onCountrySelect(standardizedCountry);
   };
 
   return (

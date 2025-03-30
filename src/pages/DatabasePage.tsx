@@ -119,7 +119,19 @@ const DatabasePage = () => {
   
   const normalizeCountry = (country: string | undefined | null): string => {
     if (!country) return "Global";
-    return country.trim();
+    
+    const normalizedCountry = country.trim();
+    
+    const countryAliases = {
+      'usa': 'United States',
+      'us': 'United States',
+      'united states of america': 'United States',
+      'uk': 'United Kingdom',
+      'great britain': 'United Kingdom',
+      'nz': 'New Zealand'
+    };
+    
+    return countryAliases[normalizedCountry.toLowerCase()] || normalizedCountry;
   };
   
   const availableCountries = Array.from(new Set([
@@ -136,8 +148,11 @@ const DatabasePage = () => {
     if (selectedCountry === "Global") return true;
     
     const productCountry = normalizeCountry(product.country);
-    return productCountry === selectedCountry || 
-           productCountry.toLowerCase() === selectedCountry.toLowerCase();
+    const normalizedSelectedCountry = normalizeCountry(selectedCountry);
+    
+    console.log(`Comparing product country: "${productCountry}" with selected: "${normalizedSelectedCountry}"`);
+    
+    return productCountry.toLowerCase() === normalizedSelectedCountry.toLowerCase();
   });
   
   const filteredProducts = combinedApprovedProducts.filter(product => {
@@ -192,6 +207,7 @@ const DatabasePage = () => {
   };
   
   const handleCountrySelect = (country: string) => {
+    console.log("Country selected:", country);
     setSelectedCountry(country);
   };
   
