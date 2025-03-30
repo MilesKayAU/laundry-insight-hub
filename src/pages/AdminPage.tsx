@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,8 @@ import BrandVerifications from "@/components/admin/BrandVerifications";
 import BrandMessages from "@/components/admin/BrandMessages";
 import AdminSettings from "@/components/admin/AdminSettings";
 import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
+import UserManagement from "@/components/admin/UserManagement";
+import Communications from "@/components/admin/Communications";
 
 const saveProductDetails = (productId: string, details: Partial<ProductSubmission>) => {
   const submissions = getProductSubmissions();
@@ -412,14 +415,16 @@ const AdminPage = () => {
       <div className="text-center mb-10">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-muted-foreground mt-2">
-          Manage product submissions and configuration
+          Manage product submissions, users, and communications
         </p>
       </div>
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6 max-w-4xl mx-auto">
-          <TabsTrigger value="pending">Pending Approval</TabsTrigger>
-          <TabsTrigger value="approved">Approved Products</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-8 max-w-5xl mx-auto">
+          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="approved">Products</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="communications">Communications</TabsTrigger>
           <TabsTrigger value="verifications" className="relative">
             Brand Verifications
             {pendingVerifications.length > 0 && (
@@ -462,6 +467,14 @@ const AdminPage = () => {
             setShowCleanupDialog={setShowCleanupDialog}
             onCleanDuplicates={handleCleanDuplicates}
           />
+        </TabsContent>
+        
+        <TabsContent value="users" className="mt-6">
+          <UserManagement />
+        </TabsContent>
+        
+        <TabsContent value="communications" className="mt-6">
+          <Communications />
         </TabsContent>
         
         <TabsContent value="verifications" className="mt-6">
