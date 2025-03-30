@@ -41,8 +41,8 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
                   <TableHead>Brand</TableHead>
+                  <TableHead>Product</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>PVA Status</TableHead>
                   <TableHead>PVA %</TableHead>
@@ -53,8 +53,8 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
               <TableBody>
                 {products.map((product) => (
                   <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.brand}</TableCell>
+                    <TableCell className="text-[115%] font-medium">{product.brand}</TableCell>
+                    <TableCell>{product.name}</TableCell>
                     <TableCell>{product.type}</TableCell>
                     <TableCell>
                       {product.pvaStatus === 'contains' && (

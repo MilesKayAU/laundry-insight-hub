@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -46,6 +47,7 @@ import {
   Filter, 
   Search as SearchIcon,
   ChevronDown,
+  ChevronUp,
   BarChart as BarChartIcon,
   Globe,
   Map,
@@ -84,6 +86,7 @@ const DatabasePage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [allSubmissions, setAllSubmissions] = useState<ProductSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const itemsPerPage = 10;
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -138,12 +141,6 @@ const DatabasePage = () => {
     return countryAliases[normalizedCountry.toLowerCase()] || normalizedCountry;
   };
   
-  const availableCountries = Array.from(new Set([
-    ...approvedProducts.map(p => normalizeCountry(p.country || "Global")),
-    ...approvedSubmissions.map(p => normalizeCountry(p.country || "Global")),
-    "Australia"
-  ])).filter(country => country !== "Global").sort();
-  
   const isProductSubmission = (product: any): product is ProductSubmission => {
     return 'pvaStatus' in product;
   };
@@ -192,6 +189,22 @@ const DatabasePage = () => {
     return matchesSearch && matchesType && matchesPvaStatus;
   });
   
+  // Sort products by brand name
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const brandA = a.brand.toLowerCase();
+    const brandB = b.brand.toLowerCase();
+    
+    if (sortDirection === 'asc') {
+      return brandA.localeCompare(brandB);
+    } else {
+      return brandB.localeCompare(brandA);
+    }
+  });
+  
+  const toggleSortDirection = () => {
+    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+  };
+  
   const productTypes = Array.from(new Set(combinedApprovedProducts.map(p => p.type)));
   
   const paginateData = (data) => {
@@ -200,7 +213,7 @@ const DatabasePage = () => {
     return data.slice(startIndex, endIndex);
   };
   
-  const paginatedProducts = paginateData(filteredProducts);
+  const paginatedProducts = paginateData(sortedProducts);
   
   const getTotalPages = (totalItems) => {
     return Math.ceil(totalItems / itemsPerPage);
@@ -610,8 +623,20 @@ const DatabasePage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>
+                        <button 
+                          onClick={toggleSortDirection} 
+                          className="flex items-center focus:outline-none hover:text-blue-600 transition-colors"
+                        >
+                          Brand
+                          {sortDirection === 'asc' ? (
+                            <ChevronUp className="ml-1 h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="ml-1 h-4 w-4" />
+                          )}
+                        </button>
+                      </TableHead>
                       <TableHead>Product</TableHead>
-                      <TableHead>Brand</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>PVA Status</TableHead>
                       <TableHead className="text-right">PVA %</TableHead>
@@ -622,17 +647,17 @@ const DatabasePage = () => {
                     {paginatedProducts.length > 0 ? (
                       paginatedProducts.map((product) => (
                         <TableRow key={product.id}>
-                          <TableCell className="font-medium">
-                            {product.name}
-                            {renderBrandVerification(product)}
-                          </TableCell>
                           <TableCell>
                             <Link 
                               to={`/brand/${product.brand}`}
-                              className="text-blue-600 hover:underline hover:text-blue-800"
+                              className="text-blue-600 hover:underline hover:text-blue-800 text-[115%] font-medium"
                             >
                               {product.brand}
                             </Link>
+                            {renderBrandVerification(product)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {product.name}
                           </TableCell>
                           <TableCell>{product.type}</TableCell>
                           <TableCell>{renderPvaStatus(product)}</TableCell>

@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, Trash, Search, Upload, Eraser } from "lucide-react";
+import { Eye, Trash, Search, Upload, Eraser, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { ProductSubmission } from "@/lib/textExtractor";
@@ -42,6 +42,23 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
   setShowCleanupDialog,
   onCleanDuplicates
 }) => {
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+  
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const brandA = a.brand.toLowerCase();
+    const brandB = b.brand.toLowerCase();
+    
+    if (sortDirection === 'asc') {
+      return brandA.localeCompare(brandB);
+    } else {
+      return brandB.localeCompare(brandA);
+    }
+  });
+  
+  const toggleSortDirection = () => {
+    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+  };
+  
   return (
     <Card>
       <CardHeader className="space-y-1">
@@ -107,8 +124,20 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>
+                      <button 
+                        onClick={toggleSortDirection} 
+                        className="flex items-center focus:outline-none hover:text-blue-600 transition-colors"
+                      >
+                        Brand
+                        {sortDirection === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )}
+                      </button>
+                    </TableHead>
                     <TableHead>Product</TableHead>
-                    <TableHead>Brand</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>PVA Status</TableHead>
                     <TableHead>PVA %</TableHead>
@@ -116,10 +145,12 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.map((product) => (
+                  {sortedProducts.map((product) => (
                     <TableRow key={product.id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>{product.brand}</TableCell>
+                      <TableCell className="text-[115%] font-medium">
+                        {product.brand}
+                      </TableCell>
+                      <TableCell>{product.name}</TableCell>
                       <TableCell>{product.type}</TableCell>
                       <TableCell>
                         {product.pvaStatus === 'contains' && (
