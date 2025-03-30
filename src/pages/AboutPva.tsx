@@ -1,7 +1,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const AboutPva = () => {
   return (
@@ -16,6 +16,14 @@ const AboutPva = () => {
           />
         </div>
       </div>
+      
+      {/* Warning Alert */}
+      <Alert variant="warning" className="mb-8">
+        <AlertTitle className="text-yellow-800 dark:text-yellow-300 font-bold">Environmental Warnings:</AlertTitle>
+        <AlertDescription className="text-yellow-800 dark:text-yellow-400">
+          Ironically, the Safety Data Sheets (SDS) for the ingredient PVA explicitly warn against disposing of this chemical down waterways. Yet, as consumers, we're unknowingly doing exactly that with every wash. And 1 kg can be anywhere from 5-40% full PVA! Millions of people are using these.
+        </AlertDescription>
+      </Alert>
       
       <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center bg-gradient-to-r from-pvablue-500 to-pvagreen-500 bg-clip-text text-transparent">
         Learn More About PVA (Polyvinyl Alcohol)
