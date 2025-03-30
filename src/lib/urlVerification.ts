@@ -9,6 +9,7 @@ interface VerificationResult {
   extractedPvaPercentage: number | null;
   message: string;
   url?: string;
+  needsManualVerification?: boolean;
 }
 
 export const verifyProductUrl = async (
@@ -87,12 +88,21 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
       : null; // Sometimes we don't find ingredients
   }
   
-  let message = containsPva ? 'PVA ingredients detected in the product page.' : 
-    (sampleIngredients ? 'No PVA ingredients detected in the product page.' : 
-    'Could not find ingredients list on the product page.');
+  // Always flag as needing manual verification if we don't definitively find PVA
+  const needsManualVerification = !containsPva;
+  
+  let message = containsPva 
+    ? 'PVA ingredients detected in the product page.' 
+    : (sampleIngredients 
+      ? 'No definitive PVA ingredients detected. Manual verification required.' 
+      : 'Could not find ingredients list on the product page. Manual verification required.');
       
   if (extractedPvaPercentage !== null) {
     message = `${message} Detected PVA percentage: ${extractedPvaPercentage}%.`;
+  }
+  
+  if (needsManualVerification) {
+    message += ' Please have an admin manually check this product page.';
   }
   
   return {
@@ -101,6 +111,8 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
     detectedTerms: randomDetectedTerms,
     extractedIngredients: sampleIngredients,
     extractedPvaPercentage,
-    message
+    message,
+    needsManualVerification
   };
 };
+

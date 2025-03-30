@@ -91,13 +91,18 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
           });
         } else if (result.extractedIngredients) {
           toast({
-            title: "No PVA Found",
-            description: "No PVA ingredients were detected in the product page.",
-            variant: "default"
+            title: "Manual Verification Required",
+            description: "No definitive PVA found. Ingredients were detected but require manual verification.",
+            variant: "warning"
           });
+          
+          // Set up for manual verification
+          setManualVerificationProduct(product);
+          setVerificationUrl(product.websiteUrl);
+          setShowManualVerificationDialog(true);
         } else {
           toast({
-            title: "Inconclusive",
+            title: "Manual Verification Required",
             description: "Could not determine PVA status from the website. Manual verification needed.",
             variant: "warning"
           });
@@ -417,3 +422,4 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
 };
 
 export default ApprovedProducts;
+

@@ -95,6 +95,12 @@ const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({
           description: "PVA was found but no specific percentage. Please enter the percentage manually.",
           variant: "default"
         });
+      } else if (result.needsManualVerification) {
+        toast({
+          title: "Manual Verification Required",
+          description: "We couldn't definitively determine if this product contains PVA. An admin will need to manually verify.",
+          variant: "warning"
+        });
       } else {
         toast({
           title: "Verification Result",
@@ -346,3 +352,4 @@ const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({
 };
 
 export default PvaPercentageForm;
+

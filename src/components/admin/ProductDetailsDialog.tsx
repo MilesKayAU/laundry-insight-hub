@@ -51,6 +51,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
     detectedTerms?: string[];
     extractedPvaPercentage?: number | null;
     url?: string;
+    needsManualVerification?: boolean;
   } | null>(null);
   const [showManualVerificationDialog, setShowManualVerificationDialog] = useState(false);
 
@@ -78,7 +79,8 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
         ingredients: result.extractedIngredients,
         detectedTerms: result.detectedTerms,
         extractedPvaPercentage: result.extractedPvaPercentage,
-        url: details.websiteUrl
+        url: details.websiteUrl,
+        needsManualVerification: result.needsManualVerification
       });
 
       // If PVA percentage was detected, update the product details
@@ -106,12 +108,20 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
           description: "The product contains PVA ingredients but no specific percentage was found. Using default value.",
           variant: "destructive"
         });
+      } else if (result.needsManualVerification) {
+        toast({
+          title: "Manual Verification Required",
+          description: "We couldn't definitively determine if this product is PVA-free. Manual verification is required.",
+          variant: "warning"
+        });
+        setShowManualVerificationDialog(true);
       } else if (result.success && !result.containsPva && result.extractedIngredients) {
         toast({
-          title: "No PVA Detected",
-          description: "No PVA ingredients were found in the product page.",
-          variant: "default"
+          title: "Manual Verification Required",
+          description: "No PVA was automatically detected, but manual verification is required to confirm.",
+          variant: "warning"
         });
+        setShowManualVerificationDialog(true);
       } else {
         toast({
           title: "Verification Incomplete",
@@ -462,3 +472,4 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
 };
 
 export default ProductDetailsDialog;
+
