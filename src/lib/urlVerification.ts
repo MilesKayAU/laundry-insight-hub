@@ -88,8 +88,8 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
       : null; // Sometimes we don't find ingredients
   }
   
-  // Always flag as needing manual verification if we don't definitively find PVA
-  const needsManualVerification = !containsPva;
+  // IMPORTANT CHANGE: Always flag as needing manual verification, regardless of whether we find PVA or not
+  const needsManualVerification = true;
   
   let message = containsPva 
     ? 'PVA ingredients detected in the product page.' 
@@ -101,9 +101,7 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
     message = `${message} Detected PVA percentage: ${extractedPvaPercentage}%.`;
   }
   
-  if (needsManualVerification) {
-    message += ' Please have an admin manually check this product page.';
-  }
+  message += ' Please have an admin manually check this product page.';
   
   return {
     success: true,

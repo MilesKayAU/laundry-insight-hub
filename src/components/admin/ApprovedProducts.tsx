@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Table, 
@@ -96,7 +95,6 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
             variant: "warning"
           });
           
-          // Set up for manual verification
           setManualVerificationProduct(product);
           setVerificationUrl(product.websiteUrl);
           setShowManualVerificationDialog(true);
@@ -107,13 +105,11 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
             variant: "warning"
           });
           
-          // Set up for manual verification
           setManualVerificationProduct(product);
           setVerificationUrl(product.websiteUrl);
           setShowManualVerificationDialog(true);
         }
         
-        // Show extracted ingredients if available
         if (result.extractedIngredients) {
           toast({
             title: "Extracted Ingredients",
@@ -361,7 +357,6 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
         )}
       </CardContent>
 
-      {/* Manual Verification Dialog */}
       <AlertDialog open={showManualVerificationDialog} onOpenChange={setShowManualVerificationDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -422,4 +417,3 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
 };
 
 export default ApprovedProducts;
-

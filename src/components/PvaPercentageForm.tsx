@@ -31,12 +31,14 @@ interface PvaPercentageFormProps {
   onSubmitSuccess?: () => void;
   defaultBrand?: string;
   defaultProduct?: string;
+  isAdmin?: boolean; // New prop to identify if the form is being used by an admin
 }
 
 const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({ 
   onSubmitSuccess,
   defaultBrand = "",
-  defaultProduct = ""
+  defaultProduct = "",
+  isAdmin = false // Default to false (regular user)
 }) => {
   const { toast } = useToast();
   const [isVerifying, setIsVerifying] = useState(false);
@@ -128,9 +130,13 @@ const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({
       // For now, we'll simulate a successful submission
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      const message = isAdmin 
+        ? "The product PVA percentage has been updated."
+        : "Your PVA percentage update request has been submitted for review.";
+      
       toast({
         title: "Submission Successful",
-        description: "Your PVA percentage update request has been submitted for review.",
+        description: message,
         variant: "default"
       });
       
@@ -153,9 +159,14 @@ const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle>Submit PVA Percentage Update</CardTitle>
+        <CardTitle>
+          {isAdmin ? "Update PVA Percentage" : "Submit PVA Percentage Update"}
+        </CardTitle>
         <CardDescription>
-          Provide documentation showing the actual PVA percentage in this product
+          {isAdmin 
+            ? "Update the PVA percentage information for this product"
+            : "Provide documentation showing the actual PVA percentage in this product"
+          }
         </CardDescription>
       </CardHeader>
       
@@ -336,20 +347,23 @@ const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({
               )}
             />
             
-            <Button type="submit" className="w-full">Submit for Review</Button>
+            <Button type="submit" className="w-full">
+              {isAdmin ? "Update PVA Percentage" : "Submit for Review"}
+            </Button>
           </form>
         </Form>
       </CardContent>
       
       <CardFooter className="flex flex-col text-center text-sm text-muted-foreground pt-0">
-        <p>
-          Submissions are reviewed by our team before being published.
-          Thank you for helping improve our database accuracy.
-        </p>
+        {!isAdmin && (
+          <p>
+            Submissions are reviewed by our team before being published.
+            Thank you for helping improve our database accuracy.
+          </p>
+        )}
       </CardFooter>
     </Card>
   );
 };
 
 export default PvaPercentageForm;
-
