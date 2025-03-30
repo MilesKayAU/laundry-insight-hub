@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -331,7 +330,7 @@ const DatabasePage = () => {
         );
       } else if (product.pvaStatus === 'verified-free') {
         return (
-          <Badge variant="success" className="bg-green-100 text-green-800 flex items-center gap-1">
+          <Badge variant="outline" className="bg-green-100 text-green-800 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" />
             PVA-Free
           </Badge>
@@ -353,7 +352,7 @@ const DatabasePage = () => {
       }
     } else if (product.pvaPercentage === 0) {
       return (
-        <Badge variant="success" className="bg-green-100 text-green-800 flex items-center gap-1">
+        <Badge variant="outline" className="bg-green-100 text-green-800 flex items-center gap-1">
           <CheckCircle className="h-3 w-3" />
           PVA-Free
         </Badge>
