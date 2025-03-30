@@ -1,10 +1,9 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useIsAdmin } from '@/hooks/use-blog';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AdminGuardProps {
   children: React.ReactNode;
@@ -12,32 +11,79 @@ interface AdminGuardProps {
 
 const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { data: isAdmin, isLoading: isAdminLoading, error: adminError } = useIsAdmin();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isAdminLoading, setIsAdminLoading] = useState(true);
 
-  // Manual admin override for specific email
-  const isAdminOverride = user?.email?.toLowerCase() === 'mileskayaustralia@gmail.com';
+  // Special admin emails - keep this as a direct check to avoid RPC failures
+  const ADMIN_EMAILS = ['mileskayaustralia@gmail.com'];
+  
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setIsAdminLoading(false);
+        return;
+      }
 
-  // Force admin for our special user
-  const isForcedAdmin = isAdminOverride;
+      console.log("AdminGuard: Checking admin status for user:", user.email);
+      
+      // 1. First check if the user is in our hardcoded admin list
+      const isSpecialAdmin = user.email && 
+        ADMIN_EMAILS.includes(user.email.toLowerCase());
+      
+      if (isSpecialAdmin) {
+        console.log("AdminGuard: User is special admin, granting access");
+        setIsAdmin(true);
+        setIsAdminLoading(false);
+        return;
+      }
+
+      // 2. Then try the RPC method as fallback
+      try {
+        const { data, error } = await supabase.rpc('has_role', { role: 'admin' });
+        
+        if (error) {
+          console.error("Error checking admin role:", error);
+          // If there's an error but we already know it's a special admin, allow access
+          if (isSpecialAdmin) {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        } else {
+          console.log("AdminGuard: Admin RPC result:", data);
+          setIsAdmin(!!data);
+        }
+      } catch (err) {
+        console.error("Exception in admin check:", err);
+        // If exception but the user is a special admin, still grant access
+        if (isSpecialAdmin) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } finally {
+        setIsAdminLoading(false);
+      }
+    };
+
+    if (isAuthenticated && !isLoading) {
+      checkAdminStatus();
+    } else {
+      setIsAdminLoading(false);
+    }
+  }, [isAuthenticated, isLoading, user]);
 
   useEffect(() => {
-    // Log admin status information for debugging
-    if (user) {
-      console.log("AdminGuard: User email:", user.email);
-      console.log("AdminGuard: isAdmin from hook:", isAdmin);
-      console.log("AdminGuard: isAdminOverride:", isAdminOverride);
-      console.log("AdminGuard: isForcedAdmin:", isForcedAdmin);
-    }
-    
     if (!isLoading && !isAdminLoading) {
       if (!isAuthenticated) {
         // Redirect to login page with return URL
         console.log("AdminGuard: User not authenticated, redirecting to login");
         navigate('/auth', { state: { returnUrl: location.pathname } });
-      } else if (!isAdmin && !isForcedAdmin) {
+      } else if (!isAdmin) {
         // User is authenticated but not an admin
         console.log("AdminGuard: User not admin, access denied");
         toast({
@@ -50,7 +96,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
         console.log("AdminGuard: Access granted to admin area");
       }
     }
-  }, [isAuthenticated, isLoading, isAdminLoading, navigate, location.pathname, isAdmin, toast, user, isAdminOverride, isForcedAdmin]);
+  }, [isAuthenticated, isLoading, isAdminLoading, navigate, location.pathname, isAdmin, toast]);
 
   // Show loading while checking authentication or admin status
   if (isLoading || isAdminLoading) {
@@ -61,20 +107,8 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
     );
   }
 
-  // Special case: if the user is our known admin, always allow access
-  if (isForcedAdmin) {
-    console.log("AdminGuard: Using forced admin access for special user");
-    return <>{children}</>;
-  }
-
-  // If there was an error checking admin status but email is the admin email, allow access
-  if (adminError && isAdminOverride) {
-    console.log("AdminGuard: Using admin override due to error:", adminError);
-    return <>{children}</>;
-  }
-
-  // Only render children if user is authenticated and is an admin (or has admin override)
-  return (isAuthenticated && (isAdmin || isAdminOverride)) ? <>{children}</> : null;
+  // Only render children if user is authenticated and is an admin
+  return (isAuthenticated && isAdmin) ? <>{children}</> : null;
 };
 
 export default AdminGuard;

@@ -9,10 +9,10 @@ export function useBlogPosts() {
     queryFn: async () => {
       try {
         console.log("Fetching blog posts...");
-        // Get published posts
+        // Get ALL posts - not just published ones
         const { data: posts, error } = await supabase
           .from("blog_posts")
-          .select("id, title, slug, excerpt, featured_image, created_at, author_id")
+          .select("id, title, slug, excerpt, featured_image, created_at, author_id, published")
           .order("created_at", { ascending: false });
 
         if (error) {
@@ -57,11 +57,11 @@ export function useBlogPosts() {
         return resultPosts;
       } catch (error) {
         console.error("Exception in useBlogPosts:", error);
-        return [];
+        throw error; // Re-throw the error to be handled by React Query
       }
     },
     retryOnMount: true,
-    staleTime: 10000, // Consider data fresh for 10 seconds
+    staleTime: 0, // Consider data fresh for 0 seconds (always refetch)
   });
 }
 
@@ -74,7 +74,7 @@ export function useBlogPost(slug: string) {
       try {
         console.log("Fetching blog post with slug:", slug);
         
-        // Get the post - NOTE: Removing published filter to make sure we can get all posts
+        // Get the post - without any filters
         const { data: post, error } = await supabase
           .from("blog_posts")
           .select("*")
@@ -109,16 +109,19 @@ export function useBlogPost(slug: string) {
         return null;
       } catch (error) {
         console.error("Exception in useBlogPost:", error);
-        return null;
+        throw error; // Re-throw the error
       }
     },
     enabled: !!slug,
-    retry: 2,
+    retry: 3, // Try more times if it fails
   });
 }
 
 export function useIsAdmin() {
   const { user } = useAuth();
+  
+  // Define admins directly - this serves as a fallback if the database check fails
+  const ADMIN_EMAILS = ['mileskayaustralia@gmail.com'];
   
   return useQuery({
     queryKey: ["user-is-admin"],
@@ -131,8 +134,8 @@ export function useIsAdmin() {
 
       console.log("Admin check for user:", user.email);
       
-      // Special case for specific admin
-      if (user.email && user.email.toLowerCase() === 'mileskayaustralia@gmail.com') {
+      // Special case for specific admin - Direct check first
+      if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
         console.log("Admin check: Granting admin access for special user");
         return true;
       }
@@ -143,23 +146,28 @@ export function useIsAdmin() {
         
         if (error) {
           console.error("Error checking admin role:", error);
-          // Special case - if error occurs for the admin user, grant access anyway
-          if (user.email && user.email.toLowerCase() === 'mileskayaustralia@gmail.com') {
+          
+          // Special case - if error occurs for an admin user, grant access anyway
+          if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+            console.log("Admin check: Error occurred but user is special admin, granting access");
             return true;
           }
-          return false;
+          throw error; // Re-throw to be handled by error boundary
         }
         
         console.log("Admin check via RPC:", !!data);
         return !!data;
       } catch (err) {
         console.error("Exception in admin role check:", err);
-        // If exception, grant admin access only to our special user
-        return user.email?.toLowerCase() === 'mileskayaustralia@gmail.com';
+        
+        // If exception, grant admin access only to our special users
+        const isSpecialAdmin = user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+        console.log("Admin check: Exception occurred, is special admin?", isSpecialAdmin);
+        return isSpecialAdmin;
       }
     },
     enabled: !!user,
-    staleTime: 5000, // Cache result for 5 seconds only
-    retry: 1, // Try once more if it fails
+    staleTime: 0, // Always refetch
+    retry: 2, // Try more times if it fails
   });
 }

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PendingProducts from "@/components/admin/PendingProducts";
 import ApprovedProducts from "@/components/admin/ApprovedProducts";
@@ -8,12 +8,17 @@ import BrandMessages from "@/components/admin/BrandMessages";
 import AdminSettings from "@/components/admin/AdminSettings";
 import BlogPostsManager from "@/components/admin/BlogPostsManager";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin } from "@/hooks/use-blog";
 
 const AdminPage = () => {
   const [defaultTab, setDefaultTab] = useState("pending");
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { data: isAdmin, isLoading: isAdminLoading, error: isAdminError, refetch: refetchAdmin } = useIsAdmin();
   
   // Mock data for empty components
   const [pendingProducts, setPendingProducts] = useState([]);
@@ -28,30 +33,17 @@ const AdminPage = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
-  // Check if current user is admin
-  const { data: isAdmin, isLoading } = useQuery({
-    queryKey: ["admin-check"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('has_role', { role: 'admin' });
-      if (error) {
-        console.error("Error checking admin role:", error);
-        return false;
-      }
-      return data;
-    },
-  });
+  useEffect(() => {
+    console.log("AdminPage - Current user:", user?.email);
+    console.log("AdminPage - Is admin loading:", isAdminLoading);
+    console.log("AdminPage - Is admin:", isAdmin);
+    console.log("AdminPage - Admin check error:", isAdminError);
+  }, [user, isAdmin, isAdminLoading, isAdminError]);
 
-  // For this example, we're showing a message if the user is an admin but not in the admins list
-  // In a real app, you might want to actually modify the list in the database
-  React.useEffect(() => {
-    if (isAdmin === false && !isLoading) {
-      toast({
-        title: "Admin role needed",
-        description: "You need to be added to the admins list to manage this application.",
-        variant: "destructive",
-      });
-    }
-  }, [isAdmin, isLoading, toast]);
+  const handleAdminCheck = () => {
+    console.log("Manually rechecking admin status...");
+    refetchAdmin();
+  };
 
   // Mock handlers for components
   const handleViewDetails = (product) => {
@@ -104,9 +96,82 @@ const AdminPage = () => {
     console.log("Clean duplicates triggered");
   };
 
+  if (isAdminLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="animate-spin h-8 w-8 text-science-600 mb-4">
+            <RefreshCw />
+          </div>
+          <p>Checking admin status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAdminError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Admin Check Error</AlertTitle>
+          <AlertDescription>
+            There was a problem checking your admin status.
+            {isAdminError instanceof Error && (
+              <pre className="mt-2 text-xs overflow-auto max-h-[200px] p-2 bg-red-50 rounded">
+                {isAdminError.message}
+              </pre>
+            )}
+          </AlertDescription>
+        </Alert>
+        <Button onClick={handleAdminCheck} className="flex items-center">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // Special admin override based on email
+  const isSpecialAdmin = user?.email?.toLowerCase() === 'mileskayaustralia@gmail.com';
+  const hasAdminAccess = isAdmin || isSpecialAdmin;
+
+  if (!hasAdminAccess) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>
+            You don't have admin privileges to access this page.
+            User email: {user?.email}
+          </AlertDescription>
+        </Alert>
+        <Button onClick={handleAdminCheck} className="flex items-center mt-4">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Recheck Admin Status
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+        <Button onClick={handleAdminCheck} variant="outline" size="sm" className="mb-8">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh Admin Status
+        </Button>
+      </div>
+      
+      <Alert className="mb-6">
+        <AlertTitle>Admin Access Granted</AlertTitle>
+        <AlertDescription>
+          You are logged in as {user?.email} with admin privileges.
+          {isSpecialAdmin && " (Special admin override active)"}
+        </AlertDescription>
+      </Alert>
       
       <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="grid grid-cols-6 md:w-[600px]">
