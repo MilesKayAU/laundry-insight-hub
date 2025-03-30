@@ -73,7 +73,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                       )}
                     </TableCell>
                     <TableCell>
-                      {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
+                      {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'N/A'}
                     </TableCell>
                     <TableCell>
                       {product.submittedAt ? 

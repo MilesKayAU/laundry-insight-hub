@@ -314,9 +314,24 @@ const AdminPage = () => {
   const handleSaveDetails = () => {
     if (!selectedProduct) return;
     
+    const pvaPercentage = productDetails.pvaPercentage 
+      ? parseInt(productDetails.pvaPercentage, 10) 
+      : null;
+    
+    let pvaStatus = selectedProduct.pvaStatus;
+    
+    if (pvaPercentage !== null) {
+      if (pvaPercentage > 0) {
+        pvaStatus = 'contains';
+      } else if (pvaPercentage === 0) {
+        pvaStatus = 'verified-free';
+      }
+    }
+    
     const updatedDetails = {
       ...productDetails,
-      pvaPercentage: productDetails.pvaPercentage ? parseInt(productDetails.pvaPercentage, 10) : undefined
+      pvaPercentage: pvaPercentage,
+      pvaStatus: pvaStatus as 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive'
     };
     
     saveProductDetails(selectedProduct.id, updatedDetails);
