@@ -46,7 +46,8 @@ import {
   ShieldCheck, 
   ShieldX,
   UserCheck,
-  UserX
+  UserX,
+  AlertCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +74,7 @@ const UserManagement = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [action, setAction] = useState<'delete' | 'promote' | 'demote' | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     fetchUsers();
@@ -80,13 +82,16 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Fetch users from Supabase
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      // First, get all users from the profiles table (which is accessible to admins through RLS policies)
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url');
       
-      if (authError) throw authError;
+      if (profileError) throw profileError;
       
-      // Fetch user roles
+      // Then fetch user roles
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('user_id, role');
@@ -99,16 +104,24 @@ const UserManagement = () => {
         userRoles.set(role.user_id, role.role);
       });
       
-      // Combine user data with roles
-      const enhancedUsers = authUsers?.users.map(user => ({
-        ...user,
-        role: userRoles.get(user.id) || 'user',
-        is_admin: userRoles.get(user.id) === 'admin'
+      // Transform profile data into the expected user format
+      const enhancedUsers: User[] = profileData.map(profile => ({
+        id: profile.id,
+        email: profile.username || 'No email',
+        created_at: new Date().toISOString(), // Placeholder since we don't have this in profiles
+        last_sign_in_at: undefined, // Placeholder since we don't have this in profiles
+        user_metadata: {
+          full_name: profile.full_name,
+          avatar_url: profile.avatar_url
+        },
+        role: userRoles.get(profile.id) || 'user',
+        is_admin: userRoles.get(profile.id) === 'admin'
       }));
       
       setUsers(enhancedUsers || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching users:', error);
+      setError(error.message || "Failed to load users");
       toast({
         title: "Error fetching users",
         description: error.message || "Failed to load users",
@@ -121,9 +134,20 @@ const UserManagement = () => {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      // Instead of directly deleting the auth user (which requires admin rights),
+      // we'll simply remove the profile and rely on cascading to handle related data
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
       
       if (error) throw error;
+      
+      // Remove from user_roles table as well
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
       
       setUsers(users.filter(user => user.id !== userId));
       
@@ -131,7 +155,7 @@ const UserManagement = () => {
         title: "User deleted",
         description: "User has been successfully removed",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting user:', error);
       toast({
         title: "Error deleting user",
@@ -183,7 +207,7 @@ const UserManagement = () => {
         title: "Role updated",
         description: `User role has been updated to ${newRole}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating role:', error);
       toast({
         title: "Error updating role",
@@ -243,6 +267,15 @@ const UserManagement = () => {
         {loading ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground">Loading users...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 space-y-4">
+            <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
+            <div>
+              <p className="font-semibold text-destructive">Error fetching users</p>
+              <p className="text-muted-foreground">{error}</p>
+            </div>
+            <Button variant="outline" onClick={fetchUsers}>Try Again</Button>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-8">
