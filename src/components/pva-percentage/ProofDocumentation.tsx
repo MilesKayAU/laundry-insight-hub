@@ -4,9 +4,9 @@ import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessa
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, FileText } from "lucide-react";
+import { Globe, FileText, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertCircle, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { UseFormReturn } from "react-hook-form";
 import { PvaFormValues, VerificationResult } from "./types";
 
