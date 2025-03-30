@@ -49,7 +49,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   // Add any additional common countries if they don't exist
   const commonCountries = ['United States', 'United Kingdom', 'Canada', 'New Zealand'];
   commonCountries.forEach(country => {
-    if (!displayCountries.includes(country)) {
+    if (!displayCountries.some(c => c.toLowerCase() === country.toLowerCase())) {
       displayCountries.push(country);
     }
   });
@@ -62,6 +62,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   });
 
   const handleCountryChange = (value: string) => {
+    console.log("Selected country:", value); // Debug log
     onCountrySelect(value);
   };
 

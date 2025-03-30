@@ -117,7 +117,7 @@ const DatabasePage = () => {
   
   const approvedProducts = approvedSubmissions.length > 0 ? [] : mockProducts.filter(product => product.approved);
   
-  const normalizeCountry = (country) => {
+  const normalizeCountry = (country: string | undefined | null): string => {
     if (!country) return "Global";
     return country.trim();
   };
@@ -136,7 +136,8 @@ const DatabasePage = () => {
     if (selectedCountry === "Global") return true;
     
     const productCountry = normalizeCountry(product.country);
-    return productCountry.toLowerCase() === selectedCountry.toLowerCase();
+    return productCountry === selectedCountry || 
+           productCountry.toLowerCase() === selectedCountry.toLowerCase();
   });
   
   const filteredProducts = combinedApprovedProducts.filter(product => {
