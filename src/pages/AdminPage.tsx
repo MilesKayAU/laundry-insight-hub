@@ -16,6 +16,7 @@ import AdminSettings from "@/components/admin/AdminSettings";
 import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
 import UserManagement from "@/components/admin/UserManagement";
 import Communications from "@/components/admin/Communications";
+import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmissions";
 
 const saveProductDetails = (productId: string, details: Partial<ProductSubmission>) => {
   const submissions = getProductSubmissions();
@@ -493,7 +494,7 @@ const AdminPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-8 max-w-5xl mx-auto">
+        <TabsList className="grid w-full grid-cols-9 max-w-5xl mx-auto">
           <TabsTrigger value="pending">Pending</TabsTrigger>
           <TabsTrigger value="approved">Products</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
@@ -513,6 +514,12 @@ const AdminPage = () => {
                 {brandMessages.filter(m => !m.admin_response).length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="pva-updates">
+            PVA Updates
+            <Badge className="ml-1 bg-blue-500" variant="default">
+              3
+            </Badge>
           </TabsTrigger>
           <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -571,6 +578,10 @@ const AdminPage = () => {
             onResponseChange={setMessageResponse}
             onSendResponse={handleMessageResponse}
           />
+        </TabsContent>
+        
+        <TabsContent value="pva-updates" className="mt-6">
+          <PvaPercentageSubmissions />
         </TabsContent>
         
         <TabsContent value="bulk" className="mt-6">

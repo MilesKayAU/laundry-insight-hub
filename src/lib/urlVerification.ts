@@ -6,6 +6,7 @@ interface VerificationResult {
   containsPva: boolean;
   detectedTerms: string[];
   extractedIngredients: string | null;
+  extractedPvaPercentage: number | null;
   message: string;
   url?: string;
 }
@@ -19,6 +20,7 @@ export const verifyProductUrl = async (
       containsPva: false,
       detectedTerms: [],
       extractedIngredients: null,
+      extractedPvaPercentage: null,
       message: 'Invalid URL provided. Please enter a valid product URL.'
     };
   }
@@ -40,6 +42,7 @@ export const verifyProductUrl = async (
       containsPva: false,
       detectedTerms: [],
       extractedIngredients: null,
+      extractedPvaPercentage: null,
       message: 'Failed to scan the product URL. Please try again later.'
     };
   }
@@ -63,12 +66,33 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
   
   // Simulate extracting ingredients
   let sampleIngredients = null;
+  
+  // Try to extract PVA percentage (if mentioned)
+  let extractedPvaPercentage: number | null = null;
+  
   if (containsPva) {
-    sampleIngredients = `Water, Sodium Laureth Sulfate, Cocamidopropyl Betaine, ${randomDetectedTerms[0] || 'Polyvinyl Alcohol'}, Sodium Chloride, Glycerin, Fragrance`;
+    // For simulation purposes, check if URL contains percentage indicators
+    const percentageMatch = url.match(/(\d+)(%|percent|\s*pva)/i);
+    if (percentageMatch && !isNaN(parseInt(percentageMatch[1]))) {
+      extractedPvaPercentage = parseInt(percentageMatch[1]);
+    } else {
+      // Randomly assign a percentage for simulation
+      extractedPvaPercentage = Math.random() > 0.5 ? Math.floor(Math.random() * 40) + 10 : null;
+    }
+    
+    sampleIngredients = `Water, Sodium Laureth Sulfate, Cocamidopropyl Betaine, ${randomDetectedTerms[0] || 'Polyvinyl Alcohol'} ${extractedPvaPercentage ? `(${extractedPvaPercentage}%)` : ''}, Sodium Chloride, Glycerin, Fragrance`;
   } else {
     sampleIngredients = Math.random() > 0.5 
       ? "Water, Sodium Laureth Sulfate, Cocamidopropyl Betaine, Glycerin, Citric Acid, Sodium Benzoate" 
       : null; // Sometimes we don't find ingredients
+  }
+  
+  let message = containsPva ? 'PVA ingredients detected in the product page.' : 
+    (sampleIngredients ? 'No PVA ingredients detected in the product page.' : 
+    'Could not find ingredients list on the product page.');
+      
+  if (extractedPvaPercentage !== null) {
+    message = `${message} Detected PVA percentage: ${extractedPvaPercentage}%.`;
   }
   
   return {
@@ -76,10 +100,7 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
     containsPva,
     detectedTerms: randomDetectedTerms,
     extractedIngredients: sampleIngredients,
-    message: containsPva 
-      ? 'PVA ingredients detected in the product page.' 
-      : sampleIngredients 
-        ? 'No PVA ingredients detected in the product page.' 
-        : 'Could not find ingredients list on the product page.'
+    extractedPvaPercentage,
+    message
   };
 };

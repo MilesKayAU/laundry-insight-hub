@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from 'react-router-dom';
 import { Image, Video, Link as LinkIcon, Percent, AlertCircle, MapPin, Search, Loader2, ExternalLink, Check, X } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { verifyProductUrl } from "@/lib/urlVerification";
 import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 // Make sure the interface matches what's being used in AdminPage.tsx
 export interface ProductDetails {
@@ -41,12 +42,14 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
   onSave
 }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{
     containsPva: boolean;
     message: string;
     ingredients?: string | null;
     detectedTerms?: string[];
+    extractedPvaPercentage?: number | null;
     url?: string;
   } | null>(null);
   const [showManualVerificationDialog, setShowManualVerificationDialog] = useState(false);
@@ -74,11 +77,25 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
         message: result.message,
         ingredients: result.extractedIngredients,
         detectedTerms: result.detectedTerms,
+        extractedPvaPercentage: result.extractedPvaPercentage,
         url: details.websiteUrl
       });
 
-      // If PVA was detected, update the product details
-      if (result.containsPva && result.success) {
+      // If PVA percentage was detected, update the product details
+      if (result.extractedPvaPercentage) {
+        onDetailsChange({
+          ...details,
+          pvaPercentage: result.extractedPvaPercentage.toString()
+        });
+
+        toast({
+          title: "PVA Percentage Detected",
+          description: `Found PVA at ${result.extractedPvaPercentage}%. The percentage has been updated.`,
+          variant: "default"
+        });
+      }
+      // If PVA was detected but no percentage, use default
+      else if (result.containsPva && result.success) {
         onDetailsChange({
           ...details,
           pvaPercentage: "25" // Default percentage if detected
@@ -86,7 +103,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
 
         toast({
           title: "PVA Detected",
-          description: "The product contains PVA ingredients. Details have been updated.",
+          description: "The product contains PVA ingredients but no specific percentage was found. Using default value.",
           variant: "destructive"
         });
       } else if (result.success && !result.containsPva && result.extractedIngredients) {
@@ -141,6 +158,15 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
     }
     
     setShowManualVerificationDialog(false);
+  };
+
+  const handleOpenPvaUpdatePage = () => {
+    if (product) {
+      onOpenChange(false); // Close the dialog
+      
+      // Navigate to the PVA update page with brand and product info
+      navigate(`/update-pva/${encodeURIComponent(product.brand)}/${encodeURIComponent(product.name)}`);
+    }
   };
 
   return (
@@ -299,6 +325,15 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
                       </div>
                     </div>
                   )}
+                  
+                  {verificationResult.extractedPvaPercentage && (
+                    <div className="mt-2">
+                      <p className="font-semibold text-sm">Detected PVA Percentage:</p>
+                      <p className="text-xs mt-1 bg-background/50 p-2 rounded font-medium">
+                        {verificationResult.extractedPvaPercentage}%
+                      </p>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             </div>
@@ -309,16 +344,27 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
               <Percent className="h-4 w-4" /> PVA Percentage
             </Label>
             <div className="col-span-3">
-              <Input
-                id="pvaPercentage"
-                placeholder="PVA percentage (e.g. 25)"
-                value={details.pvaPercentage}
-                onChange={(e) => onDetailsChange({...details, pvaPercentage: e.target.value})}
-                className="col-span-3"
-                type="number"
-                min="0"
-                max="100"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="pvaPercentage"
+                  placeholder="PVA percentage (e.g. 25)"
+                  value={details.pvaPercentage}
+                  onChange={(e) => onDetailsChange({...details, pvaPercentage: e.target.value})}
+                  className="w-32"
+                  type="number"
+                  min="0"
+                  max="100"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleOpenPvaUpdatePage}
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                >
+                  <FileText className="h-4 w-4" />
+                  Request Update with Proof
+                </Button>
+              </div>
+              
               <Alert variant="warning" className="mt-2 bg-amber-50 border-amber-200">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-xs text-amber-800">

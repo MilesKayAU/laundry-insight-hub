@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -16,18 +15,18 @@ import PvaFreePage from "./pages/PvaFreePage";
 import CertificationPage from "./pages/CertificationPage";
 import AuthPage from "./pages/AuthPage";
 import BrandProfilePage from "./pages/BrandProfilePage";
+import PvaPercentageUpdatePage from "./pages/PvaPercentageUpdatePage";
 import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
 import NotFound from "./pages/NotFound";
 
-// Create a client with more aggressive stale time settings
 const createQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Consider data stale immediately
-      gcTime: 5 * 60 * 1000, // Cache for 5 minutes (renamed from cacheTime)
-      refetchOnWindowFocus: true, // Refetch when window gains focus
-      refetchOnMount: true, // Refetch when component mounts
+      staleTime: 0,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
     },
   },
 });
@@ -36,7 +35,6 @@ const QueryClientWrapper = ({ children }) => {
   const location = useLocation();
   const [queryClient] = useState(() => createQueryClient());
   
-  // Reset query cache when navigating to the database page
   React.useEffect(() => {
     if (location.pathname === '/database') {
       queryClient.resetQueries();
@@ -71,6 +69,7 @@ const App: React.FC = () => {
                   } />
                   <Route path="/database" element={<DatabasePage />} />
                   <Route path="/brand/:brandName" element={<BrandProfilePage />} />
+                  <Route path="/update-pva/:brandName/:productName" element={<PvaPercentageUpdatePage />} />
                   <Route path="/admin" element={
                     <AdminGuard>
                       <AdminPage />
@@ -79,7 +78,6 @@ const App: React.FC = () => {
                   <Route path="/about" element={<AboutPva />} />
                   <Route path="/pva-free" element={<PvaFreePage />} />
                   <Route path="/certification" element={<CertificationPage />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>
