@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Card, 
   CardContent, 
@@ -54,7 +54,8 @@ import {
   AlertTriangle,
   CheckCircle,
   HelpCircle,
-  XCircle
+  XCircle,
+  Percent
 } from "lucide-react";
 import {
   Select,
@@ -92,6 +93,7 @@ const availableCountries = [
 ];
 
 const DatabasePage = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState<string>("all");
@@ -293,6 +295,10 @@ const DatabasePage = () => {
     }
   };
 
+  const handlePvaUpdateClick = (brand: string, product: string) => {
+    navigate(`/update-pva/${encodeURIComponent(brand)}/${encodeURIComponent(product)}`);
+  };
+
   const PaginationControls = ({ totalItems }) => {
     const totalPages = getTotalPages(totalItems);
     
@@ -422,27 +428,47 @@ const DatabasePage = () => {
     return null;
   };
 
-  const renderBrandButtons = (product) => {
-    if (!isProductSubmission(product)) return null;
+  const renderActionButtons = (product) => {
+    const buttons = [];
     
-    if (product.brandVerified || product.brandOwnershipRequested) {
-      return null;
+    if (isProductSubmission(product) && !product.brandVerified && !product.brandOwnershipRequested) {
+      buttons.push(
+        <Button
+          key="brand-ownership"
+          variant="outline"
+          size="sm"
+          className="ml-2 text-xs"
+          onClick={() => {
+            setSelectedProduct(product as ProductSubmission);
+            setIsDialogOpen(true);
+          }}
+        >
+          <Shield className="h-3 w-3 mr-1" />
+          Own this brand?
+        </Button>
+      );
     }
     
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        className="ml-2 text-xs"
-        onClick={() => {
-          setSelectedProduct(product as ProductSubmission);
-          setIsDialogOpen(true);
-        }}
-      >
-        <Shield className="h-3 w-3 mr-1" />
-        Own this brand?
-      </Button>
-    );
+    const hasPvaPercentage = isProductSubmission(product) 
+      ? !!product.pvaPercentage 
+      : product.pvaPercentage !== null && product.pvaPercentage !== undefined;
+      
+    if (!hasPvaPercentage || product.pvaPercentage === 'Unknown') {
+      buttons.push(
+        <Button
+          key="pva-update"
+          variant="outline"
+          size="sm"
+          className={buttons.length > 0 ? "ml-2 text-xs" : "text-xs"}
+          onClick={() => handlePvaUpdateClick(product.brand, product.name)}
+        >
+          <Percent className="h-3 w-3 mr-1" />
+          Submit PVA %
+        </Button>
+      );
+    }
+    
+    return buttons.length > 0 ? <div className="flex flex-wrap gap-2">{buttons}</div> : null;
   };
 
   if (loading) {
@@ -680,7 +706,7 @@ const DatabasePage = () => {
                             {renderPvaValue(product)}
                           </TableCell>
                           <TableCell>
-                            {renderBrandButtons(product)}
+                            {renderActionButtons(product)}
                           </TableCell>
                         </TableRow>
                       ))

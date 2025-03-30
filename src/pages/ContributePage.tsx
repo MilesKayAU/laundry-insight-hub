@@ -6,6 +6,7 @@ import ContributePageHeader from "@/components/contribute/ContributePageHeader";
 import ProductForm from "@/components/contribute/ProductForm";
 import BulkUpload from "@/components/BulkUpload";
 import DiscussionSection from "@/components/contribute/DiscussionSection";
+import PvaPercentageForm from "@/components/PvaPercentageForm";
 
 const ContributePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("individual");
@@ -27,13 +28,18 @@ const ContributePage: React.FC = () => {
       <ContributePageHeader />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-4xl mx-auto">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="individual">Individual Product</TabsTrigger>
+          <TabsTrigger value="pva-update">PVA Percentage Update</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
         </TabsList>
         
         <TabsContent value="individual">
           <ProductForm onComplete={handleFormComplete} />
+        </TabsContent>
+        
+        <TabsContent value="pva-update">
+          <PvaPercentageForm onSubmitSuccess={handleFormComplete} />
         </TabsContent>
         
         <TabsContent value="bulk">
