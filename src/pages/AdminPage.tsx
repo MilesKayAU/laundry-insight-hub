@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { PVA_KEYWORDS_CATEGORIES, getProductSubmissions, ProductSubmission, updateProductApproval, deleteProductSubmission } from "@/lib/textExtractor";
 import { isDuplicateProduct, approveBrandOwnership, rejectBrandOwnership, cleanDuplicateProducts, resetProductDatabase } from "@/lib/bulkUpload";
+import { verifyProductUrl } from "@/lib/urlVerification";
 import BulkUpload from "@/components/BulkUpload";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -61,7 +61,6 @@ const AdminPage = () => {
   const [messageResponse, setMessageResponse] = useState("");
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [brandSearchTerm, setBrandSearchTerm] = useState("");
-  
   const [productDetails, setProductDetails] = useState({
     description: "",
     imageUrl: "",
@@ -70,19 +69,17 @@ const AdminPage = () => {
     pvaPercentage: "",
     country: ""
   });
-  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
   const [keywordCategories, setKeywordCategories] = useState({
     commonNames: [...PVA_KEYWORDS_CATEGORIES.commonNames],
     chemicalSynonyms: [...PVA_KEYWORDS_CATEGORIES.chemicalSynonyms],
     inciTerms: [...PVA_KEYWORDS_CATEGORIES.inciTerms],
     additional: [...PVA_KEYWORDS_CATEGORIES.additional]
   });
-  
   const [newKeyword, setNewKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("commonNames");
   const [searchTerm, setSearchTerm] = useState("");
+  const [verifyingProductId, setVerifyingProductId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProductSubmissions();
@@ -220,6 +217,83 @@ const AdminPage = () => {
         description: "There was an error rejecting this request.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleVerifyProduct = async (product: ProductSubmission) => {
+    if (!product.websiteUrl) {
+      toast({
+        title: "Missing URL",
+        description: "This product doesn't have a website URL to verify.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setVerifyingProductId(product.id);
+    
+    try {
+      const result = await verifyProductUrl(product.websiteUrl);
+      
+      if (result.success) {
+        if (result.containsPva) {
+          const updatedDetails = {
+            pvaStatus: 'contains' as 'contains',
+            pvaPercentage: 25,
+            description: product.description || ''
+          };
+          
+          if (result.extractedIngredients) {
+            updatedDetails.description += result.extractedIngredients.length > 0 
+              ? `\n\nIngredients: ${result.extractedIngredients}` 
+              : '';
+          }
+          
+          saveProductDetails(product.id, updatedDetails);
+          loadProductSubmissions();
+          
+          toast({
+            title: "PVA Detected",
+            description: "The product has been marked as containing PVA.",
+            variant: "default"
+          });
+        } else if (result.extractedIngredients) {
+          saveProductDetails(product.id, {
+            pvaStatus: 'verified-free' as 'verified-free',
+            description: product.description 
+              ? `${product.description}\n\nIngredients: ${result.extractedIngredients}` 
+              : `Ingredients: ${result.extractedIngredients}`
+          });
+          loadProductSubmissions();
+          
+          toast({
+            title: "Verified PVA-Free",
+            description: "No PVA ingredients were found. The product has been marked as PVA-free.",
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: "Inconclusive",
+            description: "Could not determine PVA status from the website. Manual verification needed.",
+            variant: "warning"
+          });
+        }
+      } else {
+        toast({
+          title: "Verification Failed",
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error verifying product:", error);
+      toast({
+        title: "Verification Error",
+        description: "An error occurred while verifying the product.",
+        variant: "destructive"
+      });
+    } finally {
+      setVerifyingProductId(null);
     }
   };
 
@@ -379,7 +453,6 @@ const AdminPage = () => {
         return;
       }
       
-      // Refresh messages
       loadBrandMessages();
       
       toast({
@@ -451,6 +524,7 @@ const AdminPage = () => {
             onViewDetails={openProductDetails}
             onApprove={handleApprove}
             onReject={handleReject}
+            onVerify={handleVerifyProduct}
           />
         </TabsContent>
         

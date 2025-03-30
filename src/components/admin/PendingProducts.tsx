@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Eye } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Search } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 
 interface PendingProductsProps {
@@ -19,13 +19,15 @@ interface PendingProductsProps {
   onViewDetails: (product: ProductSubmission) => void;
   onApprove: (productId: string) => void;
   onReject: (productId: string) => void;
+  onVerify?: (product: ProductSubmission) => void;
 }
 
 const PendingProducts: React.FC<PendingProductsProps> = ({ 
   products, 
   onViewDetails, 
   onApprove, 
-  onReject 
+  onReject,
+  onVerify 
 }) => {
   return (
     <Card>
@@ -90,6 +92,19 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                         >
                           <Eye className="h-4 w-4 text-muted-foreground" />
                         </Button>
+                        
+                        {onVerify && product.websiteUrl && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => onVerify(product)}
+                            title="Verify Website"
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Search className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
                         <Button 
                           variant="ghost" 
                           size="icon"
