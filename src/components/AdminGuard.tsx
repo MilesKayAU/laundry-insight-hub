@@ -19,6 +19,13 @@ const AdminGuard: React.FC<AdminGuardProps> = ({
   const location = useLocation();
   const { toast } = useToast();
 
+  const PRIMARY_ADMIN_EMAIL = 'mileskayaustralia@gmail.com';
+
+  // Helper function to normalize email for comparison
+  const normalizeEmail = (email: string): string => {
+    return email ? email.toLowerCase().trim() : '';
+  };
+
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
@@ -26,12 +33,19 @@ const AdminGuard: React.FC<AdminGuardProps> = ({
         console.log('AdminGuard: Not authenticated, redirecting to auth page');
         navigate('/auth', { state: { returnUrl: location.pathname } });
       } else if (user?.email) {
-        const userEmail = user.email.toLowerCase();
+        const userEmail = normalizeEmail(user.email);
         // Normalize admin emails to lowercase for case-insensitive comparison
-        const normalizedAdminEmails = adminEmails.map(email => email.toLowerCase());
+        const normalizedAdminEmails = adminEmails.map(email => normalizeEmail(email));
         
         // Special check for the primary admin email
-        const isPrimaryAdmin = userEmail === 'mileskayaustralia@gmail.com'.toLowerCase();
+        const isPrimaryAdmin = userEmail === normalizeEmail(PRIMARY_ADMIN_EMAIL);
+        
+        console.log('AdminGuard: Admin check', {
+          userEmail,
+          isPrimaryAdmin,
+          normalizedAdminEmails,
+          isEmailInList: normalizedAdminEmails.includes(userEmail)
+        });
         
         if (!normalizedAdminEmails.includes(userEmail) && !isPrimaryAdmin) {
           // User is authenticated but not an admin
@@ -65,13 +79,29 @@ const AdminGuard: React.FC<AdminGuardProps> = ({
     }
   }, [isAuthenticated, isLoading, navigate, location.pathname, user, adminEmails, toast]);
 
-  // Force access for primary admin email even if another check fails
-  const forceAccessForPrimaryAdmin = () => {
-    if (user?.email?.toLowerCase() === 'mileskayaustralia@gmail.com'.toLowerCase()) {
-      console.log('AdminGuard: Forcing access for primary admin');
+  // Determine if user should have access based on email
+  const hasAdminAccess = (): boolean => {
+    if (!isAuthenticated || !user?.email) return false;
+    
+    const userEmail = normalizeEmail(user.email);
+    
+    // Always allow primary admin access
+    if (userEmail === normalizeEmail(PRIMARY_ADMIN_EMAIL)) {
+      console.log('AdminGuard: Primary admin access granted');
       return true;
     }
-    return false;
+    
+    // Check against admin email list
+    const normalizedAdminEmails = adminEmails.map(email => normalizeEmail(email));
+    const hasAccess = normalizedAdminEmails.includes(userEmail);
+    
+    console.log('AdminGuard: Admin access check', { 
+      userEmail, 
+      hasAccess,
+      normalizedAdminEmails
+    });
+    
+    return hasAccess;
   };
 
   if (isLoading) {
@@ -82,15 +112,8 @@ const AdminGuard: React.FC<AdminGuardProps> = ({
     );
   }
 
-  // Render children if:
-  // 1. User is authenticated AND
-  // 2. Either user's email is in adminEmails OR user's email is mileskayaustralia@gmail.com
-  const shouldRenderChildren = isAuthenticated && (
-    (user?.email && adminEmails.map(email => email.toLowerCase()).includes(user.email.toLowerCase())) ||
-    forceAccessForPrimaryAdmin()
-  );
-
-  return shouldRenderChildren ? <>{children}</> : null;
+  // Render children if user has admin access
+  return hasAdminAccess() ? <>{children}</> : null;
 };
 
 export default AdminGuard;

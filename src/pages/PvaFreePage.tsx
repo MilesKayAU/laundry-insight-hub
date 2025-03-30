@@ -19,7 +19,8 @@ import {
   CollapsibleTrigger
 } from "@/components/ui/collapsible";
 import { getProductSubmissions } from "@/lib/textExtractor";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import PvaCertificationBadge from "@/components/PvaCertificationBadge";
 
 const PvaFreePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,6 +56,15 @@ const PvaFreePage = () => {
     product.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Helper function to check if a product is eligible for certification badge
+  const isProductCertified = (product) => {
+    return product.approved && 
+           product.pvaStatus === 'verified-free' && 
+           (product.type === 'Laundry Sheets' || product.type === 'Laundry Pods' || 
+            product.type.toLowerCase().includes('laundry sheet') || 
+            product.type.toLowerCase().includes('laundry pod'));
+  };
+
   if (loading && pvaFreeProducts.length === 0) {
     return (
       <div className="container mx-auto py-10 px-4">
@@ -78,6 +88,11 @@ const PvaFreePage = () => {
           These products have been verified to contain zero polyvinyl alcohol (PVA).
           Our verification process includes ingredient analysis and manufacturer confirmation.
         </p>
+        <div className="mt-4">
+          <Link to="/certification" className="text-science-600 hover:text-science-700 underline">
+            Learn about our certification program →
+          </Link>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -95,7 +110,14 @@ const PvaFreePage = () => {
       {filteredProducts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20"> {/* Added mb-20 for more spacing */}
           {filteredProducts.map((product) => (
-            <Card key={product.id} className="overflow-hidden flex flex-col h-full">
+            <Card key={product.id} className="overflow-hidden flex flex-col h-full relative">
+              {/* Add certification badge for eligible products */}
+              {isProductCertified(product) && (
+                <div className="absolute top-3 right-3 z-10">
+                  <PvaCertificationBadge size="sm" />
+                </div>
+              )}
+              
               {product.imageUrl && (
                 <div className="aspect-video w-full overflow-hidden bg-muted">
                   <img 
@@ -131,6 +153,13 @@ const PvaFreePage = () => {
                       </p>
                     </CollapsibleContent>
                   </Collapsible>
+                )}
+                
+                {/* Show certification note for certified products */}
+                {isProductCertified(product) && (
+                  <div className="my-2 text-xs text-science-700 italic">
+                    This product is PVA-Free Certified. <Link to="/certification" className="underline">Learn more</Link>
+                  </div>
                 )}
                 
                 {product.videoUrl && (

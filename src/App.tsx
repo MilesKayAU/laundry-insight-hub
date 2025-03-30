@@ -13,6 +13,7 @@ import DatabasePage from "./pages/DatabasePage";
 import AdminPage from "./pages/AdminPage";
 import AboutPva from "./pages/AboutPva";
 import PvaFreePage from "./pages/PvaFreePage";
+import CertificationPage from "./pages/CertificationPage";
 import AuthPage from "./pages/AuthPage";
 import BrandProfilePage from "./pages/BrandProfilePage";
 import AuthGuard from "./components/AuthGuard";
@@ -77,6 +78,7 @@ const App: React.FC = () => {
                   } />
                   <Route path="/about" element={<AboutPva />} />
                   <Route path="/pva-free" element={<PvaFreePage />} />
+                  <Route path="/certification" element={<CertificationPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Route>

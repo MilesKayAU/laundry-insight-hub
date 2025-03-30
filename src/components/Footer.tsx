@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Microscope, Mail, Github, Twitter } from "lucide-react";
+import { Microscope, Mail, Github, Twitter, ShieldCheck } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -20,7 +20,7 @@ const Footer = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-8 border-t border-b border-gray-700">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 py-8 border-t border-b border-gray-700">
           <div>
             <h3 className="font-bold text-lg mb-4 text-science-300">Quick Links</h3>
             <ul className="space-y-2">
@@ -63,6 +63,27 @@ const Footer = () => {
                 <Link to="/faq" className="text-gray-300 hover:text-science-300 transition-colors">
                   FAQ
                 </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-bold text-lg mb-4 text-science-300">Certification</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/certification" className="text-gray-300 hover:text-science-300 transition-colors flex items-center gap-1">
+                  <ShieldCheck className="h-4 w-4" />
+                  PVA-Free Certification
+                </Link>
+              </li>
+              <li>
+                <Link to="/pva-free" className="text-gray-300 hover:text-science-300 transition-colors">
+                  Certified Products
+                </Link>
+              </li>
+              <li>
+                <a href="#" className="text-gray-300 hover:text-science-300 transition-colors">
+                  Apply for Certification
+                </a>
               </li>
             </ul>
           </div>
