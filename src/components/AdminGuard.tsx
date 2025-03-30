@@ -12,17 +12,27 @@ interface AdminGuardProps {
 
 const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
+  const { data: isAdmin, isLoading: isAdminLoading, error: adminError } = useIsAdmin();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
 
+  // Manual admin override for specific email
+  const isAdminOverride = user?.email?.toLowerCase() === 'mileskayaustralia@gmail.com';
+
   useEffect(() => {
+    // Log admin status information for debugging
+    if (user) {
+      console.log("AdminGuard: User email:", user.email);
+      console.log("AdminGuard: isAdmin:", isAdmin);
+      console.log("AdminGuard: isAdminOverride:", isAdminOverride);
+    }
+    
     if (!isLoading && !isAdminLoading) {
       if (!isAuthenticated) {
         // Redirect to login page with return URL
         navigate('/auth', { state: { returnUrl: location.pathname } });
-      } else if (!isAdmin) {
+      } else if (!isAdmin && !isAdminOverride) {
         // User is authenticated but not an admin
         toast({
           title: "Access denied",
@@ -32,7 +42,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
         navigate('/');
       }
     }
-  }, [isAuthenticated, isLoading, isAdminLoading, navigate, location.pathname, isAdmin, toast]);
+  }, [isAuthenticated, isLoading, isAdminLoading, navigate, location.pathname, isAdmin, toast, user, isAdminOverride]);
 
   // Show loading while checking authentication or admin status
   if (isLoading || isAdminLoading) {
@@ -43,8 +53,14 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
     );
   }
 
-  // Only render children if user is authenticated and is an admin
-  return isAuthenticated && isAdmin ? <>{children}</> : null;
+  // If there was an error checking admin status but email is the admin email, allow access
+  if (adminError && isAdminOverride) {
+    console.log("AdminGuard: Using admin override due to error:", adminError);
+    return <>{children}</>;
+  }
+
+  // Only render children if user is authenticated and is an admin (or has admin override)
+  return (isAuthenticated && (isAdmin || isAdminOverride)) ? <>{children}</> : null;
 };
 
 export default AdminGuard;

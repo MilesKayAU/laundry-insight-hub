@@ -88,22 +88,38 @@ export function useIsAdmin() {
     queryKey: ["user-is-admin"],
     queryFn: async () => {
       // Check if user exists first
-      if (!user) return false;
+      if (!user) {
+        console.log("Admin check: No user found");
+        return false;
+      }
+
+      console.log("Admin check for user:", user.email);
       
       // First check if the user's email is in the admin list
       const adminEmails = ['mileskayaustralia@gmail.com'];
-      if (user.email && adminEmails.includes(user.email)) {
+      if (user.email && adminEmails.includes(user.email.toLowerCase())) {
+        console.log("Admin check: User is in admin emails list");
         return true;
       }
       
-      // Fallback to checking the admin role in the database
-      const { data, error } = await supabase.rpc('has_role', { role: 'admin' });
-      if (error) {
-        console.error("Error checking admin role:", error);
-        return false;
+      try {
+        // Fallback to checking the admin role in the database
+        const { data, error } = await supabase.rpc('has_role', { role: 'admin' });
+        
+        if (error) {
+          console.error("Error checking admin role:", error);
+          return false;
+        }
+        
+        console.log("Admin check via RPC:", !!data);
+        return !!data;
+      } catch (err) {
+        console.error("Exception in admin role check:", err);
+        return user.email === 'mileskayaustralia@gmail.com'; // Fallback for safety
       }
-      return !!data;
     },
     enabled: !!user,
+    staleTime: 60000, // Cache result for 1 minute
+    retry: false, // Don't retry on failure to avoid multiple error messages
   });
 }
