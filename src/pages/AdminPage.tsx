@@ -64,7 +64,8 @@ const AdminPage = () => {
     imageUrl: "",
     videoUrl: "",
     websiteUrl: "",
-    pvaPercentage: ""
+    pvaPercentage: "",
+    country: ""
   });
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -226,7 +227,8 @@ const AdminPage = () => {
       imageUrl: product.imageUrl || "",
       videoUrl: product.videoUrl || "",
       websiteUrl: product.websiteUrl || "",
-      pvaPercentage: product.pvaPercentage ? product.pvaPercentage.toString() : ""
+      pvaPercentage: product.pvaPercentage ? product.pvaPercentage.toString() : "",
+      country: product.country || ""
     });
     setIsDialogOpen(true);
   };

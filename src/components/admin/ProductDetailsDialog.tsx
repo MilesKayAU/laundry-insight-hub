@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Image, Video, Link as LinkIcon, Percent, AlertCircle } from "lucide-react";
+import { Image, Video, Link as LinkIcon, Percent, AlertCircle, MapPin } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -16,7 +16,8 @@ export interface ProductDetails {
   imageUrl: string;
   videoUrl: string;
   websiteUrl: string;
-  pvaPercentage: string; // Changed from optional to required to match the state in AdminPage
+  pvaPercentage: string;
+  country: string; // Added country field
 }
 
 interface ProductDetailsDialogProps {
@@ -82,6 +83,19 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
               placeholder="Enter product description"
               value={details.description}
               onChange={(e) => onDetailsChange({...details, description: e.target.value})}
+              className="col-span-3"
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="country" className="text-right flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Country
+            </Label>
+            <Input
+              id="country"
+              placeholder="Enter country (e.g. United States, Australia)"
+              value={details.country}
+              onChange={(e) => onDetailsChange({...details, country: e.target.value})}
               className="col-span-3"
             />
           </div>
