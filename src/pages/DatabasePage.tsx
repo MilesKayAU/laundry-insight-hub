@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -74,6 +73,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import DataCharts from "@/components/DataCharts";
 import CountrySelector from "@/components/CountrySelector";
+
+const availableCountries = [
+  "Global",
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "New Zealand",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Japan",
+  "South Korea",
+  "Brazil",
+  "India"
+];
 
 const DatabasePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -189,7 +205,6 @@ const DatabasePage = () => {
     return matchesSearch && matchesType && matchesPvaStatus;
   });
   
-  // Sort products by brand name
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     const brandA = a.brand.toLowerCase();
     const brandB = b.brand.toLowerCase();
