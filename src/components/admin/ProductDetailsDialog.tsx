@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Image, Video, Link as LinkIcon, Percent } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 
-interface ProductDetails {
+// Make sure the interface matches what's being used in AdminPage.tsx
+export interface ProductDetails {
   description: string;
   imageUrl: string;
   videoUrl: string;
   websiteUrl: string;
-  pvaPercentage?: string;
+  pvaPercentage: string; // Changed from optional to required to match the state in AdminPage
 }
 
 interface ProductDetailsDialogProps {
