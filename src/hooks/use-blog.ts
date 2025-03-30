@@ -48,6 +48,8 @@ export function useBlogPost(slug: string) {
   return useQuery({
     queryKey: ["blog-post", slug],
     queryFn: async () => {
+      if (!slug) return null;
+      
       // Get the post
       const { data: post, error } = await supabase
         .from("blog_posts")

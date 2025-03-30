@@ -21,8 +21,18 @@ import { useToast } from "@/hooks/use-toast";
 import AdminGuard from "@/components/AdminGuard";
 import { Switch } from "@/components/ui/switch";
 
-// Third-party markdown editor would be added here in a real app
-// For simplicity, we'll use a textarea for content
+// Define a type for our blog post data
+interface BlogPost {
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string;
+  featured_image: string | null;
+  published: boolean;
+  author_id?: string;
+  id?: string;
+  updated_at?: string;
+}
 
 const EditBlogPostPage = () => {
   const { id } = useParams();
@@ -32,7 +42,7 @@ const EditBlogPostPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const isNewPost = id === "new";
 
-  const form = useForm({
+  const form = useForm<BlogPost>({
     defaultValues: {
       title: "",
       slug: "",
@@ -44,7 +54,7 @@ const EditBlogPostPage = () => {
   });
 
   // Fetch post data if editing an existing post
-  const { isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["blog-post-edit", id],
     queryFn: async () => {
       if (isNewPost) return null;
@@ -56,41 +66,24 @@ const EditBlogPostPage = () => {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as BlogPost;
     },
     enabled: !isNewPost,
   });
 
   // Handle query data separately to reset form
   useEffect(() => {
-    if (!isNewPost) {
-      const fetchPost = async () => {
-        const { data, error } = await supabase
-          .from("blog_posts")
-          .select("*")
-          .eq("id", id)
-          .single();
-        
-        if (error) {
-          console.error("Error fetching post:", error);
-          return;
-        }
-        
-        if (data) {
-          form.reset({
-            title: data.title || "",
-            slug: data.slug || "",
-            excerpt: data.excerpt || "",
-            content: data.content || "",
-            featured_image: data.featured_image || "",
-            published: data.published || false,
-          });
-        }
-      };
-      
-      fetchPost();
+    if (!isNewPost && data) {
+      form.reset({
+        title: data.title || "",
+        slug: data.slug || "",
+        excerpt: data.excerpt || "",
+        content: data.content || "",
+        featured_image: data.featured_image || "",
+        published: data.published || false,
+      });
     }
-  }, [isNewPost, id, form]);
+  }, [isNewPost, data, form]);
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -109,7 +102,7 @@ const EditBlogPostPage = () => {
   }, [form]);
 
   const savePostMutation = useMutation({
-    mutationFn: async (values) => {
+    mutationFn: async (values: BlogPost) => {
       const { title, slug, excerpt, content, featured_image, published } = values;
       
       // Get the current user's ID
@@ -180,7 +173,7 @@ const EditBlogPostPage = () => {
     },
   });
 
-  const onSubmit = (values) => {
+  const onSubmit = (values: BlogPost) => {
     setIsSaving(true);
     savePostMutation.mutate(values);
   };
@@ -274,6 +267,7 @@ const EditBlogPostPage = () => {
                         placeholder="Brief summary of the post" 
                         className="h-20"
                         {...field} 
+                        value={field.value || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -292,7 +286,7 @@ const EditBlogPostPage = () => {
                     <FormLabel>Featured Image URL</FormLabel>
                     <FormControl>
                       <div className="flex">
-                        <Input placeholder="https://example.com/image.jpg" {...field} />
+                        <Input placeholder="https://example.com/image.jpg" {...field} value={field.value || ""} />
                         <Button type="button" variant="outline" className="ml-2">
                           <ImageIcon className="h-4 w-4 mr-2" />
                           Browse
