@@ -74,7 +74,7 @@ const DatabasePage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState<string>("all");
   const [filterPvaStatus, setFilterPvaStatus] = useState<string>("all");
-  const [chartView, setChartView] = useState(true);
+  const [chartView, setChartView] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("Global");
   const [countrySelected, setCountrySelected] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);

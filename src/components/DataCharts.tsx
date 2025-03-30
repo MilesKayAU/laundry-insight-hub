@@ -96,7 +96,7 @@ const renderActiveShape = (props: any) => {
 
 const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const [activePieIndex, setActivePieIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState("status");
+  const [activeTab, setActiveTab] = useState("combined"); // Changed default to "combined" for bar chart view
 
   // Log product data to debug
   console.log("Charting products:", products.map(p => ({
