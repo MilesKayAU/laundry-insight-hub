@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -49,7 +50,11 @@ import {
   BarChart as BarChartIcon,
   Globe,
   Map,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  HelpCircle,
+  XCircle
 } from "lucide-react";
 import {
   Select,
@@ -315,6 +320,61 @@ const DatabasePage = () => {
     }
   };
   
+  const renderPvaStatus = (product) => {
+    if (isProductSubmission(product)) {
+      if (product.pvaStatus === 'contains') {
+        return (
+          <Badge variant="destructive" className="flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            Contains PVA
+          </Badge>
+        );
+      } else if (product.pvaStatus === 'verified-free') {
+        return (
+          <Badge variant="success" className="bg-green-100 text-green-800 flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" />
+            PVA-Free
+          </Badge>
+        );
+      } else if (product.pvaStatus === 'needs-verification') {
+        return (
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
+            <HelpCircle className="h-3 w-3" />
+            Needs Verification
+          </Badge>
+        );
+      } else {
+        return (
+          <Badge variant="outline" className="bg-gray-100 text-gray-800 flex items-center gap-1">
+            <HelpCircle className="h-3 w-3" />
+            Inconclusive
+          </Badge>
+        );
+      }
+    } else if (product.pvaPercentage === 0) {
+      return (
+        <Badge variant="success" className="bg-green-100 text-green-800 flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          PVA-Free
+        </Badge>
+      );
+    } else if (product.pvaPercentage && product.pvaPercentage > 0) {
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          Contains PVA
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="outline" className="bg-gray-100 text-gray-800 flex items-center gap-1">
+          <HelpCircle className="h-3 w-3" />
+          Unknown
+        </Badge>
+      );
+    }
+  };
+  
   const renderBrandVerification = (product) => {
     if (!isProductSubmission(product)) return null;
     
@@ -429,7 +489,7 @@ const DatabasePage = () => {
                 Change Region
               </Button>
               <Button 
-                variant="default" 
+                variant={chartView ? "default" : "outline"} 
                 size="sm"
                 onClick={() => setChartView(true)}
               >
@@ -554,6 +614,7 @@ const DatabasePage = () => {
                       <TableHead>Product</TableHead>
                       <TableHead>Brand</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>PVA Status</TableHead>
                       <TableHead className="text-right">PVA %</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -575,6 +636,7 @@ const DatabasePage = () => {
                             </Link>
                           </TableCell>
                           <TableCell>{product.type}</TableCell>
+                          <TableCell>{renderPvaStatus(product)}</TableCell>
                           <TableCell className="text-right">
                             {renderPvaValue(product)}
                           </TableCell>
@@ -585,7 +647,7 @@ const DatabasePage = () => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                           No products matching your search criteria
                         </TableCell>
                       </TableRow>
