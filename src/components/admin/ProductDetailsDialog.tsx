@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Image, Video, Link as LinkIcon, Percent, AlertCircle, MapPin, Search, Loader2 } from "lucide-react";
+import { Image, Video, Link as LinkIcon, Percent, AlertCircle, MapPin, Search, Loader2, ExternalLink, Check, X } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { verifyProductUrl } from "@/lib/urlVerification";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel } from "@/components/ui/alert-dialog";
 
 // Make sure the interface matches what's being used in AdminPage.tsx
 export interface ProductDetails {
@@ -46,7 +47,9 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
     message: string;
     ingredients?: string | null;
     detectedTerms?: string[];
+    url?: string;
   } | null>(null);
+  const [showManualVerificationDialog, setShowManualVerificationDialog] = useState(false);
 
   if (!product) return null;
 
@@ -70,7 +73,8 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
         containsPva: result.containsPva,
         message: result.message,
         ingredients: result.extractedIngredients,
-        detectedTerms: result.detectedTerms
+        detectedTerms: result.detectedTerms,
+        url: details.websiteUrl
       });
 
       // If PVA was detected, update the product details
@@ -108,6 +112,35 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
     } finally {
       setVerifying(false);
     }
+  };
+
+  const openProductInNewTab = () => {
+    if (details.websiteUrl) {
+      window.open(details.websiteUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleManualVerification = (containsPva: boolean) => {
+    if (containsPva) {
+      onDetailsChange({
+        ...details,
+        pvaPercentage: "25" // Default percentage if detected
+      });
+      
+      toast({
+        title: "Product Marked as Containing PVA",
+        description: "The product has been manually verified to contain PVA.",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Product Marked as PVA-Free",
+        description: "The product has been manually verified to be PVA-free.",
+        variant: "default"
+      });
+    }
+    
+    setShowManualVerificationDialog(false);
   };
 
   return (
@@ -223,6 +256,15 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
                   <Search className="h-4 w-4" />
                 )}
               </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowManualVerificationDialog(true)}
+                title="Manually verify product"
+                className="flex-shrink-0 text-orange-500 hover:text-orange-700 hover:bg-orange-50"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           
@@ -312,6 +354,63 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
           <Button type="submit" onClick={onSave}>Save changes</Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Manual Verification Dialog */}
+      <AlertDialog open={showManualVerificationDialog} onOpenChange={setShowManualVerificationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Manual Product Verification</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please visit the product page to manually verify if it contains PVA ingredients.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="flex flex-col space-y-4 py-4">
+            <p className="text-sm">
+              <span className="font-semibold">Product:</span> {product?.brand} - {product?.name}
+            </p>
+            <p className="text-sm">
+              <span className="font-semibold">URL:</span> {details.websiteUrl}
+            </p>
+            
+            <Button
+              onClick={openProductInNewTab}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open Product Page in New Tab
+            </Button>
+            
+            <div className="border-t pt-4 text-sm text-muted-foreground">
+              After reviewing the product page, please indicate whether the product contains PVA:
+            </div>
+          </div>
+          
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => handleManualVerification(false)}
+            >
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-600" />
+                PVA Free
+              </div>
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => handleManualVerification(true)}
+            >
+              <div className="flex items-center gap-2">
+                <X className="h-4 w-4" />
+                Contains PVA
+              </div>
+            </Button>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

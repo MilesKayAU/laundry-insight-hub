@@ -7,6 +7,7 @@ interface VerificationResult {
   detectedTerms: string[];
   extractedIngredients: string | null;
   message: string;
+  url?: string;
 }
 
 export const verifyProductUrl = async (
@@ -28,7 +29,10 @@ export const verifyProductUrl = async (
     // In a real implementation, this would be an edge function
     // For now, we'll simulate the behavior
     const response = await simulateUrlScan(url);
-    return response;
+    return {
+      ...response,
+      url: url // Add the URL to the response for manual verification
+    };
   } catch (error) {
     console.error('Error verifying product URL:', error);
     return {

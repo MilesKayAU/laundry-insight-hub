@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, Trash, Search, Upload, Eraser, ChevronUp, ChevronDown, Globe, BarChart } from "lucide-react";
+import { Eye, Trash, Search, Upload, Eraser, ChevronUp, ChevronDown, Globe, BarChart, ExternalLink, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { ProductSubmission } from "@/lib/textExtractor";
@@ -48,6 +48,9 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [chartView, setChartView] = useState(false);
   const [verifyingProductId, setVerifyingProductId] = useState<string | null>(null);
+  const [manualVerificationProduct, setManualVerificationProduct] = useState<ProductSubmission | null>(null);
+  const [showManualVerificationDialog, setShowManualVerificationDialog] = useState(false);
+  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
   
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     const brandA = a.brand.toLowerCase();
@@ -98,6 +101,11 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
             description: "Could not determine PVA status from the website. Manual verification needed.",
             variant: "warning"
           });
+          
+          // Set up for manual verification
+          setManualVerificationProduct(product);
+          setVerificationUrl(product.websiteUrl);
+          setShowManualVerificationDialog(true);
         }
         
         // Show extracted ingredients if available
@@ -125,6 +133,34 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
     } finally {
       setVerifyingProductId(null);
     }
+  };
+
+  const openProductInNewTab = () => {
+    if (verificationUrl) {
+      window.open(verificationUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleManualVerification = (containsPva: boolean) => {
+    if (!manualVerificationProduct) return;
+    
+    if (containsPva) {
+      toast({
+        title: "Product Marked as Containing PVA",
+        description: "The product has been manually verified to contain PVA.",
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "Product Marked as PVA-Free",
+        description: "The product has been manually verified to be PVA-free.",
+        variant: "default"
+      });
+    }
+    
+    setShowManualVerificationDialog(false);
+    setManualVerificationProduct(null);
+    setVerificationUrl(null);
   };
   
   return (
@@ -269,16 +305,31 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                               <Eye className="h-4 w-4" />
                             </Button>
                             {product.websiteUrl && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleVerifyProduct(product)}
-                                disabled={verifyingProductId === product.id}
-                                title="Verify Product URL"
-                                className="text-green-500 hover:text-green-700 hover:bg-green-50"
-                              >
-                                <Globe className="h-4 w-4" />
-                              </Button>
+                              <>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => handleVerifyProduct(product)}
+                                  disabled={verifyingProductId === product.id}
+                                  title="Verify Product URL"
+                                  className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                                >
+                                  <Globe className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => {
+                                    setVerificationUrl(product.websiteUrl);
+                                    setManualVerificationProduct(product);
+                                    setShowManualVerificationDialog(true);
+                                  }}
+                                  title="Manual Verification"
+                                  className="text-orange-500 hover:text-orange-700 hover:bg-orange-50"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </>
                             )}
                             <Button 
                               variant="ghost" 
@@ -304,6 +355,63 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
           </div>
         )}
       </CardContent>
+
+      {/* Manual Verification Dialog */}
+      <AlertDialog open={showManualVerificationDialog} onOpenChange={setShowManualVerificationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Manual Product Verification</AlertDialogTitle>
+            <AlertDialogDescription>
+              Automatic verification was inconclusive. Please visit the product page and manually verify if it contains PVA.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="flex flex-col space-y-4 py-4">
+            <p className="text-sm">
+              <span className="font-semibold">Product:</span> {manualVerificationProduct?.brand} - {manualVerificationProduct?.name}
+            </p>
+            <p className="text-sm">
+              <span className="font-semibold">URL:</span> {verificationUrl}
+            </p>
+            
+            <Button
+              onClick={openProductInNewTab}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open Product Page in New Tab
+            </Button>
+            
+            <div className="border-t pt-4 text-sm text-muted-foreground">
+              After reviewing the product page, please indicate whether the product contains PVA:
+            </div>
+          </div>
+          
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => handleManualVerification(false)}
+            >
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-600" />
+                PVA Free
+              </div>
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => handleManualVerification(true)}
+            >
+              <div className="flex items-center gap-2">
+                <X className="h-4 w-4" />
+                Contains PVA
+              </div>
+            </Button>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
