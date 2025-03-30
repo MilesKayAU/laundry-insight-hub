@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -11,10 +11,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, Trash, Search, Upload, Eraser, ChevronUp, ChevronDown } from "lucide-react";
+import { Eye, Trash, Search, Upload, Eraser, ChevronUp, ChevronDown, Globe, BarChart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { ProductSubmission } from "@/lib/textExtractor";
+import { verifyProductUrl } from "@/lib/urlVerification";
+import { useToast } from "@/hooks/use-toast";
 import DataCharts from "@/components/DataCharts";
 
 interface ApprovedProductsProps {
@@ -42,7 +44,10 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
   setShowCleanupDialog,
   onCleanDuplicates
 }) => {
-  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+  const { toast } = useToast();
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [chartView, setChartView] = useState(false);
+  const [verifyingProductId, setVerifyingProductId] = useState<string | null>(null);
   
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     const brandA = a.brand.toLowerCase();
@@ -57,6 +62,69 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
   
   const toggleSortDirection = () => {
     setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+  };
+
+  const handleVerifyProduct = async (product: ProductSubmission) => {
+    if (!product.websiteUrl) {
+      toast({
+        title: "Missing URL",
+        description: "This product doesn't have a website URL to verify.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setVerifyingProductId(product.id);
+    
+    try {
+      const result = await verifyProductUrl(product.websiteUrl);
+      
+      if (result.success) {
+        if (result.containsPva) {
+          toast({
+            title: "PVA Detected",
+            description: `Found ${result.detectedTerms.join(", ")} in the product page.`,
+            variant: "default"
+          });
+        } else if (result.extractedIngredients) {
+          toast({
+            title: "No PVA Found",
+            description: "No PVA ingredients were detected in the product page.",
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: "Inconclusive",
+            description: "Could not determine PVA status from the website. Manual verification needed.",
+            variant: "warning"
+          });
+        }
+        
+        // Show extracted ingredients if available
+        if (result.extractedIngredients) {
+          toast({
+            title: "Extracted Ingredients",
+            description: result.extractedIngredients,
+            variant: "default"
+          });
+        }
+      } else {
+        toast({
+          title: "Verification Failed",
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error verifying product:", error);
+      toast({
+        title: "Verification Error",
+        description: "An error occurred while verifying the product.",
+        variant: "destructive"
+      });
+    } finally {
+      setVerifyingProductId(null);
+    }
   };
   
   return (
@@ -113,89 +181,122 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            <Button 
+              variant={chartView ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setChartView(true)}
+              className="hidden md:flex items-center gap-2"
+            >
+              <BarChart className="h-4 w-4" />
+              Chart View
+            </Button>
+            <Button 
+              variant={!chartView ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setChartView(false)}
+              className="hidden md:flex items-center gap-2"
+            >
+              <Table className="h-4 w-4" />
+              Table View
+            </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {products.length > 0 ? (
           <>
-            <DataCharts products={products} />
-            <div className="rounded-md border mt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      <button 
-                        onClick={toggleSortDirection} 
-                        className="flex items-center focus:outline-none hover:text-blue-600 transition-colors"
-                      >
-                        Brand
-                        {sortDirection === 'asc' ? (
-                          <ChevronUp className="ml-1 h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="ml-1 h-4 w-4" />
-                        )}
-                      </button>
-                    </TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>PVA Status</TableHead>
-                    <TableHead>PVA %</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="text-[115%] font-medium">
-                        {product.brand}
-                      </TableCell>
-                      <TableCell>{product.name}</TableCell>
-                      <TableCell>{product.type}</TableCell>
-                      <TableCell>
-                        {product.pvaStatus === 'contains' && (
-                          <Badge variant="destructive">Contains PVA</Badge>
-                        )}
-                        {product.pvaStatus === 'verified-free' && (
-                          <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
-                        )}
-                        {product.pvaStatus === 'needs-verification' && (
-                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
-                        )}
-                        {product.pvaStatus === 'inconclusive' && (
-                          <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => onViewDetails(product)}
-                            title="Edit Details"
-                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => onDelete(product.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            title="Delete"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+            {chartView ? (
+              <DataCharts products={products} />
+            ) : (
+              <div className="rounded-md border mt-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        <button 
+                          onClick={toggleSortDirection} 
+                          className="flex items-center focus:outline-none hover:text-blue-600 transition-colors"
+                        >
+                          Brand
+                          {sortDirection === 'asc' ? (
+                            <ChevronUp className="ml-1 h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="ml-1 h-4 w-4" />
+                          )}
+                        </button>
+                      </TableHead>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>PVA Status</TableHead>
+                      <TableHead>PVA %</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedProducts.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell className="text-[115%] font-medium">
+                          {product.brand}
+                        </TableCell>
+                        <TableCell>{product.name}</TableCell>
+                        <TableCell>{product.type}</TableCell>
+                        <TableCell>
+                          {product.pvaStatus === 'contains' && (
+                            <Badge variant="destructive">Contains PVA</Badge>
+                          )}
+                          {product.pvaStatus === 'verified-free' && (
+                            <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
+                          )}
+                          {product.pvaStatus === 'needs-verification' && (
+                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
+                          )}
+                          {product.pvaStatus === 'inconclusive' && (
+                            <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {product.pvaPercentage ? `${product.pvaPercentage}%` : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => onViewDetails(product)}
+                              title="Edit Details"
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {product.websiteUrl && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleVerifyProduct(product)}
+                                disabled={verifyingProductId === product.id}
+                                title="Verify Product URL"
+                                className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                              >
+                                <Globe className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => onDelete(product.id)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              title="Delete"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center py-10 text-muted-foreground">
