@@ -1,17 +1,33 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { formatDistance } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useBlogPosts } from "@/hooks/use-blog";
+import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 
 const BlogPage = () => {
-  const { data: posts, isLoading, error } = useBlogPosts();
+  const queryClient = useQueryClient();
+  const { data: posts, isLoading, error, refetch } = useBlogPosts();
+
+  useEffect(() => {
+    // Log the state of the blog posts for debugging
+    console.log("Blog Page - Loading:", isLoading);
+    console.log("Blog Page - Error:", error);
+    console.log("Blog Page - Posts:", posts);
+  }, [isLoading, error, posts]);
+
+  const handleRefresh = () => {
+    console.log("Manually refreshing blog posts...");
+    refetch();
+  };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-science-600" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-science-600 mb-4" />
+        <p className="text-gray-600">Loading blog posts...</p>
       </div>
     );
   }
@@ -19,9 +35,14 @@ const BlogPage = () => {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
           Error loading blog posts. Please try again later.
+          <pre className="mt-2 text-xs">{error.message}</pre>
         </div>
+        <Button onClick={handleRefresh} className="flex items-center">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
       </div>
     );
   }
@@ -32,9 +53,9 @@ const BlogPage = () => {
         Blog
       </h1>
       
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {posts && posts.length > 0 ? (
-          posts.map((post) => (
+      {posts && posts.length > 0 ? (
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {posts.map((post) => (
             <Link 
               key={post.id} 
               to={`/blog/${post.slug}`}
@@ -68,13 +89,17 @@ const BlogPage = () => {
                 </div>
               </div>
             </Link>
-          ))
-        ) : (
-          <div className="col-span-full text-center py-12 text-gray-500">
-            No blog posts available yet. Check back soon!
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-4">No blog posts available yet. Check back soon!</p>
+          <Button onClick={handleRefresh} variant="outline" className="flex items-center mx-auto">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
