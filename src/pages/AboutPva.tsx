@@ -1,10 +1,22 @@
 
 import { ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 const AboutPva = () => {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
+      {/* Hero Image */}
+      <div className="mb-10 rounded-lg overflow-hidden shadow-lg">
+        <AspectRatio ratio={16/9} className="bg-muted">
+          <img 
+            src="/lovable-uploads/4016d350-0161-4b6f-b584-5205067d9612.png" 
+            alt="Laundry sheets and measuring cup showing PVA content" 
+            className="w-full h-full object-cover"
+          />
+        </AspectRatio>
+      </div>
+      
       <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center bg-gradient-to-r from-pvablue-500 to-pvagreen-500 bg-clip-text text-transparent">
         Learn More About PVA (Polyvinyl Alcohol)
       </h1>
@@ -193,4 +205,3 @@ const AboutPva = () => {
 };
 
 export default AboutPva;
-
