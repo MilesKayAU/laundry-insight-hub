@@ -14,6 +14,18 @@ import { supabase } from "@/integrations/supabase/client";
 const AdminPage = () => {
   const [defaultTab, setDefaultTab] = useState("pending");
   const { toast } = useToast();
+  
+  // Mock data for empty components
+  const [pendingProducts, setPendingProducts] = useState([]);
+  const [approvedProducts, setApprovedProducts] = useState([]);
+  const [brandVerifications, setBrandVerifications] = useState([]);
+  const [brandMessages, setBrandMessages] = useState([]);
+  const [brandProfiles, setBrandProfiles] = useState([]);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [messageResponse, setMessageResponse] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState([]);
 
   // Check if current user is admin
   const { data: isAdmin, isLoading } = useQuery({
@@ -40,6 +52,45 @@ const AdminPage = () => {
     }
   }, [isAdmin, isLoading, toast]);
 
+  // Mock handlers for components
+  const handleViewDetails = (product) => {
+    console.log("View details:", product);
+  };
+
+  const handleApprove = (productId) => {
+    console.log("Approve product:", productId);
+  };
+
+  const handleReject = (productId) => {
+    console.log("Reject product:", productId);
+  };
+
+  const handleApproveVerification = (productId) => {
+    console.log("Approve verification:", productId);
+  };
+
+  const handleRejectVerification = (productId) => {
+    console.log("Reject verification:", productId);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleMessageSelect = (message) => {
+    setSelectedMessage(message);
+    setDialogOpen(true);
+  };
+
+  const handleResponseChange = (response) => {
+    setMessageResponse(response);
+  };
+
+  const handleSendResponse = () => {
+    console.log("Send response:", messageResponse);
+    setDialogOpen(false);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
@@ -55,19 +106,49 @@ const AdminPage = () => {
         </TabsList>
         
         <TabsContent value="pending">
-          <PendingProducts />
+          <PendingProducts 
+            products={pendingProducts}
+            onViewDetails={handleViewDetails}
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
         </TabsContent>
         
         <TabsContent value="approved">
-          <ApprovedProducts />
+          <ApprovedProducts 
+            products={approvedProducts}
+            filteredProducts={filteredProducts}
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            onViewDetails={handleViewDetails}
+            onAddProduct={() => {}}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onExport={() => {}}
+            isLoading={false}
+          />
         </TabsContent>
         
         <TabsContent value="brands">
-          <BrandVerifications />
+          <BrandVerifications 
+            verifications={brandVerifications}
+            onApproveVerification={handleApproveVerification}
+            onRejectVerification={handleRejectVerification}
+          />
         </TabsContent>
         
         <TabsContent value="messages">
-          <BrandMessages />
+          <BrandMessages 
+            messages={brandMessages}
+            profiles={brandProfiles}
+            selectedMessage={selectedMessage}
+            messageResponse={messageResponse}
+            dialogOpen={dialogOpen}
+            onDialogOpenChange={setDialogOpen}
+            onMessageSelect={handleMessageSelect}
+            onResponseChange={handleResponseChange}
+            onSendResponse={handleSendResponse}
+          />
         </TabsContent>
         
         <TabsContent value="blog">

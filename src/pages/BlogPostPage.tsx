@@ -17,24 +17,40 @@ const BlogPostPage = () => {
     queryKey: ["blog-post", slug],
     queryFn: async () => {
       // Check if user is admin to determine if we should fetch unpublished posts
-      const isAdmin = await supabase.rpc('has_role', { role: 'admin' });
+      const { data: isAdmin } = await supabase.rpc('has_role', { role: 'admin' });
       
+      // Get the post
       let query = supabase
         .from("blog_posts")
-        .select("*, profiles(full_name)")
-        .eq("slug", slug)
-        .single();
+        .select("*")
+        .eq("slug", slug);
       
       // If not admin, only fetch published posts
       if (!isAdmin) {
         query = query.eq("published", true);
       }
       
-      const { data, error } = await query;
+      const { data: postData, error: postError } = await query.single();
       
-      if (error) throw error;
-      return data;
+      if (postError) throw postError;
+      
+      // Get author info
+      if (postData) {
+        const { data: authorData } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", postData.author_id)
+          .single();
+          
+        return {
+          ...postData,
+          author: authorData || { full_name: "Admin" }
+        };
+      }
+      
+      return null;
     },
+    enabled: !!slug,
   });
 
   // If blog post not found or error, redirect to blog index
@@ -96,7 +112,7 @@ const BlogPostPage = () => {
         </div>
         <div className="flex items-center">
           <User className="mr-2 h-4 w-4" />
-          <span>{post.profiles?.full_name || "Admin"}</span>
+          <span>{post.author?.full_name || "Admin"}</span>
         </div>
         
         {isAdmin && (

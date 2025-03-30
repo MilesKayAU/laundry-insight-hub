@@ -43,8 +43,7 @@ const BlogPostsManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("blog_posts")
-        .select("id, title, slug, published, created_at, updated_at")
-        .order("created_at", { ascending: false });
+        .select("id, title, slug, published, created_at, updated_at");
 
       if (error) throw error;
       return data;
@@ -52,11 +51,12 @@ const BlogPostsManager = () => {
   });
 
   const togglePublishMutation = useMutation({
-    mutationFn: async ({ id, published }) => {
-      const { error } = await supabase
+    mutationFn: async ({ id, published }: { id: string, published: boolean }) => {
+      const { data, error } = await supabase
         .from("blog_posts")
         .update({ published })
-        .eq("id", id);
+        .eq("id", id)
+        .select();
       
       if (error) throw error;
       return { id, published };
@@ -78,7 +78,7 @@ const BlogPostsManager = () => {
   });
 
   const deletePostMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("blog_posts")
         .delete()
@@ -104,11 +104,11 @@ const BlogPostsManager = () => {
     },
   });
 
-  const handleTogglePublish = (id, currentStatus) => {
+  const handleTogglePublish = (id: string, currentStatus: boolean) => {
     togglePublishMutation.mutate({ id, published: !currentStatus });
   };
 
-  const handleDeleteClick = (post) => {
+  const handleDeleteClick = (post: any) => {
     setPostToDelete(post);
   };
 

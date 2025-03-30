@@ -58,6 +58,7 @@ const EditBlogPostPage = () => {
       if (error) throw error;
       return data;
     },
+    enabled: !isNewPost,
     onSuccess: (data) => {
       if (data) {
         // Reset form with existing post data
@@ -71,7 +72,6 @@ const EditBlogPostPage = () => {
         });
       }
     },
-    enabled: !isNewPost,
   });
 
   // Auto-generate slug from title
