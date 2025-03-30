@@ -1,49 +1,12 @@
 
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { formatDistance } from "date-fns";
 import { Loader2 } from "lucide-react";
+import { useBlogPosts } from "@/hooks/use-blog";
 
 const BlogPage = () => {
-  const { data: posts, isLoading, error } = useQuery({
-    queryKey: ["blog-posts"],
-    queryFn: async () => {
-      // Only select the specific fields we need without the join
-      const { data, error } = await supabase
-        .from("blog_posts")
-        .select("id, title, slug, excerpt, featured_image, created_at, author_id")
-        .eq("published", true)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      
-      // Get author details in a separate query if needed
-      const authorIds = data.map(post => post.author_id);
-      let authors = {};
-      
-      if (authorIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", authorIds);
-        
-        if (profilesData) {
-          authors = profilesData.reduce((acc, profile) => {
-            acc[profile.id] = profile;
-            return acc;
-          }, {});
-        }
-      }
-      
-      // Attach author data to posts
-      return data.map(post => ({
-        ...post,
-        author: authors[post.author_id] || { full_name: "Admin" }
-      }));
-    },
-  });
+  const { data: posts, isLoading, error } = useBlogPosts();
 
   if (isLoading) {
     return (
@@ -96,7 +59,7 @@ const BlogPage = () => {
                   )}
                   <div className="flex items-center justify-between text-sm text-gray-500">
                     <span>
-                      {post.author?.full_name || "Admin"}
+                      {post.author?.full_name || "Unknown"}
                     </span>
                     <span>
                       {formatDistance(new Date(post.created_at), new Date(), { addSuffix: true })}

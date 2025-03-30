@@ -59,20 +59,38 @@ const EditBlogPostPage = () => {
       return data;
     },
     enabled: !isNewPost,
-    onSuccess: (data) => {
-      if (data) {
-        // Reset form with existing post data
-        form.reset({
-          title: data.title || "",
-          slug: data.slug || "",
-          excerpt: data.excerpt || "",
-          content: data.content || "",
-          featured_image: data.featured_image || "",
-          published: data.published || false,
-        });
-      }
-    },
   });
+
+  // Handle query data separately to reset form
+  useEffect(() => {
+    if (!isNewPost) {
+      const fetchPost = async () => {
+        const { data, error } = await supabase
+          .from("blog_posts")
+          .select("*")
+          .eq("id", id)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching post:", error);
+          return;
+        }
+        
+        if (data) {
+          form.reset({
+            title: data.title || "",
+            slug: data.slug || "",
+            excerpt: data.excerpt || "",
+            content: data.content || "",
+            featured_image: data.featured_image || "",
+            published: data.published || false,
+          });
+        }
+      };
+      
+      fetchPost();
+    }
+  }, [isNewPost, id, form]);
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -205,7 +223,7 @@ const EditBlogPostPage = () => {
           </div>
         </div>
 
-        {isLoading && !isNewPost ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-science-600" />
           </div>

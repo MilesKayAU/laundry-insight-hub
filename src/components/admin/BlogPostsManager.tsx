@@ -33,10 +33,19 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
+type BlogPost = {
+  id: string;
+  title: string;
+  slug: string;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 const BlogPostsManager = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [postToDelete, setPostToDelete] = useState(null);
+  const [postToDelete, setPostToDelete] = useState<BlogPost | null>(null);
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ["admin-blog-posts"],
@@ -46,7 +55,7 @@ const BlogPostsManager = () => {
         .select("id, title, slug, published, created_at, updated_at");
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
@@ -108,7 +117,7 @@ const BlogPostsManager = () => {
     togglePublishMutation.mutate({ id, published: !currentStatus });
   };
 
-  const handleDeleteClick = (post: any) => {
+  const handleDeleteClick = (post: BlogPost) => {
     setPostToDelete(post);
   };
 

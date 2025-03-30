@@ -38,7 +38,7 @@ export function useBlogPosts() {
       // Add author data to each post
       return posts.map(post => ({
         ...post,
-        author: authorMap[post.author_id] || { full_name: "Admin" }
+        author: authorMap[post.author_id] || { full_name: "Unknown" }
       }));
     },
   });
@@ -68,11 +68,11 @@ export function useBlogPost(slug: string) {
         
         return {
           ...post,
-          author: author || { full_name: "Admin" }
+          author: author || { full_name: "Unknown" }
         };
       }
       
-      return post;
+      return null;
     },
     enabled: !!slug,
   });

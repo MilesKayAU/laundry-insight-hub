@@ -1,57 +1,19 @@
 
 import React, { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ArrowLeft, Calendar, User, Edit } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBlogPost, useIsAdmin } from "@/hooks/use-blog";
 
 const BlogPostPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const { data: post, isLoading, error } = useQuery({
-    queryKey: ["blog-post", slug],
-    queryFn: async () => {
-      // Check if user is admin to determine if we should fetch unpublished posts
-      const { data: isAdmin } = await supabase.rpc('has_role', { role: 'admin' });
-      
-      // Get the post
-      let query = supabase
-        .from("blog_posts")
-        .select("*")
-        .eq("slug", slug);
-      
-      // If not admin, only fetch published posts
-      if (!isAdmin) {
-        query = query.eq("published", true);
-      }
-      
-      const { data: postData, error: postError } = await query.single();
-      
-      if (postError) throw postError;
-      
-      // Get author info
-      if (postData) {
-        const { data: authorData } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", postData.author_id)
-          .single();
-          
-        return {
-          ...postData,
-          author: authorData || { full_name: "Admin" }
-        };
-      }
-      
-      return null;
-    },
-    enabled: !!slug,
-  });
+  const { data: post, isLoading, error } = useBlogPost(slug);
+  const { data: isAdmin } = useIsAdmin();
 
   // If blog post not found or error, redirect to blog index
   useEffect(() => {
@@ -59,18 +21,6 @@ const BlogPostPage = () => {
       navigate("/blog");
     }
   }, [error, isLoading, navigate]);
-
-  // Check if current user is admin
-  const { data: isAdmin } = useQuery({
-    queryKey: ["user-is-admin"],
-    queryFn: async () => {
-      if (!user) return false;
-      const { data, error } = await supabase.rpc('has_role', { role: 'admin' });
-      if (error) return false;
-      return data;
-    },
-    enabled: !!user,
-  });
 
   if (isLoading) {
     return (
@@ -112,7 +62,7 @@ const BlogPostPage = () => {
         </div>
         <div className="flex items-center">
           <User className="mr-2 h-4 w-4" />
-          <span>{post.author?.full_name || "Admin"}</span>
+          <span>{post.author?.full_name || "Unknown"}</span>
         </div>
         
         {isAdmin && (

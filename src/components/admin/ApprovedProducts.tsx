@@ -21,13 +21,17 @@ interface ApprovedProductsProps {
   products: ProductSubmission[];
   filteredProducts: ProductSubmission[];
   searchTerm: string;
-  onSearchChange: (value: string) => void;
+  onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onViewDetails: (product: ProductSubmission) => void;
   onDelete: (productId: string) => void;
-  onBulkUpload: () => void;
-  showCleanupDialog: boolean;
-  setShowCleanupDialog: (show: boolean) => void;
-  onCleanDuplicates: () => void;
+  onBulkUpload?: () => void;
+  showCleanupDialog?: boolean;
+  setShowCleanupDialog?: (show: boolean) => void;
+  onCleanDuplicates?: () => void;
+  isLoading?: boolean;
+  onAddProduct?: () => void;
+  onEdit?: () => void;
+  onExport?: () => void;
 }
 
 const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
@@ -40,7 +44,11 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
   onBulkUpload,
   showCleanupDialog,
   setShowCleanupDialog,
-  onCleanDuplicates
+  onCleanDuplicates,
+  onAddProduct,
+  onEdit,
+  onExport,
+  isLoading
 }) => {
   return (
     <Card>
@@ -60,42 +68,46 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                 placeholder="Search products..."
                 className="pl-8 w-[250px]"
                 value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onChange={onSearchChange}
               />
             </div>
-            <Button 
-              onClick={onBulkUpload}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Bulk Upload
-            </Button>
-            <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  title="Remove duplicate products"
-                >
-                  <Eraser className="h-4 w-4" />
-                  Clean Duplicates
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Clean Duplicate Products</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will scan the database and remove any duplicate products, keeping only the most recently added version of each product. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={onCleanDuplicates}>
+            {onBulkUpload && (
+              <Button 
+                onClick={onBulkUpload}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Bulk Upload
+              </Button>
+            )}
+            {setShowCleanupDialog && onCleanDuplicates && (
+              <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    title="Remove duplicate products"
+                  >
+                    <Eraser className="h-4 w-4" />
                     Clean Duplicates
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clean Duplicate Products</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will scan the database and remove any duplicate products, keeping only the most recently added version of each product. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={onCleanDuplicates}>
+                      Clean Duplicates
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </div>
       </CardHeader>

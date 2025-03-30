@@ -26,6 +26,7 @@ const AdminPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
   // Check if current user is admin
   const { data: isAdmin, isLoading } = useQuery({
@@ -90,6 +91,18 @@ const AdminPage = () => {
     console.log("Send response:", messageResponse);
     setDialogOpen(false);
   };
+  
+  const handleDelete = (id) => {
+    console.log("Delete item:", id);
+  };
+  
+  const handleBulkUpload = () => {
+    console.log("Bulk upload triggered");
+  };
+  
+  const handleCleanDuplicates = () => {
+    console.log("Clean duplicates triggered");
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -121,10 +134,11 @@ const AdminPage = () => {
             searchTerm={searchTerm}
             onSearchChange={handleSearchChange}
             onViewDetails={handleViewDetails}
-            onAddProduct={() => {}}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            onExport={() => {}}
+            onDelete={handleDelete}
+            onBulkUpload={handleBulkUpload}
+            showCleanupDialog={showCleanupDialog}
+            setShowCleanupDialog={setShowCleanupDialog}
+            onCleanDuplicates={handleCleanDuplicates}
             isLoading={false}
           />
         </TabsContent>
