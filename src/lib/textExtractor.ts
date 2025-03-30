@@ -1,4 +1,3 @@
-
 import { createHash } from "crypto";
 import Tesseract from 'tesseract.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -77,6 +76,7 @@ export interface ProductSubmitData {
   websiteUrl?: string;
   comments?: string;
   media?: File[];
+  pvaPercentage?: number; // Add pvaPercentage to the interface
 }
 
 // Extract text from image using Tesseract OCR
@@ -339,12 +339,12 @@ export const submitProduct = async (data: ProductSubmitData): Promise<boolean> =
       brand: data.brand,
       type: data.type,
       ingredients: data.ingredients,
-      country: data.countries?.length ? data.countries.join(', ') : data.country, // Use joined countries if available
+      country: data.countries?.length ? data.countries.join(', ') : data.country,
       websiteUrl: data.websiteUrl,
       comments: data.comments,
       approved: false,
       pvaStatus: 'needs-verification',
-      pvaPercentage: null,
+      pvaPercentage: data.pvaPercentage !== undefined ? data.pvaPercentage : null,
       brandVerified: false,
       brandOwnershipRequested: false,
       timestamp: Date.now()
@@ -357,14 +357,25 @@ export const submitProduct = async (data: ProductSubmitData): Promise<boolean> =
           ingredientsLower.includes('pva') || 
           ingredientsLower.includes('poly(vinyl alcohol)')) {
         newSubmission.pvaStatus = 'contains';
-        // Simulate finding a percentage from the text
-        const percentMatch = ingredientsLower.match(/pva[^\d]*(\d+(?:\.\d+)?)%/);
-        if (percentMatch) {
-          newSubmission.pvaPercentage = parseFloat(percentMatch[1]);
+        
+        // If a percentage was manually entered, use that
+        if (data.pvaPercentage !== undefined) {
+          newSubmission.pvaPercentage = data.pvaPercentage;
         } else {
-          newSubmission.pvaPercentage = 5; // Default assumption if PVA is mentioned but no percentage
+          // Simulate finding a percentage from the text
+          const percentMatch = ingredientsLower.match(/pva[^\d]*(\d+(?:\.\d+)?)%/);
+          if (percentMatch) {
+            newSubmission.pvaPercentage = parseFloat(percentMatch[1]);
+          } else {
+            newSubmission.pvaPercentage = 25; // Default to 25% if PVA is mentioned but no percentage
+          }
         }
       }
+    }
+    
+    // If PVA status is 'contains' but no percentage is set, default to 25%
+    if (newSubmission.pvaStatus === 'contains' && newSubmission.pvaPercentage === null) {
+      newSubmission.pvaPercentage = 25;
     }
     
     // Simulating image analysis (would be server-side in production)

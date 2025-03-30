@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +34,8 @@ import { Textarea } from "@/components/ui/textarea";
 import MediaUploader from "@/components/MediaUploader";
 import { useToast } from "@/hooks/use-toast";
 import { submitProduct } from "@/lib/textExtractor";
-import { Shield, Camera } from "lucide-react";
+import { Shield, Camera, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const productSchema = z.object({
   productName: z.string().min(2, {
@@ -51,6 +53,15 @@ const productSchema = z.object({
   }).or(z.string().length(0)),
   ingredients: z.string().optional(),
   comments: z.string().optional(),
+  pvaPercentage: z
+    .string()
+    .refine((val) => !val || !isNaN(Number(val)), {
+      message: "PVA percentage must be a number",
+    })
+    .refine((val) => !val || (Number(val) >= 0 && Number(val) <= 100), {
+      message: "PVA percentage must be between 0 and 100",
+    })
+    .optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -90,6 +101,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
       websiteUrl: "",
       ingredients: "",
       comments: "",
+      pvaPercentage: "",
     },
   });
 
@@ -105,6 +117,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
         websiteUrl: data.websiteUrl || undefined,
         ingredients: data.ingredients || undefined,
         comments: data.comments || undefined,
+        pvaPercentage: data.pvaPercentage ? Number(data.pvaPercentage) : undefined,
         media: media,
       });
 
@@ -230,6 +243,38 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
                 )}
               />
             </div>
+            
+            <FormField
+              control={form.control}
+              name="pvaPercentage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>PVA Percentage</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter PVA percentage (e.g. 25)"
+                      type="number"
+                      min="0"
+                      max="100"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    If known, enter the PVA percentage from the product packaging or documentation.
+                    If unknown, leave blank and we'll estimate based on product type.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <Alert variant="warning" className="bg-amber-50 border-amber-200">
+              <Info className="h-4 w-4 text-amber-600" />
+              <AlertDescription>
+                Products containing PVA without a specified percentage will be estimated at 25% by default.
+                This is only an estimate as many manufacturers do not disclose exact PVA content.
+              </AlertDescription>
+            </Alert>
             
             <FormField
               control={form.control}

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Image, Video, Link as LinkIcon, Percent } from "lucide-react";
+import { Image, Video, Link as LinkIcon, Percent, AlertCircle } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Make sure the interface matches what's being used in AdminPage.tsx
 export interface ProductDetails {
@@ -128,16 +129,25 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
             <Label htmlFor="pvaPercentage" className="text-right flex items-center gap-2">
               <Percent className="h-4 w-4" /> PVA Percentage
             </Label>
-            <Input
-              id="pvaPercentage"
-              placeholder="PVA percentage (e.g. 25)"
-              value={details.pvaPercentage || (product.pvaPercentage ? product.pvaPercentage.toString() : '')}
-              onChange={(e) => onDetailsChange({...details, pvaPercentage: e.target.value})}
-              className="col-span-3"
-              type="number"
-              min="0"
-              max="100"
-            />
+            <div className="col-span-3">
+              <Input
+                id="pvaPercentage"
+                placeholder="PVA percentage (e.g. 25)"
+                value={details.pvaPercentage}
+                onChange={(e) => onDetailsChange({...details, pvaPercentage: e.target.value})}
+                className="col-span-3"
+                type="number"
+                min="0"
+                max="100"
+              />
+              <Alert variant="warning" className="mt-2 bg-amber-50 border-amber-200">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-xs text-amber-800">
+                  If no specific PVA percentage is known, a default value of 25% is used as an estimate.
+                  This is because manufacturers often don't disclose exact PVA content.
+                </AlertDescription>
+              </Alert>
+            </div>
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
