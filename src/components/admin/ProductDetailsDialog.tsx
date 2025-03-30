@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Image, Video, Link as LinkIcon } from "lucide-react";
+import { Image, Video, Link as LinkIcon, Percent } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 
 interface ProductDetails {
@@ -14,6 +14,7 @@ interface ProductDetails {
   imageUrl: string;
   videoUrl: string;
   websiteUrl: string;
+  pvaPercentage?: string;
 }
 
 interface ProductDetailsDialogProps {
@@ -119,6 +120,22 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
               value={details.websiteUrl}
               onChange={(e) => onDetailsChange({...details, websiteUrl: e.target.value})}
               className="col-span-3"
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="pvaPercentage" className="text-right flex items-center gap-2">
+              <Percent className="h-4 w-4" /> PVA Percentage
+            </Label>
+            <Input
+              id="pvaPercentage"
+              placeholder="PVA percentage (e.g. 25)"
+              value={details.pvaPercentage || (product.pvaPercentage ? product.pvaPercentage.toString() : '')}
+              onChange={(e) => onDetailsChange({...details, pvaPercentage: e.target.value})}
+              className="col-span-3"
+              type="number"
+              min="0"
+              max="100"
             />
           </div>
           

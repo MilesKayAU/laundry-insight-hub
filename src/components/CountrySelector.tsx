@@ -61,6 +61,10 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     return a.localeCompare(b);
   });
 
+  const handleCountryChange = (value: string) => {
+    onCountrySelect(value);
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto mt-8">
       <CardHeader className="text-center">
@@ -71,11 +75,11 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col space-y-2">
-          <Select value={selectedCountry} onValueChange={onCountrySelect}>
+          <Select value={selectedCountry} onValueChange={handleCountryChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a country" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px]">
               <SelectItem value="Global">
                 <div className="flex items-center">
                   <Globe className="w-4 h-4 mr-2" />

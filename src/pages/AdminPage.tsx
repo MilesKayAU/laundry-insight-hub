@@ -63,7 +63,8 @@ const AdminPage = () => {
     description: "",
     imageUrl: "",
     videoUrl: "",
-    websiteUrl: ""
+    websiteUrl: "",
+    pvaPercentage: ""
   });
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -224,7 +225,8 @@ const AdminPage = () => {
       description: product.description || "",
       imageUrl: product.imageUrl || "",
       videoUrl: product.videoUrl || "",
-      websiteUrl: product.websiteUrl || ""
+      websiteUrl: product.websiteUrl || "",
+      pvaPercentage: product.pvaPercentage ? product.pvaPercentage.toString() : ""
     });
     setIsDialogOpen(true);
   };
@@ -232,7 +234,12 @@ const AdminPage = () => {
   const handleSaveDetails = () => {
     if (!selectedProduct) return;
     
-    saveProductDetails(selectedProduct.id, productDetails);
+    const updatedDetails = {
+      ...productDetails,
+      pvaPercentage: productDetails.pvaPercentage ? parseInt(productDetails.pvaPercentage, 10) : undefined
+    };
+    
+    saveProductDetails(selectedProduct.id, updatedDetails);
     loadProductSubmissions();
     
     toast({

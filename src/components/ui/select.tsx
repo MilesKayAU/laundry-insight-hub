@@ -178,10 +178,29 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
       return `${selected.length} selected`;
     };
 
+    // Close dropdown when clicking outside
+    React.useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as Node;
+        const dropdown = document.getElementById('multi-select-dropdown');
+        const trigger = document.getElementById('multi-select-trigger');
+        
+        if (dropdown && trigger && !dropdown.contains(target) && !trigger.contains(target)) {
+          setIsOpen(false);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+
     return (
       <div ref={ref} className={cn("space-y-2", className)}>
         {label && <div className="text-sm font-medium">{label}</div>}
         <div 
+          id="multi-select-trigger"
           className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-pointer"
           onClick={() => setIsOpen(!isOpen)}
         >
@@ -191,7 +210,11 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
         
         {isOpen && (
-          <div className="absolute z-50 mt-1 max-h-60 w-[calc(100%-2rem)] overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+          <div 
+            id="multi-select-dropdown"
+            className="absolute z-50 mt-1 max-h-60 overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md w-[calc(100%-2rem)]"
+            style={{ maxHeight: '300px' }}
+          >
             {options.map((option) => (
               <div
                 key={option.value}
