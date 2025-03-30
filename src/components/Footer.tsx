@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Microscope, Mail, Github, Twitter, BookOpen } from "lucide-react";
+import { Microscope, Mail, Github, Twitter } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -37,11 +37,6 @@ const Footer = () => {
               <li>
                 <Link to="/database" className="text-gray-300 hover:text-science-300 transition-colors">
                   Product Database
-                </Link>
-              </li>
-              <li>
-                <Link to="/blog" className="text-gray-300 hover:text-science-300 transition-colors">
-                  Blog
                 </Link>
               </li>
               <li>
@@ -105,10 +100,6 @@ const Footer = () => {
               <Twitter className="h-5 w-5" />
               <span className="sr-only">Twitter</span>
             </a>
-            <Link to="/blog" className="text-gray-400 hover:text-science-300 transition-colors">
-              <BookOpen className="h-5 w-5" />
-              <span className="sr-only">Blog</span>
-            </Link>
           </div>
         </div>
       </div>

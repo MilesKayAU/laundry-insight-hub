@@ -18,9 +18,6 @@ import BrandProfilePage from "./pages/BrandProfilePage";
 import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
 import NotFound from "./pages/NotFound";
-import BlogPage from "./pages/BlogPage";
-import BlogPostPage from "./pages/BlogPostPage";
-import EditBlogPostPage from "./pages/admin/EditBlogPostPage";
 
 // Create a client with more aggressive stale time settings
 const createQueryClient = () => new QueryClient({
@@ -73,21 +70,9 @@ const App: React.FC = () => {
                   } />
                   <Route path="/database" element={<DatabasePage />} />
                   <Route path="/brand/:brandName" element={<BrandProfilePage />} />
-                  <Route path="/blog" element={<BlogPage />} />
-                  <Route path="/blog/:slug" element={<BlogPostPage />} />
                   <Route path="/admin" element={
                     <AdminGuard>
                       <AdminPage />
-                    </AdminGuard>
-                  } />
-                  <Route path="/admin/blog/new" element={
-                    <AdminGuard>
-                      <EditBlogPostPage />
-                    </AdminGuard>
-                  } />
-                  <Route path="/admin/blog/edit/:id" element={
-                    <AdminGuard>
-                      <EditBlogPostPage />
                     </AdminGuard>
                   } />
                   <Route path="/about" element={<AboutPva />} />
