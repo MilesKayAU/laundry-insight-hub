@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function useBlogPosts() {
   return useQuery({
@@ -81,12 +82,28 @@ export function useBlogPost(slug: string) {
 }
 
 export function useIsAdmin() {
+  const { user } = useAuth();
+  
   return useQuery({
     queryKey: ["user-is-admin"],
     queryFn: async () => {
+      // Check if user exists first
+      if (!user) return false;
+      
+      // First check if the user's email is in the admin list
+      const adminEmails = ['mileskayaustralia@gmail.com'];
+      if (user.email && adminEmails.includes(user.email)) {
+        return true;
+      }
+      
+      // Fallback to checking the admin role in the database
       const { data, error } = await supabase.rpc('has_role', { role: 'admin' });
-      if (error) return false;
-      return data;
+      if (error) {
+        console.error("Error checking admin role:", error);
+        return false;
+      }
+      return !!data;
     },
+    enabled: !!user,
   });
 }

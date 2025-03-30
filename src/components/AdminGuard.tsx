@@ -4,27 +4,25 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useIsAdmin } from '@/hooks/use-blog';
 
 interface AdminGuardProps {
   children: React.ReactNode;
-  adminEmails?: string[];
 }
 
-const AdminGuard: React.FC<AdminGuardProps> = ({ 
-  children, 
-  adminEmails = ['mileskayaustralia@gmail.com'] 
-}) => {
+const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !isAdminLoading) {
       if (!isAuthenticated) {
         // Redirect to login page with return URL
         navigate('/auth', { state: { returnUrl: location.pathname } });
-      } else if (user?.email && !adminEmails.includes(user.email)) {
+      } else if (!isAdmin) {
         // User is authenticated but not an admin
         toast({
           title: "Access denied",
@@ -34,9 +32,10 @@ const AdminGuard: React.FC<AdminGuardProps> = ({
         navigate('/');
       }
     }
-  }, [isAuthenticated, isLoading, navigate, location.pathname, user, adminEmails, toast]);
+  }, [isAuthenticated, isLoading, isAdminLoading, navigate, location.pathname, isAdmin, toast]);
 
-  if (isLoading) {
+  // Show loading while checking authentication or admin status
+  if (isLoading || isAdminLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-science-600" />
@@ -45,9 +44,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({
   }
 
   // Only render children if user is authenticated and is an admin
-  return isAuthenticated && user?.email && adminEmails.includes(user.email) ? (
-    <>{children}</>
-  ) : null;
+  return isAuthenticated && isAdmin ? <>{children}</> : null;
 };
 
 export default AdminGuard;
