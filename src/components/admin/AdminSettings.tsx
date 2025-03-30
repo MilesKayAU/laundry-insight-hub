@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Accordion,
   AccordionContent,
@@ -15,41 +15,93 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { AlertTriangle, PlusCircle, XCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-interface KeywordCategories {
+interface KeywordCategory {
   commonNames: string[];
   chemicalSynonyms: string[];
   inciTerms: string[];
   additional: string[];
 }
 
-interface AdminSettingsProps {
-  keywordCategories: KeywordCategories;
-  newKeyword: string;
-  selectedCategory: string;
-  showResetDialog: boolean;
-  setShowResetDialog: (show: boolean) => void;
-  onNewKeywordChange: (keyword: string) => void;
-  onCategoryChange: (category: string) => void;
-  onAddKeyword: () => void;
-  onRemoveKeyword: (keyword: string, category: keyof KeywordCategories) => void;
-  onResetDatabase: () => void;
-  getCategoryDisplayName: (category: string) => string;
-}
+const AdminSettings = () => {
+  // State management
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [newKeyword, setNewKeyword] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('commonNames');
+  const [keywordCategories, setKeywordCategories] = useState<KeywordCategory>({
+    commonNames: ['PVA', 'Polyvinyl Alcohol', 'PVOH'],
+    chemicalSynonyms: ['C2H4O', 'Ethenol', 'Vinyl Alcohol'],
+    inciTerms: ['Polyvinyl Alcohol', 'PVA/VA Copolymer'],
+    additional: ['Water-soluble film']
+  });
+  const { toast } = useToast();
 
-const AdminSettings: React.FC<AdminSettingsProps> = ({
-  keywordCategories,
-  newKeyword,
-  selectedCategory,
-  showResetDialog,
-  setShowResetDialog,
-  onNewKeywordChange,
-  onCategoryChange,
-  onAddKeyword,
-  onRemoveKeyword,
-  onResetDatabase,
-  getCategoryDisplayName
-}) => {
+  // Handlers
+  const handleNewKeywordChange = (keyword: string) => {
+    setNewKeyword(keyword);
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+  };
+
+  const handleAddKeyword = () => {
+    if (!newKeyword.trim()) return;
+    
+    setKeywordCategories(prev => ({
+      ...prev,
+      [selectedCategory]: [...prev[selectedCategory as keyof KeywordCategory], newKeyword.trim()]
+    }));
+    
+    setNewKeyword('');
+    toast({
+      title: "Keyword added",
+      description: `Added "${newKeyword}" to ${getCategoryDisplayName(selectedCategory)}`,
+    });
+  };
+
+  const handleRemoveKeyword = (keyword: string, category: keyof KeywordCategory) => {
+    setKeywordCategories(prev => ({
+      ...prev,
+      [category]: prev[category].filter(k => k !== keyword)
+    }));
+    
+    toast({
+      title: "Keyword removed",
+      description: `Removed "${keyword}" from ${getCategoryDisplayName(category)}`,
+      variant: "destructive",
+    });
+  };
+
+  const handleResetDatabase = () => {
+    // This would be connected to a real database reset function
+    console.log("Database reset triggered");
+    setShowResetDialog(false);
+    
+    toast({
+      title: "Database reset",
+      description: "All product data has been reset.",
+      variant: "destructive",
+    });
+  };
+
+  const getCategoryDisplayName = (category: string): string => {
+    switch (category) {
+      case 'commonNames':
+        return 'Common Names & Abbreviations';
+      case 'chemicalSynonyms':
+        return 'Chemical Synonyms';
+      case 'inciTerms':
+        return 'INCI Terms';
+      case 'additional':
+        return 'Additional Terms';
+      default:
+        return category;
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -79,7 +131,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => onRemoveKeyword(keyword, 'commonNames')}
+                        onClick={() => handleRemoveKeyword(keyword, 'commonNames')}
                       >
                         <XCircle className="h-3 w-3" />
                       </Button>
@@ -105,7 +157,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => onRemoveKeyword(keyword, 'chemicalSynonyms')}
+                        onClick={() => handleRemoveKeyword(keyword, 'chemicalSynonyms')}
                       >
                         <XCircle className="h-3 w-3" />
                       </Button>
@@ -131,7 +183,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => onRemoveKeyword(keyword, 'inciTerms')}
+                        onClick={() => handleRemoveKeyword(keyword, 'inciTerms')}
                       >
                         <XCircle className="h-3 w-3" />
                       </Button>
@@ -157,7 +209,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => onRemoveKeyword(keyword, 'additional')}
+                        onClick={() => handleRemoveKeyword(keyword, 'additional')}
                       >
                         <XCircle className="h-3 w-3" />
                       </Button>
@@ -175,17 +227,17 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                 <Input
                   placeholder="Enter new keyword or abbreviation..."
                   value={newKeyword}
-                  onChange={(e) => onNewKeywordChange(e.target.value)}
+                  onChange={(e) => handleNewKeywordChange(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      onAddKeyword();
+                      handleAddKeyword();
                     }
                   }}
                 />
               </div>
               <div>
-                <Select value={selectedCategory} onValueChange={onCategoryChange}>
+                <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -198,7 +250,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                 </Select>
               </div>
             </div>
-            <Button onClick={onAddKeyword} className="w-full md:w-auto self-end">
+            <Button onClick={handleAddKeyword} className="w-full md:w-auto self-end">
               <PlusCircle className="h-4 w-4 mr-2" /> Add Keyword
             </Button>
           </div>
@@ -246,7 +298,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={onResetDatabase}>
+                          <AlertDialogAction onClick={handleResetDatabase}>
                             Reset Database
                           </AlertDialogAction>
                         </AlertDialogFooter>

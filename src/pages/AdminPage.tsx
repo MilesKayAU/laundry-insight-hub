@@ -1,11 +1,11 @@
 
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PendingProducts } from "@/components/admin/PendingProducts";
-import { ApprovedProducts } from "@/components/admin/ApprovedProducts";
-import { BrandVerifications } from "@/components/admin/BrandVerifications";
-import { BrandMessages } from "@/components/admin/BrandMessages";
-import { AdminSettings } from "@/components/admin/AdminSettings";
+import PendingProducts from "@/components/admin/PendingProducts";
+import ApprovedProducts from "@/components/admin/ApprovedProducts";
+import BrandVerifications from "@/components/admin/BrandVerifications";
+import BrandMessages from "@/components/admin/BrandMessages";
+import AdminSettings from "@/components/admin/AdminSettings";
 import BlogPostsManager from "@/components/admin/BlogPostsManager";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
