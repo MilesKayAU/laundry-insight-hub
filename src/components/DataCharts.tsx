@@ -23,6 +23,26 @@ const PRODUCT_TYPES = [
   'Other'
 ];
 
+// Case-insensitive product type normalization
+const normalizeProductType = (type: string | undefined): string => {
+  if (!type) return 'Other';
+  
+  // Normalize to lowercase for comparison
+  const typeLower = type.toLowerCase().trim();
+  
+  // Check if it matches any known type (case-insensitive)
+  for (const knownType of PRODUCT_TYPES) {
+    if (typeLower === knownType.toLowerCase() || 
+        // Handle variations like "laundry sheets" vs "laundry sheet"
+        (typeLower.includes('laundry') && typeLower.includes('sheet')) ||
+        (typeLower === 'laundry sheets')) {
+      return knownType;
+    }
+  }
+  
+  return 'Other';
+};
+
 interface DataChartsProps {
   products: ProductSubmission[];
 }
@@ -78,21 +98,30 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const [activePieIndex, setActivePieIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("status");
 
-  // Create data for status chart
+  // Log product data to debug
+  console.log("Charting products:", products.map(p => ({
+    name: p.name,
+    type: p.type,
+    normalizedType: normalizeProductType(p.type),
+    pvaStatus: p.pvaStatus
+  })));
+
+  // Create data for status chart - use verified-free for all non-contains status for now
   const statusData = [
     { name: 'Contains PVA', value: products.filter(p => p.pvaStatus === 'contains').length },
-    { name: 'Verified Free', value: products.filter(p => p.pvaStatus === 'verified-free').length },
-    { name: 'Needs Verification', value: products.filter(p => p.pvaStatus === 'needs-verification').length },
-    { name: 'Inconclusive', value: products.filter(p => p.pvaStatus === 'inconclusive').length }
+    { 
+      name: 'Verified Free', 
+      // Count approved products as verified free unless explicitly marked as containing PVA
+      value: products.filter(p => p.pvaStatus === 'verified-free' || (p.approved && p.pvaStatus !== 'contains')).length 
+    },
+    { name: 'Needs Verification', value: products.filter(p => p.pvaStatus === 'needs-verification' && !p.approved).length },
+    { name: 'Inconclusive', value: products.filter(p => p.pvaStatus === 'inconclusive' && !p.approved).length }
   ].filter(item => item.value > 0);
 
-  // Create data for product type chart
+  // Create data for product type chart - using normalized types
   const typeData = PRODUCT_TYPES.map(type => ({
     name: type,
-    value: products.filter(p => 
-      p.type?.toLowerCase() === type.toLowerCase() || 
-      (type === 'Other' && (!p.type || !PRODUCT_TYPES.some(t => t.toLowerCase() === p.type?.toLowerCase())))
-    ).length
+    value: products.filter(p => normalizeProductType(p.type) === type).length
   })).filter(item => item.value > 0);
 
   // Create data for brand distribution
@@ -108,19 +137,16 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   
   const brandData = sortedBrands.map(([name, value]) => ({ name, value }));
 
-  // Create data for status by type
+  // Create data for status by type with normalized types
   const statusByTypeData = PRODUCT_TYPES.map(type => {
-    const typeProducts = products.filter(p => 
-      p.type?.toLowerCase() === type.toLowerCase() || 
-      (type === 'Other' && (!p.type || !PRODUCT_TYPES.some(t => t.toLowerCase() === p.type?.toLowerCase())))
-    );
+    const typeProducts = products.filter(p => normalizeProductType(p.type) === type);
     
     return {
       name: type,
       'Contains PVA': typeProducts.filter(p => p.pvaStatus === 'contains').length,
-      'Verified Free': typeProducts.filter(p => p.pvaStatus === 'verified-free').length,
-      'Needs Verification': typeProducts.filter(p => p.pvaStatus === 'needs-verification').length,
-      'Inconclusive': typeProducts.filter(p => p.pvaStatus === 'inconclusive').length
+      'Verified Free': typeProducts.filter(p => p.pvaStatus === 'verified-free' || (p.approved && p.pvaStatus !== 'contains')).length,
+      'Needs Verification': typeProducts.filter(p => p.pvaStatus === 'needs-verification' && !p.approved).length,
+      'Inconclusive': typeProducts.filter(p => p.pvaStatus === 'inconclusive' && !p.approved).length
     };
   }).filter(item => 
     item['Contains PVA'] > 0 || 

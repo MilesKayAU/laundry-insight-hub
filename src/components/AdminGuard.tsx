@@ -23,18 +23,56 @@ const AdminGuard: React.FC<AdminGuardProps> = ({
     if (!isLoading) {
       if (!isAuthenticated) {
         // Redirect to login page with return URL
+        console.log('AdminGuard: Not authenticated, redirecting to auth page');
         navigate('/auth', { state: { returnUrl: location.pathname } });
-      } else if (user?.email && !adminEmails.includes(user.email)) {
-        // User is authenticated but not an admin
+      } else if (user?.email) {
+        const userEmail = user.email.toLowerCase();
+        // Normalize admin emails to lowercase for case-insensitive comparison
+        const normalizedAdminEmails = adminEmails.map(email => email.toLowerCase());
+        
+        // Special check for the primary admin email
+        const isPrimaryAdmin = userEmail === 'mileskayaustralia@gmail.com'.toLowerCase();
+        
+        if (!normalizedAdminEmails.includes(userEmail) && !isPrimaryAdmin) {
+          // User is authenticated but not an admin
+          console.log('AdminGuard: User is not an admin', {
+            userEmail,
+            adminEmails: normalizedAdminEmails,
+            isPrimaryAdmin
+          });
+          
+          toast({
+            title: "Access denied",
+            description: "You don't have permission to access this page.",
+            variant: "destructive",
+          });
+          navigate('/');
+        } else {
+          console.log('AdminGuard: User is an admin', {
+            userEmail,
+            isPrimaryAdmin
+          });
+        }
+      } else {
+        console.log('AdminGuard: User has no email, redirecting to home');
         toast({
           title: "Access denied",
-          description: "You don't have permission to access this page.",
+          description: "You need to sign in with an email to access this page.",
           variant: "destructive",
         });
         navigate('/');
       }
     }
   }, [isAuthenticated, isLoading, navigate, location.pathname, user, adminEmails, toast]);
+
+  // Force access for primary admin email even if another check fails
+  const forceAccessForPrimaryAdmin = () => {
+    if (user?.email?.toLowerCase() === 'mileskayaustralia@gmail.com'.toLowerCase()) {
+      console.log('AdminGuard: Forcing access for primary admin');
+      return true;
+    }
+    return false;
+  };
 
   if (isLoading) {
     return (
@@ -44,10 +82,15 @@ const AdminGuard: React.FC<AdminGuardProps> = ({
     );
   }
 
-  // Only render children if user is authenticated and is an admin
-  return isAuthenticated && user?.email && adminEmails.includes(user.email) ? (
-    <>{children}</>
-  ) : null;
+  // Render children if:
+  // 1. User is authenticated AND
+  // 2. Either user's email is in adminEmails OR user's email is mileskayaustralia@gmail.com
+  const shouldRenderChildren = isAuthenticated && (
+    (user?.email && adminEmails.map(email => email.toLowerCase()).includes(user.email.toLowerCase())) ||
+    forceAccessForPrimaryAdmin()
+  );
+
+  return shouldRenderChildren ? <>{children}</> : null;
 };
 
 export default AdminGuard;
