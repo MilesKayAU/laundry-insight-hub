@@ -8,14 +8,12 @@ const AboutPva = () => {
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       {/* Hero Image */}
       <div className="mb-10 rounded-lg overflow-hidden shadow-lg">
-        <div className="relative">
-          <AspectRatio ratio={4/3} className="bg-muted">
-            <img 
-              src="/lovable-uploads/d7cdeee9-514e-4b4c-a546-f3734ed5d516.png" 
-              alt="Laundry sheets and measuring cup showing PVA content" 
-              className="w-full h-full object-contain"
-            />
-          </AspectRatio>
+        <div className="w-full">
+          <img 
+            src="/lovable-uploads/b94347dc-11e4-4482-8f85-38ff7abfaf60.png" 
+            alt="Laundry sheets and measuring cup showing PVA content" 
+            className="w-full h-auto"
+          />
         </div>
       </div>
       
