@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ResearchLink, fetchResearchLinks, seedInitialData, syncResearchData } from './utils';
+import { ResearchLink, fetchResearchLinks, seedInitialData, syncResearchData, deleteResearchLink } from './utils';
 
 export const useResearchLinks = () => {
   const { toast } = useToast();
@@ -122,55 +122,41 @@ export const useResearchLinks = () => {
     }
   };
 
-  const deleteResearchLink = async (id: string) => {
+  const handleDeleteResearchLink = async (id: string) => {
     try {
       console.log('Executing deleteResearchLink for ID:', id);
       
-      // For local links (starting with 'initial-' or 'local-'), delete from local state
-      if (id.startsWith('initial-') || id.startsWith('local-')) {
-        console.log('Deleting local research link');
-        
-        // Update state first for immediate feedback
-        const updatedLinks = researchLinks.filter(link => link.id !== id);
-        setResearchLinks(updatedLinks);
-        
-        // Then update localStorage
-        syncResearchData(updatedLinks);
-        
-        toast({
-          title: "Success",
-          description: "Research link successfully deleted",
-        });
-        
-        return true;
-      } 
-      // For Supabase links, delete from database
-      else {
-        console.log('Deleting Supabase research link with ID:', id);
-        
-        const { error } = await supabase
-          .from('research_links')
-          .delete()
-          .eq('id', id);
-
-        if (error) {
-          console.error('Error deleting from Supabase:', error);
-          throw error;
-        }
-        
-        // Update local state immediately for better UX
-        const updatedLinks = researchLinks.filter(link => link.id !== id);
-        setResearchLinks(updatedLinks);
+      // Update state immediately for better UX
+      const updatedLinks = researchLinks.filter(link => link.id !== id);
+      setResearchLinks(updatedLinks);
+      
+      // Attempt deletion from database or localStorage
+      const { success, error } = await deleteResearchLink(id);
+      
+      if (!success) {
+        // If deletion failed, revert the state update
+        console.error('Deletion failed, reverting state update:', error);
+        await loadResearchLinks(); // Reload the original data
         
         toast({
-          title: "Success",
-          description: "Research link successfully deleted",
+          title: "Error",
+          description: "Failed to delete research link: " + (error?.message || "Unknown error"),
+          variant: "destructive",
         });
-        
-        return true;
+        return false;
       }
+      
+      toast({
+        title: "Success",
+        description: "Research link successfully deleted",
+      });
+      
+      return true;
     } catch (error: any) {
-      console.error('Error in deleteResearchLink:', error);
+      console.error('Error in handleDeleteResearchLink:', error);
+      
+      // Reload the original data
+      await loadResearchLinks();
       
       toast({
         title: "Error",
@@ -203,6 +189,6 @@ export const useResearchLinks = () => {
     loadResearchLinks,
     addResearchLink,
     updateResearchLink,
-    deleteResearchLink
+    deleteResearchLink: handleDeleteResearchLink
   };
 };

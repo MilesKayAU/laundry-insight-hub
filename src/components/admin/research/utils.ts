@@ -79,6 +79,49 @@ export const fetchResearchLinks = async () => {
   }
 };
 
+export const deleteResearchLink = async (id: string) => {
+  console.log('Deleting research link with ID:', id);
+  
+  try {
+    // If it's a local ID (starts with 'initial-' or 'local-'), we only need to update local storage
+    if (id.startsWith('initial-') || id.startsWith('local-')) {
+      console.log('Deleting local research link');
+      
+      // Get current links from localStorage
+      const storedLinks = localStorage.getItem('research_links');
+      if (storedLinks) {
+        const links = JSON.parse(storedLinks);
+        const updatedLinks = links.filter((link: ResearchLink) => link.id !== id);
+        
+        // Update localStorage
+        syncResearchData(updatedLinks);
+        return { success: true, error: null };
+      }
+      
+      return { success: false, error: "No local links found" };
+    } 
+    // If it's a database ID, delete from Supabase
+    else {
+      console.log('Deleting Supabase research link with ID:', id);
+      
+      const { error } = await supabase
+        .from('research_links')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Error deleting from Supabase:', error);
+        return { success: false, error };
+      }
+      
+      return { success: true, error: null };
+    }
+  } catch (error) {
+    console.error('Error in deleteResearchLink:', error);
+    return { success: false, error };
+  }
+};
+
 export const seedInitialData = async () => {
   try {
     const { data } = await supabase

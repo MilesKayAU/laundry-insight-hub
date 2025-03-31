@@ -51,7 +51,15 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
     if (deletingId) {
       console.log('Confirming deletion of research link with ID:', deletingId);
       onDelete(deletingId);
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    console.log('Canceling deletion');
+    setDeleteDialogOpen(false);
+    setDeletingId(null);
   };
 
   return (
@@ -66,49 +74,61 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {links.map((link) => (
-            <TableRow key={link.id}>
-              <TableCell className="font-medium">{link.title}</TableCell>
-              <TableCell className="max-w-[300px]">
-                <div className="truncate">{link.description}</div>
-              </TableCell>
-              <TableCell>
-                <a 
-                  href={link.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center text-blue-600 hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  <span className="truncate max-w-[150px]">{link.url}</span>
-                </a>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => onEdit(link)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleDeleteClick(link.id)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
+          {links.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                No research links found
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            links.map((link) => (
+              <TableRow key={link.id}>
+                <TableCell className="font-medium">{link.title}</TableCell>
+                <TableCell className="max-w-[300px]">
+                  <div className="truncate">{link.description}</div>
+                </TableCell>
+                <TableCell>
+                  <a 
+                    href={link.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center text-blue-600 hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    <span className="truncate max-w-[150px]">{link.url}</span>
+                  </a>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => onEdit(link)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDeleteClick(link.id)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
       
       <AlertDialog 
         open={deleteDialogOpen} 
-        onOpenChange={setDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCancelDelete();
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -118,7 +138,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
+            <AlertDialogCancel onClick={handleCancelDelete}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
