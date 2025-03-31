@@ -1,19 +1,19 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-type AuthContextType = {
-  user: User | null;
-  session: Session | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+interface AuthContextType {
+  user: any;
   isAuthenticated: boolean;
-  sendPasswordResetEmail: (email: string) => Promise<void>;
-};
+  isLoading: boolean;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<any>;
+  signup: (email: string, password: string, metadata?: any) => Promise<any>;
+  loginWithGoogle: () => Promise<any>;
+  logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<any>;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -21,10 +21,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Handle auth redirect parameters from email links
     const handleAuthRedirect = async () => {
       const params = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = params.get('access_token');
@@ -32,7 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const type = params.get('type');
       
       if (accessToken && refreshToken && type === 'recovery') {
-        // Handle password recovery
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
@@ -56,7 +55,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     handleAuthRedirect();
 
-    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state changed:', event);
@@ -77,7 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -86,6 +83,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, [toast]);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        try {
+          const PRIMARY_ADMIN_EMAIL = 'mileskayaustralia@gmail.com';
+          
+          if (user.email === PRIMARY_ADMIN_EMAIL) {
+            setIsAdmin(true);
+            return;
+          }
+          
+          const { data, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('role', 'admin')
+            .single();
+          
+          if (error && error.code !== 'PGRST116') {
+            console.error('Error checking admin status', error);
+          }
+          
+          setIsAdmin(!!data);
+        } catch (error) {
+          console.error('Error checking admin status', error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -116,14 +148,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const signup = async (email: string, password: string, metadata?: any) => {
     setIsLoading(true);
     try {
-      // Get the current domain for redirection
       const domain = window.location.origin;
       
-      // For development, you can toggle email confirmation
-      // This is just a flag to control UI messaging, not actual Supabase behavior
       const skipEmailConfirmation = false;
       
       const { data, error } = await supabase.auth.signUp({
@@ -131,11 +160,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         options: {
           data: {
-            full_name: name,
+            full_name: metadata?.name,
             username: email.split('@')[0],
           },
           emailRedirectTo: `${domain}/auth`,
-          // Note: We removed the emailConfirmation property as it's not supported
         }
       });
 
@@ -149,7 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: "Your account has been successfully created. Please check your email for verification.",
         });
       } else {
-        // If email confirmation is not required (based on our UI flag)
         toast({
           title: "Account created!",
           description: "Your account has been successfully created and you can log in now.",
@@ -158,7 +185,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Registration response:", data);
       
-      // Check if the user was created but needs to confirm their email
       if (data?.user?.identities?.length === 0) {
         toast({
           title: "Email already exists",
@@ -172,6 +198,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: "Registration failed",
         description: error.message || "There was an error creating your account.",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Welcome!",
+        description: "You've successfully signed in.",
+      });
+    } catch (error: any) {
+      console.error('Google login failed:', error);
+      toast({
+        title: "Google login failed",
+        description: error.message || "There was an error signing in with Google.",
         variant: "destructive",
       });
       throw error;
@@ -197,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const sendPasswordResetEmail = async (email: string) => {
+  const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth`,
@@ -222,18 +276,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const contextValue: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    isAdmin,
+    login,
+    signup,
+    loginWithGoogle,
+    logout,
+    resetPassword
+  };
+
   return (
     <AuthContext.Provider 
-      value={{ 
-        user, 
-        session,
-        isLoading, 
-        login, 
-        register, 
-        logout,
-        sendPasswordResetEmail, 
-        isAuthenticated: !!user 
-      }}
+      value={contextValue}
     >
       {children}
     </AuthContext.Provider>

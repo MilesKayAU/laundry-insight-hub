@@ -17,6 +17,7 @@ import CertificationPage from "./pages/CertificationPage";
 import AuthPage from "./pages/AuthPage";
 import BrandProfilePage from "./pages/BrandProfilePage";
 import ProfilePage from "./pages/ProfilePage";
+import ResearchPage from "./pages/ResearchPage";
 import PvaPercentageUpdatePage from "./pages/PvaPercentageUpdatePage";
 import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
@@ -75,6 +76,7 @@ const App: React.FC = () => {
                     </AuthGuard>
                   } />
                   <Route path="/database" element={<DatabasePage />} />
+                  <Route path="/research" element={<ResearchPage />} />
                   <Route path="/brand/:brandName" element={<BrandProfilePage />} />
                   <Route path="/update-pva/:brandName/:productName" element={<PvaPercentageUpdatePage />} />
                   <Route path="/admin" element={

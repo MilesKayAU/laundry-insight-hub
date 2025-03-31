@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,15 @@ import {
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
+
+const navLinks = [
+  { label: "Home", path: "/" },
+  { label: "Database", path: "/database" },
+  { label: "Research", path: "/research" },
+  { label: "About PVA", path: "/about" },
+  { label: "PVA Free", path: "/pva-free" },
+  { label: "Certification", path: "/certification" },
+];
 
 const Navbar = () => {
   const isMobile = useIsMobile();
