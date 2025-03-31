@@ -90,9 +90,20 @@ export const useResearchLinks = () => {
         // Refresh data from server after update
         await loadResearchLinks();
       }
+      
+      toast({
+        title: "Success",
+        description: "Research link successfully updated",
+      });
+      
       return true;
     } catch (error) {
       console.error('Error updating research link:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update research link",
+        variant: "destructive",
+      });
       return false;
     }
   };
@@ -128,7 +139,6 @@ export const useResearchLinks = () => {
         // Update local state immediately for better UX
         const updatedLinks = researchLinks.filter(link => link.id !== id);
         setResearchLinks(updatedLinks);
-        syncResearchData(updatedLinks);
         
         toast({
           title: "Success",

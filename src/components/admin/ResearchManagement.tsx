@@ -49,24 +49,14 @@ const ResearchManagement = () => {
         // Handle editing
         const success = await updateResearchLink(editingLink.id, values);
         
-        if (success) {
-          toast({
-            title: "Research link updated",
-            description: "The research link has been successfully updated.",
-          });
-        } else {
+        if (!success) {
           throw new Error("Failed to update research link");
         }
       } else {
         // Handle adding
         const success = await addResearchLink(values);
         
-        if (success) {
-          toast({
-            title: "Research link added",
-            description: "A new research link has been successfully added.",
-          });
-        } else {
+        if (!success) {
           throw new Error("Failed to add research link");
         }
       }
@@ -91,6 +81,9 @@ const ResearchManagement = () => {
       if (!success) {
         throw new Error("Failed to delete research link");
       }
+      
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
     } catch (error: any) {
       console.error('Error in handleDelete:', error);
       toast({

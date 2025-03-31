@@ -41,13 +41,22 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
   setDeleteDialogOpen,
   setDeletingId
 }) => {
+  const handleDeleteClick = (id: string) => {
+    console.log('Setting deletingId for item with ID:', id);
+    setDeletingId(id);
+    setDeleteDialogOpen(true);
+  };
+
   const handleDeleteConfirm = () => {
     if (deletingId) {
       console.log('Confirming deletion of research link with ID:', deletingId);
       onDelete(deletingId);
-      setDeleteDialogOpen(false);
-      setDeletingId(null);
     }
+  };
+
+  const handleDialogClose = () => {
+    setDeleteDialogOpen(false);
+    setDeletingId(null);
   };
 
   return (
@@ -91,11 +100,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => {
-                      console.log('Setting deletingId:', link.id);
-                      setDeletingId(link.id);
-                      setDeleteDialogOpen(true);
-                    }}
+                    onClick={() => handleDeleteClick(link.id)}
                   >
                     <Trash className="h-4 w-4" />
                   </Button>
@@ -108,12 +113,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
       
       <AlertDialog 
         open={deleteDialogOpen} 
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteDialogOpen(false);
-            setDeletingId(null);
-          }
-        }}
+        onOpenChange={setDeleteDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -123,10 +123,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setDeleteDialogOpen(false);
-              setDeletingId(null);
-            }}>
+            <AlertDialogCancel onClick={handleDialogClose}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>
