@@ -27,6 +27,11 @@ const sampleVerifications: ProductSubmission[] = [];
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("pending");
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [newKeyword, setNewKeyword] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   
   // Mock handlers for now - these would be connected to real APIs in production
   const handleViewDetails = (product: ProductSubmission) => {
@@ -51,6 +56,52 @@ const AdminPage = () => {
     console.log("Verify product:", product);
   };
 
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  const handleDelete = (productId: string) => {
+    console.log("Delete product:", productId);
+  };
+
+  const handleBulkUpload = () => {
+    console.log("Bulk upload");
+  };
+
+  const handleCleanDuplicates = () => {
+    console.log("Clean duplicates");
+  };
+
+  const handleNewKeywordChange = (keyword: string) => {
+    setNewKeyword(keyword);
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+  };
+
+  const handleAddKeyword = () => {
+    console.log("Add keyword:", newKeyword, "to category:", selectedCategory);
+  };
+
+  const handleRemoveKeyword = (keyword: string, category: keyof typeof keywordCategories) => {
+    console.log("Remove keyword:", keyword, "from category:", category);
+  };
+
+  const handleResetDatabase = () => {
+    console.log("Reset database");
+  };
+
+  const getCategoryDisplayName = (category: string) => {
+    switch(category) {
+      case 'commonNames': return 'Common Names & Abbreviations';
+      case 'chemicalSynonyms': return 'Chemical Synonyms';
+      case 'inciTerms': return 'INCI Terms';
+      case 'additional': return 'Additional Terms';
+      default: return category;
+    }
+  };
+
   // Define keyword categories
   const keywordCategories = {
     commonNames: [],
@@ -58,6 +109,12 @@ const AdminPage = () => {
     inciTerms: [],
     additional: []
   };
+
+  // Filter products for search functionality
+  const filteredProducts = sampleApprovedProducts.filter(product => 
+    product.brand.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <AuthGuard>
@@ -90,7 +147,15 @@ const AdminPage = () => {
           <TabsContent value="approved">
             <ApprovedProducts 
               products={sampleApprovedProducts}
+              filteredProducts={filteredProducts}
+              searchTerm={searchTerm}
+              onSearchChange={handleSearchChange}
               onViewDetails={handleViewDetails}
+              onDelete={handleDelete}
+              onBulkUpload={handleBulkUpload}
+              showCleanupDialog={showCleanupDialog}
+              setShowCleanupDialog={setShowCleanupDialog}
+              onCleanDuplicates={handleCleanDuplicates}
             />
           </TabsContent>
           
@@ -135,17 +200,16 @@ const AdminPage = () => {
           <TabsContent value="settings">
             <AdminSettings 
               keywordCategories={keywordCategories}
-              newKeyword=""
-              selectedCategory=""
-              showResetDialog={false}
-              onAddKeyword={() => {}}
-              onDeleteKeyword={() => {}}
-              onChangeNewKeyword={() => {}}
-              onChangeSelectedCategory={() => {}}
-              onResetData={() => {}}
-              onToggleResetDialog={() => {}}
-              onCreateCategory={() => {}}
-              onDeleteCategory={() => {}}
+              newKeyword={newKeyword}
+              selectedCategory={selectedCategory}
+              showResetDialog={showResetDialog}
+              setShowResetDialog={setShowResetDialog}
+              onNewKeywordChange={handleNewKeywordChange}
+              onCategoryChange={handleCategoryChange}
+              onAddKeyword={handleAddKeyword}
+              onRemoveKeyword={handleRemoveKeyword}
+              onResetDatabase={handleResetDatabase}
+              getCategoryDisplayName={getCategoryDisplayName}
             />
           </TabsContent>
         </Tabs>
