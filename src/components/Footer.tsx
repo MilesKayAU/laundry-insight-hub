@@ -1,21 +1,19 @@
-
 import { Link } from "react-router-dom";
-import { Microscope, Mail, Github, Twitter, ShieldCheck } from "lucide-react";
+import { Mail, Github, Twitter, ShieldCheck } from "lucide-react";
 
 const Footer = () => {
   return (
     <footer className="bg-gradient-to-br from-science-900 to-tech-900 text-white py-12 mt-auto">
       <div className="container mx-auto px-4">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white">
-              <Microscope className="h-5 w-5 text-science-700" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-science-300 to-tech-300 bg-clip-text text-transparent">
-              PVAFree.com
-            </span>
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <img 
+              src="/lovable-uploads/917843be-b30b-4aa2-9450-565ac4810963.png" 
+              alt="PVAFree.com Logo" 
+              className="h-20" 
+            />
           </div>
-          <p className="text-gray-300 max-w-md text-center">
+          <p className="text-gray-300 max-w-md text-center mt-3">
             Advancing scientific transparency in consumer products through data analysis and verification.
           </p>
         </div>
