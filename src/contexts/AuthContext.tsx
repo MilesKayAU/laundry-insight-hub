@@ -1,4 +1,3 @@
-
 import React, {
   useState,
   useEffect,
@@ -35,14 +34,6 @@ const AuthContext = React.createContext<AuthContextType>({
   sendPasswordResetEmail: async () => {},
 });
 
-// Primary admin email - hardcoded to ensure admin always has access
-const PRIMARY_ADMIN_EMAIL = 'mileskayaustralia@gmail.com';
-
-// Helper function to normalize email for comparison
-const normalizeEmail = (email: string): string => {
-  return email ? email.toLowerCase().trim() : '';
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,32 +42,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if the current user has the admin role - modified to avoid RLS recursion
-  const checkUserRole = async (userId: string, userEmail: string) => {
+  // Check if the current user has the admin role
+  const checkUserRole = async (userId: string) => {
     try {
-      // Special case for primary admin
-      if (normalizeEmail(userEmail) === normalizeEmail(PRIMARY_ADMIN_EMAIL)) {
-        console.log("Primary admin access granted");
-        return true;
-      }
-      
-      // Using the Supabase query builder instead of direct fetch
-      // This avoids the protected property access issue
       const { data, error } = await supabase
         .from('user_roles')
-        .select('*')
+        .select('role')
         .eq('user_id', userId)
-        .eq('role', 'admin');
+        .single();
       
-      if (error) {
-        throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error checking user role:", error);
+        return false;
       }
       
-      return data && data.length > 0;
+      return data?.role === 'admin';
     } catch (error) {
       console.error("Error in checkUserRole:", error);
-      // Fallback to primary admin check if database query fails
-      return normalizeEmail(userEmail) === normalizeEmail(PRIMARY_ADMIN_EMAIL);
+      return false;
     }
   };
 
@@ -97,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(session.user);
           
           // Check if the user is an admin
-          const isUserAdmin = await checkUserRole(session.user.id, session.user.email || '');
+          const isUserAdmin = await checkUserRole(session.user.id);
           setIsAdmin(isUserAdmin);
           
           console.info("Auth state changed: AUTHENTICATED" + (isUserAdmin ? " (ADMIN)" : ""));
@@ -130,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session.user);
         
         // Check if the user is an admin
-        const isUserAdmin = await checkUserRole(session.user.id, session.user.email || '');
+        const isUserAdmin = await checkUserRole(session.user.id);
         setIsAdmin(isUserAdmin);
       } else {
         setUser(null);
@@ -158,8 +141,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data?.user) {
-        // Check if the user is an admin - pass both ID and email
-        const isUserAdmin = await checkUserRole(data.user.id, data.user.email || '');
+        // Check if the user is an admin
+        const isUserAdmin = await checkUserRole(data.user.id);
         setIsAdmin(isUserAdmin);
         
         toast({

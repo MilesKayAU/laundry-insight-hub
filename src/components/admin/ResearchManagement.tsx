@@ -57,7 +57,7 @@ const ResearchManagement = () => {
   const [editingLink, setEditingLink] = useState<ResearchLink | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [linkToDelete, setLinkToDelete] = useState<ResearchLink | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -130,36 +130,21 @@ const ResearchManagement = () => {
 
         if (error) throw error;
 
-        // Update the local state to reflect the changes
-        setResearchLinks(prevLinks => 
-          prevLinks.map(link => 
-            link.id === editingLink.id 
-              ? { ...link, title: values.title, description: values.description, url: values.url }
-              : link
-          )
-        );
-
         toast({
           title: "Research link updated",
           description: "The research link has been successfully updated.",
         });
       } else {
         // Add new link
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('research_links')
           .insert([{
             title: values.title,
             description: values.description,
             url: values.url
-          }])
-          .select();
+          }]);
 
         if (error) throw error;
-
-        // Add the new link to the local state
-        if (data && data.length > 0) {
-          setResearchLinks(prevLinks => [data[0] as ResearchLink, ...prevLinks]);
-        }
 
         toast({
           title: "Research link added",
@@ -168,6 +153,7 @@ const ResearchManagement = () => {
       }
 
       setDialogOpen(false);
+      fetchResearchLinks();
       setEditingLink(null);
     } catch (error: any) {
       console.error('Error saving research link:', error);
@@ -179,29 +165,23 @@ const ResearchManagement = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!linkToDelete) return;
-    
+  const handleDelete = async (id: string) => {
     try {
+      setDeleting(id);
       const { error } = await supabase
         .from('research_links')
         .delete()
-        .eq('id', linkToDelete.id);
+        .eq('id', id);
 
       if (error) throw error;
-
-      // Update the local state to remove the deleted item
-      setResearchLinks(prevLinks => 
-        prevLinks.filter(link => link.id !== linkToDelete.id)
-      );
 
       toast({
         title: "Research link deleted",
         description: "The research link has been successfully deleted.",
       });
 
+      fetchResearchLinks();
       setDeleteDialogOpen(false);
-      setLinkToDelete(null);
     } catch (error: any) {
       console.error('Error deleting research link:', error);
       toast({
@@ -209,12 +189,9 @@ const ResearchManagement = () => {
         description: error.message || "Failed to delete research link. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setDeleting(null);
     }
-  };
-
-  const openDeleteConfirmation = (link: ResearchLink) => {
-    setLinkToDelete(link);
-    setDeleteDialogOpen(true);
   };
 
   return (
@@ -373,13 +350,48 @@ const ResearchManagement = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => openDeleteConfirmation(link)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
+                        <Dialog open={deleteDialogOpen && deleting === link.id} onOpenChange={(open) => {
+                          setDeleteDialogOpen(open);
+                          if (!open) setDeleting(null);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                setDeleting(link.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Confirm Deletion</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to delete this research link? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                              <p className="font-medium">{link.title}</p>
+                            </div>
+                            <DialogFooter>
+                              <Button 
+                                variant="outline" 
+                                onClick={() => setDeleteDialogOpen(false)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                variant="destructive"
+                                onClick={() => handleDelete(link.id)}
+                              >
+                                Delete
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -389,40 +401,6 @@ const ResearchManagement = () => {
           </div>
         )}
       </CardContent>
-
-      {/* Separate Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this research link? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {linkToDelete && (
-              <p className="font-medium">{linkToDelete.title}</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setLinkToDelete(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive"
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 };
