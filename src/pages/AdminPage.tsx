@@ -178,11 +178,28 @@ const AdminPage = () => {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    // Handle delete product functionality
-    toast({
-      title: "Product Deleted",
-      description: "The product has been successfully deleted",
-    });
+    try {
+      // Remove the product from approvedProducts state
+      const updatedProducts = approvedProducts.filter(p => p.id !== productId);
+      setApprovedProducts(updatedProducts);
+      
+      // Update localStorage
+      const allProducts = getProductSubmissions();
+      const updatedAllProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
+      localStorage.setItem('products', JSON.stringify(updatedAllProducts));
+      
+      toast({
+        title: "Product Deleted",
+        description: "The product has been successfully deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete product",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCleanDuplicates = () => {
