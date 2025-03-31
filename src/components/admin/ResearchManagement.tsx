@@ -42,14 +42,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Book, Plus, Trash, ExternalLink, Edit } from "lucide-react";
-
-interface ResearchLink {
-  id: string;
-  title: string;
-  description: string;
-  url: string;
-  created_at: string;
-}
+import { ResearchLink } from '@/lib/researchData';
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -107,7 +100,9 @@ const ResearchManagement = () => {
         throw error;
       }
 
-      setResearchLinks(data || []);
+      if (data) {
+        setResearchLinks(data as ResearchLink[]);
+      }
     } catch (error: any) {
       console.error('Error fetching research links:', error);
       toast({

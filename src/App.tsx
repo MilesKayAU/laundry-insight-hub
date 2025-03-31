@@ -1,101 +1,53 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { Toaster } from "@/components/ui/toaster"
 
-import React, { useState } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import MainLayout from "./layouts/MainLayout";
-import HomePage from "./pages/HomePage";
-import ContributePage from "./pages/ContributePage";
-import DatabasePage from "./pages/DatabasePage";
-import AdminPage from "./pages/AdminPage";
-import AboutPva from "./pages/AboutPva";
-import PvaFreePage from "./pages/PvaFreePage";
-import CertificationPage from "./pages/CertificationPage";
-import AuthPage from "./pages/AuthPage";
-import BrandProfilePage from "./pages/BrandProfilePage";
-import ProfilePage from "./pages/ProfilePage";
-import ResearchPage from "./pages/ResearchPage";
-import PvaPercentageUpdatePage from "./pages/PvaPercentageUpdatePage";
-import AuthGuard from "./components/AuthGuard";
-import AdminGuard from "./components/AdminGuard";
-import NotFound from "./pages/NotFound";
+import MainLayout from '@/layouts/MainLayout';
+import HomePage from '@/pages/HomePage';
+import DatabasePage from '@/pages/DatabasePage';
+import AuthPage from '@/pages/AuthPage';
+import ContributePage from '@/pages/ContributePage';
+import ProfilePage from '@/pages/ProfilePage';
+import AdminPage from '@/pages/AdminPage';
+import BrandProfilePage from '@/pages/BrandProfilePage';
+import AboutPva from '@/pages/AboutPva';
+import PvaFreePage from '@/pages/PvaFreePage';
+import CertificationPage from '@/pages/CertificationPage';
+import PvaPercentageUpdatePage from '@/pages/PvaPercentageUpdatePage';
+import NotFound from '@/pages/NotFound';
+import { AuthProvider } from '@/contexts/AuthContext';
+import ResearchPage from '@/pages/ResearchPage';
 
-const createQueryClient = () => new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 0,
-      gcTime: 5 * 60 * 1000,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
-const QueryClientWrapper = ({ children }) => {
-  const location = useLocation();
-  const [queryClient] = useState(() => createQueryClient());
-  
-  React.useEffect(() => {
-    if (location.pathname === '/database') {
-      queryClient.resetQueries();
-      console.info("Query cache reset for database page");
-    }
-  }, [location.pathname, queryClient]);
-
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <BrowserRouter>
+        <AuthProvider>
+          <MainLayout>
+            <Toaster />
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/database" element={<DatabasePage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/contribute" element={<ContributePage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/brands/:brandName" element={<BrandProfilePage />} />
+              <Route path="/about-pva" element={<AboutPva />} />
+              <Route path="/research" element={<ResearchPage />} />
+              <Route path="/pva-free" element={<PvaFreePage />} />
+              <Route path="/certification" element={<CertificationPage />} />
+              <Route path="/pva-percentage/:brandName/:productName" element={<PvaPercentageUpdatePage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </MainLayout>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
-};
-
-const App: React.FC = () => {
-  return (
-    <React.StrictMode>
-      <BrowserRouter>
-        <QueryClientWrapper>
-          <TooltipProvider>
-            <AuthProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route element={<MainLayout />}>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/contribute" element={
-                    <AuthGuard>
-                      <ContributePage />
-                    </AuthGuard>
-                  } />
-                  <Route path="/profile" element={
-                    <AuthGuard>
-                      <ProfilePage />
-                    </AuthGuard>
-                  } />
-                  <Route path="/database" element={<DatabasePage />} />
-                  <Route path="/research" element={<ResearchPage />} />
-                  <Route path="/brand/:brandName" element={<BrandProfilePage />} />
-                  <Route path="/update-pva/:brandName/:productName" element={<PvaPercentageUpdatePage />} />
-                  <Route path="/admin" element={
-                    <AdminGuard>
-                      <AdminPage />
-                    </AdminGuard>
-                  } />
-                  <Route path="/about" element={<AboutPva />} />
-                  <Route path="/pva-free" element={<PvaFreePage />} />
-                  <Route path="/certification" element={<CertificationPage />} />
-                  <Route path="*" element={<NotFound />} />
-                </Route>
-              </Routes>
-            </AuthProvider>
-          </TooltipProvider>
-        </QueryClientWrapper>
-      </BrowserRouter>
-    </React.StrictMode>
-  );
-};
+}
 
 export default App;
