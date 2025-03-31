@@ -60,24 +60,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
-      // Using the direct fetch approach instead of Supabase query builder
-      // This avoids triggering RLS policies that cause infinite recursion
-      const response = await fetch(
-        `${supabase.supabaseUrl}/rest/v1/user_roles?user_id=eq.${userId}&role=eq.admin`,
-        {
-          headers: {
-            'apikey': supabase.supabaseKey,
-            'Authorization': `Bearer ${supabase.supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      // Using the Supabase query builder instead of direct fetch
+      // This avoids the protected property access issue
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('role', 'admin');
       
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+      if (error) {
+        throw error;
       }
       
-      const data = await response.json();
       return data && data.length > 0;
     } catch (error) {
       console.error("Error in checkUserRole:", error);
