@@ -18,6 +18,10 @@ import ResearchManagement from "@/components/admin/ResearchManagement";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("pending");
+  
+  // Mock data for components to prevent undefined errors
+  const emptyProducts = [];
+  const emptyVerifications = [];
 
   return (
     <div className="container mx-auto py-10 pb-32 px-4">
@@ -37,11 +41,25 @@ const AdminPage = () => {
         </TabsList>
         
         <TabsContent value="pending">
-          <PendingProducts />
+          <PendingProducts 
+            products={emptyProducts}
+            onViewDetails={() => {}}
+            onApprove={() => {}}
+            onReject={() => {}}
+          />
         </TabsContent>
         
         <TabsContent value="approved">
-          <ApprovedProducts />
+          <ApprovedProducts 
+            products={emptyProducts}
+            filteredProducts={emptyProducts}
+            searchTerm=""
+            onSearchChange={() => {}}
+            onView={() => {}}
+            onDelete={() => {}}
+            onEdit={() => {}}
+            onPvaEdit={() => {}}
+          />
         </TabsContent>
         
         <TabsContent value="pvaSubmissions">
@@ -49,11 +67,24 @@ const AdminPage = () => {
         </TabsContent>
         
         <TabsContent value="brandVerifications">
-          <BrandVerifications />
+          <BrandVerifications 
+            verifications={emptyVerifications}
+            onApproveVerification={() => {}}
+            onRejectVerification={() => {}}
+          />
         </TabsContent>
         
         <TabsContent value="brandMessages">
-          <BrandMessages />
+          <BrandMessages 
+            messages={[]}
+            profiles={[]}
+            selectedMessage={null}
+            messageResponse=""
+            onSelectMessage={() => {}}
+            onResponseChange={() => {}}
+            onSendResponse={() => {}}
+            onMarkResolved={() => {}}
+          />
         </TabsContent>
         
         <TabsContent value="research">
@@ -69,7 +100,19 @@ const AdminPage = () => {
         </TabsContent>
         
         <TabsContent value="settings">
-          <AdminSettings />
+          <AdminSettings 
+            keywordCategories={[]}
+            newKeyword=""
+            selectedCategory=""
+            showResetDialog={false}
+            onNewKeywordChange={() => {}}
+            onCategoryChange={() => {}}
+            onAddKeyword={() => {}}
+            onDeleteKeyword={() => {}}
+            onOpenResetDialog={() => {}}
+            onCloseResetDialog={() => {}}
+            onResetData={() => {}}
+          />
         </TabsContent>
       </Tabs>
     </div>
