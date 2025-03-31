@@ -30,6 +30,8 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
     const checkAdminStatus = async () => {
       if (!isLoading && isAuthenticated && user) {
         try {
+          console.log('AdminGuard: Checking admin status for user', user.email);
+          
           // Special case for primary admin
           if (normalizeEmail(user.email || '') === normalizeEmail(PRIMARY_ADMIN_EMAIL)) {
             console.log('AdminGuard: Primary admin access granted');
@@ -46,18 +48,31 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
             .eq('role', 'admin')
             .single();
           
-          if (error && error.code !== 'PGRST116') {
-            console.error('AdminGuard: Error checking admin status', error);
+          if (error) {
+            if (error.code !== 'PGRST116') {
+              console.error('AdminGuard: Error checking admin status', error);
+            } else {
+              console.log('AdminGuard: No admin role found for user');
+            }
           }
           
-          setIsAdmin(!!data);
-          console.log('AdminGuard: Admin check result', { data, isAdmin: !!data });
+          const hasAdminRole = !!data;
+          console.log('AdminGuard: Admin check result', { data, isAdmin: hasAdminRole });
+          setIsAdmin(hasAdminRole);
+          
+          // Fallback: If user is in AuthContext's admin list
+          if (!hasAdminRole && user.email) {
+            // Check if user.email is included in AuthContext's admin list
+            const isContextAdmin = user.email === PRIMARY_ADMIN_EMAIL;
+            console.log('AdminGuard: Fallback admin check', { isContextAdmin });
+            setIsAdmin(isContextAdmin);
+          }
         } catch (error) {
           console.error('AdminGuard: Error checking admin status', error);
         } finally {
           setCheckingAdmin(false);
         }
-      } else {
+      } else if (!isLoading && !isAuthenticated) {
         setCheckingAdmin(false);
       }
     };
@@ -73,7 +88,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
         navigate('/auth', { state: { returnUrl: location.pathname } });
       } else if (!isAdmin) {
         // User is authenticated but not an admin
-        console.log('AdminGuard: User is not an admin', { userId: user?.id });
+        console.log('AdminGuard: User is not an admin', { userId: user?.id, email: user?.email });
         
         toast({
           title: "Access denied",
@@ -82,7 +97,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
         });
         navigate('/');
       } else {
-        console.log('AdminGuard: User is an admin', { userId: user?.id });
+        console.log('AdminGuard: User is an admin, granting access', { userId: user?.id, email: user?.email });
       }
     }
   }, [isAuthenticated, isLoading, isAdmin, checkingAdmin, navigate, location.pathname, user, toast]);

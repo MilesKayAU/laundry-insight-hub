@@ -39,23 +39,15 @@ const navLinks = [
 const Navbar = () => {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
-
-  // Check if user is admin
-  const isAdmin = () => {
-    if (!user || !user.email) return false;
-    const adminEmails = ['mileskayaustralia@gmail.com'];
-    return adminEmails.includes(user.email.toLowerCase().trim());
-  };
+  const { user, isAuthenticated, logout, isAdmin } = useAuth();
 
   const menuItems = [
     { name: "Home", path: "/", icon: <Home className="h-4 w-4 mr-2" /> },
     { name: "About PVA", path: "/about", icon: <FlaskConical className="h-4 w-4 mr-2" /> },
     { name: "Database", path: "/database", icon: <Database className="h-4 w-4 mr-2" /> },
     { name: "Contribute", path: "/contribute", icon: <UploadCloud className="h-4 w-4 mr-2" /> },
-    // PVA Free removed as requested
     // Only include Admin link if user is admin
-    ...(isAdmin() ? [{ name: "Admin", path: "/admin", icon: <Settings className="h-4 w-4 mr-2" /> }] : []),
+    ...(isAdmin ? [{ name: "Admin", path: "/admin", icon: <Settings className="h-4 w-4 mr-2" /> }] : []),
   ];
 
   const handleLogout = async () => {

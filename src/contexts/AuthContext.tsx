@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -90,11 +91,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const PRIMARY_ADMIN_EMAIL = 'mileskayaustralia@gmail.com';
           
+          // Quick check for primary admin email
           if (user.email === PRIMARY_ADMIN_EMAIL) {
+            console.log('AuthContext: Primary admin identified');
             setIsAdmin(true);
             return;
           }
           
+          // Check user_roles table
           const { data, error } = await supabase
             .from('user_roles')
             .select('role')
@@ -103,12 +107,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
           
           if (error && error.code !== 'PGRST116') {
-            console.error('Error checking admin status', error);
+            console.error('AuthContext: Error checking admin status', error);
           }
           
-          setIsAdmin(!!data);
+          const hasAdminRole = !!data;
+          console.log('AuthContext: Admin check result', { data, isAdmin: hasAdminRole });
+          setIsAdmin(hasAdminRole);
         } catch (error) {
-          console.error('Error checking admin status', error);
+          console.error('AuthContext: Error checking admin status', error);
           setIsAdmin(false);
         }
       } else {
