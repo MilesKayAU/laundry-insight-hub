@@ -99,21 +99,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
           
-          // Check user_roles table
-          const { data, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .eq('role', 'admin')
-            .single();
+          // Use the has_role function we created
+          const { data, error } = await supabase.rpc('has_role', {
+            role: 'admin'
+          });
           
-          if (error && error.code !== 'PGRST116') {
-            console.error('AuthContext: Error checking admin status', error);
+          if (error) {
+            console.error('AuthContext: Error checking admin status with has_role function', error);
+            throw error;
           }
           
-          const hasAdminRole = !!data;
-          console.log('AuthContext: Admin check result', { data, isAdmin: hasAdminRole });
-          setIsAdmin(hasAdminRole);
+          console.log('AuthContext: Admin check result using has_role:', data);
+          setIsAdmin(!!data);
         } catch (error) {
           console.error('AuthContext: Error checking admin status', error);
           setIsAdmin(false);

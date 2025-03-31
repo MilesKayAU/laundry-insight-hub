@@ -84,19 +84,31 @@ const UserManagement = () => {
     setLoading(true);
     setError(null);
     try {
+      console.log("Fetching profiles...");
       // First, get all users from the profiles table (which is accessible to admins through RLS policies)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, username, full_name, avatar_url');
       
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Error fetching profiles:', profileError);
+        throw profileError;
+      }
+      
+      console.log("Profiles fetched:", profileData);
+      console.log("Fetching user roles...");
       
       // Then fetch user roles
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('user_id, role');
       
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('Error fetching user roles:', roleError);
+        throw roleError;
+      }
+      
+      console.log("User roles fetched:", roleData);
       
       // Map roles to users
       const userRoles = new Map();
@@ -118,6 +130,7 @@ const UserManagement = () => {
         is_admin: userRoles.get(profile.id) === 'admin'
       }));
       
+      console.log("Enhanced users:", enhancedUsers);
       setUsers(enhancedUsers || []);
     } catch (error: any) {
       console.error('Error fetching users:', error);
@@ -134,6 +147,7 @@ const UserManagement = () => {
 
   const handleDeleteUser = async (userId: string) => {
     try {
+      console.log("Deleting user:", userId);
       // Instead of directly deleting the auth user (which requires admin rights),
       // we'll simply remove the profile and rely on cascading to handle related data
       const { error } = await supabase
@@ -141,13 +155,22 @@ const UserManagement = () => {
         .delete()
         .eq('id', userId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting profile:', error);
+        throw error;
+      }
       
+      console.log("Profile deleted, removing from user_roles...");
       // Remove from user_roles table as well
-      await supabase
+      const { error: roleError } = await supabase
         .from('user_roles')
         .delete()
         .eq('user_id', userId);
+        
+      if (roleError) {
+        console.error('Error deleting user role:', roleError);
+        // Don't throw here, as the main profile deletion was successful
+      }
       
       setUsers(users.filter(user => user.id !== userId));
       
@@ -168,34 +191,42 @@ const UserManagement = () => {
   
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
+      console.log("Changing role for user:", userId, "to", newRole);
       // Check if user already has a role
       const { data: existingRole, error: checkError } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
+        console.error('Error checking existing role:', checkError);
         throw checkError;
       }
       
       let result;
       
       if (existingRole) {
+        console.log("Updating existing role:", existingRole);
         // Update existing role
         result = await supabase
           .from('user_roles')
           .update({ role: newRole })
           .eq('user_id', userId);
       } else {
+        console.log("Creating new role entry");
         // Insert new role
         result = await supabase
           .from('user_roles')
           .insert({ user_id: userId, role: newRole });
       }
       
-      if (result.error) throw result.error;
+      if (result.error) {
+        console.error('Error updating role:', result.error);
+        throw result.error;
+      }
       
+      console.log("Role update successful");
       // Update local state
       setUsers(users.map(user => 
         user.id === userId 

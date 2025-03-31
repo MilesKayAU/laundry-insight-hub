@@ -40,35 +40,21 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
             return;
           }
           
-          // Check user_roles table
-          const { data, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .eq('role', 'admin')
-            .single();
+          // Use the has_role function we created
+          const { data, error } = await supabase.rpc('has_role', {
+            role: 'admin'
+          });
           
           if (error) {
-            if (error.code !== 'PGRST116') {
-              console.error('AdminGuard: Error checking admin status', error);
-            } else {
-              console.log('AdminGuard: No admin role found for user');
-            }
+            console.error('AdminGuard: Error checking admin status with has_role function', error);
+            throw error;
           }
           
-          const hasAdminRole = !!data;
-          console.log('AdminGuard: Admin check result', { data, isAdmin: hasAdminRole });
-          setIsAdmin(hasAdminRole);
-          
-          // Fallback: If user is in AuthContext's admin list
-          if (!hasAdminRole && user.email) {
-            // Check if user.email is included in AuthContext's admin list
-            const isContextAdmin = user.email === PRIMARY_ADMIN_EMAIL;
-            console.log('AdminGuard: Fallback admin check', { isContextAdmin });
-            setIsAdmin(isContextAdmin);
-          }
+          console.log('AdminGuard: Admin check result using has_role:', data);
+          setIsAdmin(!!data);
         } catch (error) {
           console.error('AdminGuard: Error checking admin status', error);
+          setIsAdmin(false);
         } finally {
           setCheckingAdmin(false);
         }
