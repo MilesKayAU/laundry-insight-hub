@@ -121,6 +121,8 @@ const ResearchManagement = () => {
       } else if (data && data.length > 0) {
         // Use Supabase data if available
         setResearchLinks(data);
+        // Also save to localStorage for fallback
+        localStorage.setItem('research_links', JSON.stringify(data));
       } else {
         // If no data in Supabase, use initial data and try to seed the database
         const initialData = initialResearchLinks.map((link, index) => ({
@@ -223,6 +225,9 @@ const ResearchManagement = () => {
             link.id === editingLink.id ? { ...link, ...values } : link
           );
           setResearchLinks(updatedLinks);
+          
+          // Update localStorage too
+          localStorage.setItem('research_links', JSON.stringify(updatedLinks));
         }
 
         toast({
@@ -246,7 +251,10 @@ const ResearchManagement = () => {
           
           // Update state with returned data
           if (data && data.length > 0) {
-            setResearchLinks(prev => [data[0], ...prev]);
+            const newLinks = [data[0], ...researchLinks];
+            setResearchLinks(newLinks);
+            // Update localStorage too
+            localStorage.setItem('research_links', JSON.stringify(newLinks));
           }
         } catch (supabaseError) {
           console.error('Error adding to Supabase, using local storage:', supabaseError);
@@ -288,7 +296,7 @@ const ResearchManagement = () => {
       setDeleting(id);
       
       if (id.startsWith('initial-') || id.startsWith('local-')) {
-        // For local data
+        // For local data, remove from state and localStorage
         const updatedLinks = researchLinks.filter(link => link.id !== id);
         setResearchLinks(updatedLinks);
         localStorage.setItem('research_links', JSON.stringify(updatedLinks));
@@ -304,8 +312,10 @@ const ResearchManagement = () => {
           throw error;
         }
         
-        // Once deletion is successful in Supabase, update local state
-        setResearchLinks(prev => prev.filter(link => link.id !== id));
+        // Update both local state and localStorage after successful deletion
+        const updatedLinks = researchLinks.filter(link => link.id !== id);
+        setResearchLinks(updatedLinks);
+        localStorage.setItem('research_links', JSON.stringify(updatedLinks));
       }
 
       toast({

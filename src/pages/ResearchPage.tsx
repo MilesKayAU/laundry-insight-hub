@@ -36,6 +36,7 @@ const ResearchPage = () => {
   const fetchResearchLinks = async () => {
     try {
       setLoading(true);
+      // Always fetch fresh data from Supabase
       const { data, error } = await supabase
         .from('research_links')
         .select('*')
@@ -45,13 +46,17 @@ const ResearchPage = () => {
         throw error;
       }
 
+      // If data exists in Supabase, use it
       if (data && data.length > 0) {
         setResearchLinks(data);
+        // Update localStorage with the latest data for backup
+        localStorage.setItem('research_links', JSON.stringify(data));
       } else {
-        // Check if we have data in localStorage as a fallback
+        // Try to use data from localStorage if no Supabase data
         const storedLinks = localStorage.getItem('research_links');
         if (storedLinks) {
-          setResearchLinks(JSON.parse(storedLinks));
+          const parsedLinks = JSON.parse(storedLinks);
+          setResearchLinks(parsedLinks);
         } else {
           setResearchLinks([]);
         }
