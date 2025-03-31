@@ -1,10 +1,10 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import MainLayout from "./layouts/MainLayout";
 import HomePage from "./pages/HomePage";
@@ -23,7 +23,8 @@ import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
 import NotFound from "./pages/NotFound";
 
-const createQueryClient = () => new QueryClient({
+// Create a stable QueryClient instance
+const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 0,
@@ -34,31 +35,13 @@ const createQueryClient = () => new QueryClient({
   },
 });
 
-const QueryClientWrapper = ({ children }) => {
-  const location = useLocation();
-  const [queryClient] = useState(() => createQueryClient());
-  
-  React.useEffect(() => {
-    if (location.pathname === '/database') {
-      queryClient.resetQueries();
-      console.info("Query cache reset for database page");
-    }
-  }, [location.pathname, queryClient]);
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
-};
-
 const App: React.FC = () => {
   return (
     <React.StrictMode>
-      <BrowserRouter>
-        <QueryClientWrapper>
-          <TooltipProvider>
-            <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <BrowserRouter>
               <Toaster />
               <Sonner />
               <Routes>
@@ -90,10 +73,10 @@ const App: React.FC = () => {
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>
-            </AuthProvider>
-          </TooltipProvider>
-        </QueryClientWrapper>
-      </BrowserRouter>
+            </BrowserRouter>
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
     </React.StrictMode>
   );
 };
