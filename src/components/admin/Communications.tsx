@@ -1,14 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
   Card, 
   CardContent, 
   CardDescription, 
@@ -17,38 +9,21 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { 
   Tabs, 
   TabsContent, 
   TabsList, 
   TabsTrigger 
 } from "@/components/ui/tabs";
-import { 
-  Mail, 
-  Search, 
-  Send, 
-  MessageSquare, 
-  MessageCircle,
-  RefreshCw,
-  Eye,
-  CheckCircle,
-  XCircle,
-  User,
-  Building
-} from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import PaginationControls from "@/components/database/PaginationControls";
+
+import MessageTable from "./communications/MessageTable";
+import MessageDialog from "./communications/MessageDialog";
+import StatusBadge from "./communications/StatusBadge";
+import { formatDate } from "./communications/utils";
 
 interface Communication {
   id: string;
@@ -155,27 +130,8 @@ const Communications = () => {
     setCurrentPage(page);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
-      case 'responded':
-        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Responded</Badge>;
-      case 'resolved':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">Resolved</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    return <StatusBadge status={status} />;
   };
 
   return (
@@ -278,160 +234,18 @@ const Communications = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Message Response Dialog */}
-        <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Message from {selectedCommunication?.company_name}</DialogTitle>
-              <DialogDescription>
-                Respond to this inquiry from {selectedCommunication?.sender_email}
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedCommunication && (
-              <>
-                <div className="space-y-4 my-2">
-                  <div className="p-4 border rounded-md bg-muted/50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Building className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{selectedCommunication.company_name}</span>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {formatDate(selectedCommunication.created_at)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{selectedCommunication.sender_email}</span>
-                      <span className="ml-auto">
-                        {getStatusBadge(selectedCommunication.status)}
-                      </span>
-                    </div>
-                    <p className="whitespace-pre-wrap text-sm border-t pt-2">
-                      {selectedCommunication.message}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium mb-2 flex items-center">
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Your Response
-                    </h4>
-                    <Textarea 
-                      value={responseText} 
-                      onChange={(e) => setResponseText(e.target.value)}
-                      placeholder="Write your response here..."
-                      className="min-h-32"
-                    />
-                  </div>
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setMessageDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleRespond}
-                    disabled={responseText.trim() === ''}
-                    className="gap-2"
-                  >
-                    <Send className="h-4 w-4" />
-                    Send Response
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+        <MessageDialog
+          open={messageDialogOpen}
+          onOpenChange={setMessageDialogOpen}
+          selectedCommunication={selectedCommunication}
+          responseText={responseText}
+          setResponseText={setResponseText}
+          handleRespond={handleRespond}
+          formatDate={formatDate}
+          getStatusBadge={getStatusBadge}
+        />
       </CardContent>
     </Card>
-  );
-};
-
-// Helper component for message tables
-const MessageTable = ({ 
-  communications, 
-  loading, 
-  openMessageDialog, 
-  formatDate, 
-  getStatusBadge,
-  filter,
-  currentPage,
-  onPageChange,
-  itemsPerPage
-}) => {
-  if (loading) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">Loading messages...</p>
-      </div>
-    );
-  }
-  
-  if (communications.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">
-          {filter === 'all' 
-            ? 'No messages found' 
-            : `No ${filter} messages found`}
-        </p>
-      </div>
-    );
-  }
-  
-  // Pagination logic
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedCommunications = communications.slice(startIndex, startIndex + itemsPerPage);
-  
-  return (
-    <>
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Company</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Message</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedCommunications.map((comm) => (
-              <TableRow key={comm.id}>
-                <TableCell className="font-medium">{comm.company_name}</TableCell>
-                <TableCell>{comm.sender_email}</TableCell>
-                <TableCell className="max-w-xs truncate">
-                  {comm.message.substring(0, 60)}{comm.message.length > 60 ? '...' : ''}
-                </TableCell>
-                <TableCell>{formatDate(comm.created_at)}</TableCell>
-                <TableCell>{getStatusBadge(comm.status)}</TableCell>
-                <TableCell className="text-right">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => openMessageDialog(comm)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      
-      {communications.length > itemsPerPage && (
-        <PaginationControls
-          currentPage={currentPage}
-          totalItems={communications.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={onPageChange}
-        />
-      )}
-    </>
   );
 };
 
