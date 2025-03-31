@@ -153,7 +153,8 @@ const DatabasePage = () => {
       'united states of america': 'United States',
       'uk': 'United Kingdom',
       'great britain': 'United Kingdom',
-      'nz': 'New Zealand'
+      'nz': 'New Zealand',
+      'aus': 'Australia'
     };
     
     return countryAliases[normalizedCountry.toLowerCase()] || normalizedCountry;
@@ -165,6 +166,10 @@ const DatabasePage = () => {
   
   const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions].filter(product => {
     if (selectedCountry === "Global") return true;
+    
+    if (!product.country || product.country.trim() === '') {
+      return selectedCountry === "Global";
+    }
     
     const productCountry = normalizeCountry(product.country);
     const normalizedSelectedCountry = normalizeCountry(selectedCountry);

@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Globe, MapPin, Flag } from "lucide-react";
+import { Globe, Flag } from "lucide-react";
 
 interface CountrySelectorProps {
   selectedCountry: string;
@@ -27,29 +27,30 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     typeof country === 'string' ? country.trim() : country
   );
 
-  // Create a case-insensitive check for Australia
+  // Create a case-insensitive check for frequently requested countries
   const hasAustralia = normalizedCountries.some(
     country => country.toLowerCase() === 'australia'
   );
 
-  // If Australia doesn't exist in the list but it's the selected country,
-  // we need to add it to ensure it can be selected
+  // If countries like Australia don't exist in the list but they're selected,
+  // we need to add them to ensure they can be selected
   const displayCountries = hasAustralia ? 
     normalizedCountries : 
     [...normalizedCountries, 'Australia'];
 
-  // Add well-known country names and ensure standard naming
+  // Standard country name mappings
   const standardCountryNames = {
     'usa': 'United States',
     'us': 'United States',
     'united states of america': 'United States',
     'uk': 'United Kingdom',
     'great britain': 'United Kingdom',
-    'nz': 'New Zealand'
+    'nz': 'New Zealand',
+    'aus': 'Australia'
   };
 
   // Add common countries if they don't exist, using standard naming
-  const commonCountries = ['United States', 'United Kingdom', 'Canada', 'New Zealand'];
+  const commonCountries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'New Zealand'];
   commonCountries.forEach(country => {
     if (!displayCountries.some(c => c.toLowerCase() === country.toLowerCase())) {
       displayCountries.push(country);
@@ -91,7 +92,9 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                   Global (All Products)
                 </div>
               </SelectItem>
-              {sortedCountries.map((country) => (
+              {sortedCountries
+                .filter(country => country !== 'Global') // Avoid duplicate Global option
+                .map((country) => (
                 <SelectItem key={country} value={country}>
                   <div className="flex items-center">
                     <Flag className="w-4 h-4 mr-2" />
