@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
@@ -291,7 +290,6 @@ const AdminPage = () => {
             showCleanupDialog={showCleanupDialog}
             setShowCleanupDialog={setShowCleanupDialog}
             onCleanDuplicates={handleCleanDuplicates}
-            onMessageSelect={handleMessageSelect}
           />
         </TabsContent>
         

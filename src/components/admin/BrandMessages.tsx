@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table, 
@@ -53,6 +52,7 @@ interface BrandMessagesProps {
   onMessageSelect: (message: BrandMessage) => void;
   onResponseChange: (response: string) => void;
   onSendResponse: () => void;
+  loading?: boolean; // Add loading prop as optional
 }
 
 const BrandMessages: React.FC<BrandMessagesProps> = ({
@@ -64,7 +64,8 @@ const BrandMessages: React.FC<BrandMessagesProps> = ({
   onDialogOpenChange,
   onMessageSelect,
   onResponseChange,
-  onSendResponse
+  onSendResponse,
+  loading
 }) => {
   return (
     <>

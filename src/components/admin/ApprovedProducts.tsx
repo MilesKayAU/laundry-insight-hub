@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Table, 
@@ -29,6 +30,7 @@ interface ApprovedProductsProps {
   showCleanupDialog: boolean;
   setShowCleanupDialog: (show: boolean) => void;
   onCleanDuplicates: () => void;
+  // Remove onMessageSelect as it's not needed here
 }
 
 const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
