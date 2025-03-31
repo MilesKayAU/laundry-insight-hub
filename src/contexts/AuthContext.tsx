@@ -12,6 +12,7 @@ type AuthContextType = {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -121,6 +122,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get the current domain for redirection
       const domain = window.location.origin;
       
+      // For development, you can toggle email confirmation
+      // Set emailConfirmation to false for faster testing
+      const emailConfirmation = true;
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -130,6 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             username: email.split('@')[0],
           },
           emailRedirectTo: `${domain}/auth`,
+          // Email confirmation can be disabled for development
+          emailConfirmation: emailConfirmation,
         }
       });
 
@@ -137,10 +144,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      toast({
-        title: "Account created!",
-        description: "Your account has been successfully created. Please check your email for verification.",
-      });
+      if (emailConfirmation) {
+        toast({
+          title: "Account created!",
+          description: "Your account has been successfully created. Please check your email for verification.",
+        });
+      } else {
+        // If email confirmation is disabled, user can log in immediately
+        toast({
+          title: "Account created!",
+          description: "Your account has been successfully created and you can log in now.",
+        });
+      }
+      
+      console.log("Registration response:", data);
+      
+      // Check if the user was created but needs to confirm their email
+      if (data?.user?.identities?.length === 0) {
+        toast({
+          title: "Email already exists",
+          description: "This email is already registered. Please try logging in instead.",
+          variant: "destructive",
+        });
+        return;
+      }
     } catch (error: any) {
       console.error('Registration failed:', error);
       toast({
@@ -171,6 +198,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const sendPasswordResetEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for a link to reset your password.",
+      });
+    } catch (error: any) {
+      console.error('Password reset failed:', error);
+      toast({
+        title: "Password reset failed",
+        description: error.message || "There was an error sending the password reset email.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider 
       value={{ 
@@ -179,7 +231,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading, 
         login, 
         register, 
-        logout, 
+        logout,
+        sendPasswordResetEmail, 
         isAuthenticated: !!user 
       }}
     >

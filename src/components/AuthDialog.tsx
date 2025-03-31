@@ -24,7 +24,7 @@ type AuthDialogProps = {
 };
 
 const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
-  const { login, register, isLoading } = useAuth();
+  const { login, register, isLoading, sendPasswordResetEmail } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   
@@ -39,6 +39,11 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
   
   // Verification state
   const [verificationSent, setVerificationSent] = useState(false);
+  
+  // Reset password state
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,13 +66,94 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
     }
   };
   
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await sendPasswordResetEmail(resetEmail);
+      setResetEmailSent(true);
+    } catch (error) {
+      // Error handled in the AuthContext
+    }
+  };
+  
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        {verificationSent ? (
+        {showResetPassword ? (
+          <div className="space-y-4 py-4">
+            {resetEmailSent ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Check Your Email</DialogTitle>
+                  <DialogDescription>
+                    We've sent a password reset link to your email address.
+                  </DialogDescription>
+                </DialogHeader>
+                <Alert>
+                  <AlertDescription>
+                    Please check your inbox and click the link to reset your password.
+                  </AlertDescription>
+                </Alert>
+                <DialogFooter>
+                  <Button 
+                    onClick={() => {
+                      setShowResetPassword(false);
+                      setResetEmailSent(false);
+                    }}
+                  >
+                    Return to Login
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Reset Password</DialogTitle>
+                  <DialogDescription>
+                    Enter your email address and we'll send you a link to reset your password.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handlePasswordReset}>
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Email</Label>
+                      <Input 
+                        id="reset-email" 
+                        type="email" 
+                        placeholder="you@example.com" 
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setShowResetPassword(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Reset Link"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </>
+            )}
+          </div>
+        ) : verificationSent ? (
           <div className="space-y-4 py-4">
             <DialogHeader>
               <DialogTitle>Check Your Email</DialogTitle>
@@ -79,6 +165,11 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
               <AlertDescription>
                 Please check your inbox and click the link to verify your account. 
                 After verification, you can return here to log in.
+              </AlertDescription>
+            </Alert>
+            <Alert className="bg-yellow-50 text-yellow-800 border-yellow-200">
+              <AlertDescription>
+                <strong>Development Note:</strong> If you're not receiving emails, you may need to configure your Supabase email settings or temporarily disable email confirmation in AuthContext.tsx.
               </AlertDescription>
             </Alert>
             <DialogFooter>
@@ -124,6 +215,16 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
                       onChange={(e) => setLoginPassword(e.target.value)}
                       required
                     />
+                  </div>
+                  <div className="text-right">
+                    <Button 
+                      variant="link" 
+                      type="button"
+                      onClick={() => setShowResetPassword(true)}
+                      className="p-0 h-auto"
+                    >
+                      Forgot password?
+                    </Button>
                   </div>
                 </div>
                 

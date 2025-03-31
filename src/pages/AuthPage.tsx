@@ -10,7 +10,7 @@ import { Loader2, Microscope } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const AuthPage = () => {
-  const { login, register, isAuthenticated, isLoading } = useAuth();
+  const { login, register, isAuthenticated, isLoading, sendPasswordResetEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -28,6 +28,11 @@ const AuthPage = () => {
   
   // Verification state
   const [verificationSent, setVerificationSent] = useState(false);
+  
+  // Reset password state
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   
   // Get the return URL from location state
   const returnUrl = location.state?.returnUrl || '/';
@@ -71,6 +76,99 @@ const AuthPage = () => {
     }
   };
   
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      await sendPasswordResetEmail(resetEmail);
+      setResetEmailSent(true);
+    } catch (error: any) {
+      // Error is handled in the AuthContext
+    }
+  };
+  
+  if (showResetPassword) {
+    return (
+      <div className="container mx-auto py-12 px-4">
+        <div className="max-w-md mx-auto">
+          <div className="flex justify-center mb-8">
+            <div className="flex items-center gap-2">
+              <div className="relative w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-science-500 to-tech-500">
+                <Microscope className="h-6 w-6 text-white absolute" />
+              </div>
+              <span className="text-3xl font-bold bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
+                PVAFree
+              </span>
+            </div>
+          </div>
+          
+          <div className="bg-white shadow-lg rounded-lg p-6 border border-gray-200">
+            {resetEmailSent ? (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-center">Check Your Email</h2>
+                <Alert>
+                  <AlertDescription>
+                    We've sent a password reset link to your email. Please check your inbox and click the link to reset your password.
+                  </AlertDescription>
+                </Alert>
+                <Button 
+                  onClick={() => {
+                    setShowResetPassword(false);
+                    setResetEmailSent(false);
+                  }} 
+                  className="w-full"
+                >
+                  Return to Login
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-center">Reset Password</h2>
+                <p className="text-center text-gray-600">
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <Input 
+                      id="reset-email" 
+                      type="email" 
+                      placeholder="you@example.com" 
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Reset Link"
+                    )}
+                  </Button>
+                  
+                  <div className="text-center">
+                    <Button 
+                      variant="link" 
+                      onClick={() => setShowResetPassword(false)}
+                      type="button"
+                    >
+                      Back to Login
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="max-w-md mx-auto">
@@ -92,6 +190,11 @@ const AuthPage = () => {
               <Alert>
                 <AlertDescription>
                   We've sent a verification link to your email. Please check your inbox and click the link to verify your account.
+                </AlertDescription>
+              </Alert>
+              <Alert className="bg-yellow-50 text-yellow-800 border-yellow-200">
+                <AlertDescription>
+                  <strong>Development Note:</strong> If you're not receiving emails, you may need to configure your Supabase email settings or temporarily disable email confirmation in AuthContext.tsx.
                 </AlertDescription>
               </Alert>
               <p className="text-sm text-gray-500 text-center">
@@ -134,6 +237,17 @@ const AuthPage = () => {
                         onChange={(e) => setLoginPassword(e.target.value)}
                         required
                       />
+                    </div>
+                    
+                    <div className="text-right">
+                      <Button 
+                        variant="link" 
+                        type="button"
+                        onClick={() => setShowResetPassword(true)}
+                        className="p-0 h-auto"
+                      >
+                        Forgot password?
+                      </Button>
                     </div>
                     
                     <Button type="submit" className="w-full" disabled={isLoading}>
