@@ -70,9 +70,9 @@ const Navbar = () => {
       <div className="container mx-auto flex justify-between items-center py-4">
         <Link to="/" className="flex items-center">
           <img 
-            src="/lovable-uploads/6d625ade-54c4-438e-8406-af9689c531cc.png" 
+            src="/lovable-uploads/0fdd04f0-7cdc-4a8e-94a4-1e07f79dafe1.png" 
             alt="PVAFree.com Logo" 
-            className="h-16" 
+            className="h-20" 
           />
         </Link>
 
