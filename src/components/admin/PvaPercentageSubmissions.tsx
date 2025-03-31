@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,14 @@ interface PvaSubmission {
 
 // Sample data for demonstration
 const generateSampleSubmissions = (): PvaSubmission[] => {
-  return [
+  // Get stored submissions from localStorage or generate new ones if none exist
+  const storedSubmissions = localStorage.getItem('pvaSubmissions');
+  if (storedSubmissions) {
+    return JSON.parse(storedSubmissions);
+  }
+  
+  // Generate default submissions if none are stored
+  const defaultSubmissions = [
     {
       id: "1",
       productId: "prod-001",
@@ -65,6 +72,10 @@ const generateSampleSubmissions = (): PvaSubmission[] => {
       status: 'pending'
     }
   ];
+  
+  // Store the default submissions
+  localStorage.setItem('pvaSubmissions', JSON.stringify(defaultSubmissions));
+  return defaultSubmissions;
 };
 
 const PvaPercentageSubmissions: React.FC = () => {
@@ -73,23 +84,26 @@ const PvaPercentageSubmissions: React.FC = () => {
   const [selectedSubmission, setSelectedSubmission] = useState<PvaSubmission | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
+  // Save submissions to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('pvaSubmissions', JSON.stringify(submissions));
+  }, [submissions]);
+  
   const handleSelectSubmission = (submission: PvaSubmission) => {
     setSelectedSubmission(submission);
     setDialogOpen(true);
   };
   
   const handleApprove = (submission: PvaSubmission, percentage: number) => {
-    // In a real implementation, this would update the database
-    console.log(`Approving PVA % update for ${submission.brandName} ${submission.productName} to ${percentage}%`);
-    
-    // Update the local state for demonstration
-    setSubmissions(prev => 
-      prev.map(sub => 
-        sub.id === submission.id 
-          ? { ...sub, status: 'approved' as const } 
-          : sub
-      )
+    // Update the submission status
+    const updatedSubmissions = submissions.map(sub => 
+      sub.id === submission.id 
+        ? { ...sub, status: 'approved' as const, proposedPercentage: percentage } 
+        : sub
     );
+    
+    // Save updated submissions
+    setSubmissions(updatedSubmissions);
     
     toast({
       title: "Update Approved",
@@ -99,17 +113,15 @@ const PvaPercentageSubmissions: React.FC = () => {
   };
   
   const handleReject = (submission: PvaSubmission) => {
-    // In a real implementation, this would update the database
-    console.log(`Rejecting PVA % update for ${submission.brandName} ${submission.productName}`);
-    
-    // Update the local state for demonstration
-    setSubmissions(prev => 
-      prev.map(sub => 
-        sub.id === submission.id 
-          ? { ...sub, status: 'rejected' as const } 
-          : sub
-      )
+    // Update the submission status
+    const updatedSubmissions = submissions.map(sub => 
+      sub.id === submission.id 
+        ? { ...sub, status: 'rejected' as const } 
+        : sub
     );
+    
+    // Save updated submissions
+    setSubmissions(updatedSubmissions);
     
     toast({
       title: "Update Rejected",
@@ -118,6 +130,7 @@ const PvaPercentageSubmissions: React.FC = () => {
     });
   };
   
+  // Only show pending submissions
   const pendingSubmissions = submissions.filter(sub => sub.status === 'pending');
   
   return (
@@ -133,6 +146,22 @@ const PvaPercentageSubmissions: React.FC = () => {
               Review and manage user-submitted PVA percentage update requests
             </CardDescription>
           </div>
+          
+          {/* Add a button to reset submissions for testing purposes */}
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem('pvaSubmissions');
+              setSubmissions(generateSampleSubmissions());
+              toast({
+                title: "Submissions Reset",
+                description: "PVA percentage submissions have been reset to default.",
+              });
+            }}
+          >
+            Reset Submissions
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
