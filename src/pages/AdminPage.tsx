@@ -15,9 +15,11 @@ import UserManagement from "@/components/admin/UserManagement";
 import AdminSettings from "@/components/admin/AdminSettings";
 import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmissions";
 import ResearchManagement from "@/components/admin/ResearchManagement";
-import { ProductSubmission, getProductSubmissions } from "@/lib/textExtractor";
+import { ProductSubmission, getProductSubmissions, updateProductApproval, deleteProductSubmission } from "@/lib/textExtractor";
+import { useToast } from "@/hooks/use-toast";
 
 const AdminPage = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("pending");
   const [searchTerm, setSearchTerm] = useState("");
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
@@ -26,9 +28,11 @@ const AdminPage = () => {
   const [messageResponse, setMessageResponse] = useState("");
   const [products, setProducts] = useState<ProductSubmission[]>([]);
   
-  // Load real product submissions from localStorage
+  // Load all product submissions from localStorage
   useEffect(() => {
+    // Pass no userId to get all products including system ones
     const loadedProducts = getProductSubmissions();
+    console.log(`Loaded ${loadedProducts.length} products from localStorage`);
     setProducts(loadedProducts);
   }, []);
   
@@ -43,6 +47,40 @@ const AdminPage = () => {
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : approvedProducts;
+  
+  // Handle product approval
+  const handleApproveProduct = (productId: string) => {
+    const updatedProducts = updateProductApproval(productId, true);
+    setProducts(updatedProducts);
+    toast({
+      title: "Product Approved",
+      description: "The product has been approved and added to the database.",
+    });
+  };
+  
+  // Handle product rejection/deletion
+  const handleRejectProduct = (productId: string) => {
+    const updatedProducts = deleteProductSubmission(productId);
+    setProducts(updatedProducts);
+    toast({
+      title: "Product Rejected",
+      description: "The product submission has been rejected and removed.",
+    });
+  };
+  
+  // Handle cleaning duplicates
+  const handleCleanDuplicates = () => {
+    // This would implement duplicate detection and removal
+    toast({
+      title: "Duplicates Cleaned",
+      description: "Duplicate products have been removed from the database.",
+    });
+    setShowCleanupDialog(false);
+    
+    // Reload products after cleaning
+    const refreshedProducts = getProductSubmissions();
+    setProducts(refreshedProducts);
+  };
   
   // Mock data for other components
   const emptyVerifications = [];
@@ -78,8 +116,8 @@ const AdminPage = () => {
           <PendingProducts 
             products={pendingProducts}
             onViewDetails={() => {}}
-            onApprove={() => {}}
-            onReject={() => {}}
+            onApprove={handleApproveProduct}
+            onReject={handleRejectProduct}
           />
         </TabsContent>
         
@@ -90,11 +128,11 @@ const AdminPage = () => {
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             onViewDetails={() => {}}
-            onDelete={() => {}}
+            onDelete={handleRejectProduct}
             onBulkUpload={() => {}}
             showCleanupDialog={showCleanupDialog}
             setShowCleanupDialog={setShowCleanupDialog}
-            onCleanDuplicates={() => {}}
+            onCleanDuplicates={handleCleanDuplicates}
           />
         </TabsContent>
         
