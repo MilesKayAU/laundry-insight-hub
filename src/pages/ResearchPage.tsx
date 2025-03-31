@@ -31,7 +31,26 @@ const ResearchPage = () => {
 
   useEffect(() => {
     fetchResearchLinks();
+
+    // Listen for localStorage changes made from other tabs/components
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
+
+  // Handle changes in localStorage made by other components (like ResearchManagement)
+  const handleStorageChange = (e: StorageEvent) => {
+    if (e.key === 'research_links' && e.newValue) {
+      try {
+        const updatedLinks = JSON.parse(e.newValue);
+        setResearchLinks(updatedLinks);
+      } catch (error) {
+        console.error('Error parsing research links from storage event:', error);
+      }
+    }
+  };
 
   const fetchResearchLinks = async () => {
     try {
@@ -50,7 +69,14 @@ const ResearchPage = () => {
       if (data && data.length > 0) {
         setResearchLinks(data);
         // Update localStorage with the latest data for backup
-        localStorage.setItem('research_links', JSON.stringify(data));
+        // Use dispatched event to ensure cross-component synchronization
+        const storageValue = JSON.stringify(data);
+        localStorage.setItem('research_links', storageValue);
+        // Dispatch a custom event to notify other components of the change
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'research_links',
+          newValue: storageValue
+        }));
       } else {
         // Try to use data from localStorage if no Supabase data
         const storedLinks = localStorage.getItem('research_links');
@@ -85,6 +111,15 @@ const ResearchPage = () => {
     }
   };
 
+  // Force refresh data when user navigates to this page
+  useEffect(() => {
+    const refreshInterval = setInterval(fetchResearchLinks, 60000); // Refresh every minute
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, []);
+
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
@@ -96,12 +131,17 @@ const ResearchPage = () => {
         </div>
         
         {isAdmin && (
-          <Button asChild>
-            <Link to="/admin">
-              <Book className="h-4 w-4 mr-2" />
-              Manage Research Links
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild>
+              <Link to="/admin">
+                <Book className="h-4 w-4 mr-2" />
+                Manage Research Links
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={fetchResearchLinks}>
+              Refresh Data
+            </Button>
+          </div>
         )}
       </div>
       
