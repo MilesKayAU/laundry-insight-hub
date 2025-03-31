@@ -158,7 +158,8 @@ const ResearchManagement = () => {
       }
 
       setDialogOpen(false);
-      fetchResearchLinks();
+      // Refetch the links to update the UI
+      await fetchResearchLinks();
       setEditingLink(null);
     } catch (error: any) {
       console.error('Error saving research link:', error);
@@ -180,12 +181,14 @@ const ResearchManagement = () => {
 
       if (error) throw error;
 
+      // Update the local state to remove the deleted item
+      setResearchLinks(prevLinks => prevLinks.filter(link => link.id !== id));
+      
       toast({
         title: "Research link deleted",
         description: "The research link has been successfully deleted.",
       });
 
-      fetchResearchLinks();
       setDeleteDialogOpen(false);
     } catch (error: any) {
       console.error('Error deleting research link:', error);
@@ -356,8 +359,10 @@ const ResearchManagement = () => {
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Dialog open={deleteDialogOpen && deleting === link.id} onOpenChange={(open) => {
-                          setDeleteDialogOpen(open);
-                          if (!open) setDeleting(null);
+                          if (!open) {
+                            setDeleteDialogOpen(false);
+                            setDeleting(null);
+                          }
                         }}>
                           <DialogTrigger asChild>
                             <Button
@@ -384,7 +389,10 @@ const ResearchManagement = () => {
                             <DialogFooter>
                               <Button 
                                 variant="outline" 
-                                onClick={() => setDeleteDialogOpen(false)}
+                                onClick={() => {
+                                  setDeleteDialogOpen(false);
+                                  setDeleting(null);
+                                }}
                               >
                                 Cancel
                               </Button>
