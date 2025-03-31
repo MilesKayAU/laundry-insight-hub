@@ -32,7 +32,7 @@ const generateSampleSubmissions = (): PvaSubmission[] => {
   }
   
   // Generate default submissions if none are stored
-  const defaultSubmissions = [
+  const defaultSubmissions: PvaSubmission[] = [
     {
       id: "1",
       productId: "prod-001",
