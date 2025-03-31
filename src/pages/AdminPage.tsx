@@ -15,6 +15,7 @@ import UserManagement from "@/components/admin/UserManagement";
 import AdminSettings from "@/components/admin/AdminSettings";
 import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmissions";
 import ResearchManagement from "@/components/admin/ResearchManagement";
+import { ProductSubmission } from "@/lib/textExtractor";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("pending");
@@ -24,18 +25,85 @@ const AdminPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [messageResponse, setMessageResponse] = useState("");
   
-  // Mock data for components to prevent undefined errors
-  const emptyProducts = [];
+  // Mock data for products with realistic values
+  const mockProducts: ProductSubmission[] = [
+    {
+      id: "1",
+      brand: "EcoBeauty",
+      name: "Hydrating Facial Cleanser",
+      type: "Cleanser",
+      pvaStatus: "contains",
+      pvaPercentage: "2.5",
+      ingredients: "Water, Glycerin, Polyvinyl Alcohol, Aloe Vera Extract, Chamomile Oil",
+      websiteUrl: "https://www.ecobeauty.com/products/facial-cleanser",
+      submittedBy: "user123",
+      timestamp: new Date().toISOString(),
+      status: "approved"
+    },
+    {
+      id: "2",
+      brand: "NatureCare",
+      name: "Moisturizing Face Cream",
+      type: "Moisturizer",
+      pvaStatus: "verified-free",
+      pvaPercentage: "0",
+      ingredients: "Aqua, Cetyl Alcohol, Glycerin, Shea Butter, Jojoba Oil",
+      websiteUrl: "https://www.naturecare.com/face-cream",
+      submittedBy: "user456",
+      timestamp: new Date().toISOString(),
+      status: "approved"
+    },
+    {
+      id: "3",
+      brand: "PureSkin",
+      name: "Exfoliating Scrub",
+      type: "Exfoliant",
+      pvaStatus: "needs-verification",
+      pvaPercentage: null,
+      ingredients: "Water, Walnut Shell Powder, Glycerin, Vitamin E, Tea Tree Oil",
+      websiteUrl: "https://www.pureskin.com/scrub",
+      submittedBy: "user789",
+      timestamp: new Date().toISOString(),
+      status: "pending"
+    },
+    {
+      id: "4",
+      brand: "GlowUp",
+      name: "Vitamin C Serum",
+      type: "Serum",
+      pvaStatus: "inconclusive",
+      pvaPercentage: null,
+      ingredients: "Water, Ascorbic Acid, Ferulic Acid, Vitamin E, Hyaluronic Acid",
+      websiteUrl: "https://www.glowup.com/vitamin-c-serum",
+      submittedBy: "user321",
+      timestamp: new Date().toISOString(),
+      status: "pending"
+    }
+  ];
+  
+  // Filter products by status
+  const pendingProducts = mockProducts.filter(product => product.status === "pending");
+  const approvedProducts = mockProducts.filter(product => product.status === "approved");
+  
+  // Filter approved products by search term
+  const filteredApprovedProducts = searchTerm 
+    ? approvedProducts.filter(p => 
+        p.brand.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : approvedProducts;
+  
+  // Mock data for other components
   const emptyVerifications = [];
   const emptyMessages = [];
   const emptyProfiles = [];
   
   // Mock keyword categories 
   const mockKeywordCategories = {
-    commonNames: [],
-    chemicalSynonyms: [],
-    inciTerms: [],
-    additional: []
+    commonNames: ["pva", "pvoh", "polyvinyl alcohol"],
+    chemicalSynonyms: ["ethenol homopolymer", "vinyl alcohol polymer"],
+    inciTerms: ["pva", "polyvinyl alcohol"],
+    additional: ["alcohol homopolymer"]
   };
 
   return (
@@ -57,7 +125,7 @@ const AdminPage = () => {
         
         <TabsContent value="pending">
           <PendingProducts 
-            products={emptyProducts}
+            products={pendingProducts}
             onViewDetails={() => {}}
             onApprove={() => {}}
             onReject={() => {}}
@@ -66,8 +134,8 @@ const AdminPage = () => {
         
         <TabsContent value="approved">
           <ApprovedProducts 
-            products={emptyProducts}
-            filteredProducts={emptyProducts}
+            products={approvedProducts}
+            filteredProducts={filteredApprovedProducts}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             onViewDetails={() => {}}
