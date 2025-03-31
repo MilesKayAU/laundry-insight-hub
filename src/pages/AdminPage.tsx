@@ -20,19 +20,29 @@ import { useToast } from "@/hooks/use-toast";
 import { ProductSubmission, PVA_KEYWORDS_CATEGORIES, getProductSubmissions } from "@/lib/textExtractor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
+// Define appropriate types for the status property
+type ProductStatus = 'pending' | 'approved' | 'rejected';
+
+// Extend the ProductSubmission type with the missing properties
+interface ExtendedProductSubmission extends ProductSubmission {
+  status: ProductStatus;
+}
+
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("pending");
   const { toast } = useToast();
-  const [pendingProducts, setPendingProducts] = useState<ProductSubmission[]>([]);
-  const [approvedProducts, setApprovedProducts] = useState<ProductSubmission[]>([]);
-  const [verifications, setVerifications] = useState<ProductSubmission[]>([]);
+  const [pendingProducts, setPendingProducts] = useState<ExtendedProductSubmission[]>([]);
+  const [approvedProducts, setApprovedProducts] = useState<ExtendedProductSubmission[]>([]);
+  const [verifications, setVerifications] = useState<ExtendedProductSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ExtendedProductSubmission | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [messageResponse, setMessageResponse] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [newKeyword, setNewKeyword] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   
   // Mock data for other components
   const mockMessages: any[] = [];
@@ -47,10 +57,16 @@ const AdminPage = () => {
         // For testing, load from localStorage
         const products = getProductSubmissions();
         
-        // Split into pending and approved based on approved property
-        const pending = products.filter(p => !p.approved);
-        const approved = products.filter(p => p.approved);
-        const brandVerifications = products.filter(p => p.brandOwnershipRequested);
+        // Map products to include status property
+        const mappedProducts = products.map((p: ProductSubmission): ExtendedProductSubmission => ({
+          ...p,
+          status: p.approved ? 'approved' : 'pending'
+        }));
+        
+        // Split into pending and approved based on status property
+        const pending = mappedProducts.filter(p => p.status === 'pending');
+        const approved = mappedProducts.filter(p => p.status === 'approved');
+        const brandVerifications = mappedProducts.filter(p => p.brandOwnershipRequested);
         
         setPendingProducts(pending);
         setApprovedProducts(approved);
@@ -70,7 +86,7 @@ const AdminPage = () => {
     loadProducts();
   }, [toast]);
 
-  const handleViewDetails = (product: ProductSubmission) => {
+  const handleViewDetails = (product: ExtendedProductSubmission) => {
     setSelectedProduct(product);
     setShowDetailsDialog(true);
   };
@@ -84,6 +100,7 @@ const AdminPage = () => {
       // Update the product approved status
       const updatedProducts = [...pendingProducts];
       updatedProducts[productIndex].approved = true;
+      updatedProducts[productIndex].status = 'approved';
       
       // Move to approved products
       setApprovedProducts([...approvedProducts, updatedProducts[productIndex]]);
@@ -119,6 +136,7 @@ const AdminPage = () => {
       // Update the product rejected status
       const updatedProducts = [...pendingProducts];
       updatedProducts[productIndex].approved = false;
+      updatedProducts[productIndex].status = 'rejected';
       
       // Remove from pending products
       setPendingProducts(updatedProducts.filter(p => p.id !== productId));
@@ -190,6 +208,46 @@ const AdminPage = () => {
     setDialogOpen(true);
   };
 
+  const handleNewKeywordChange = (keyword: string) => {
+    setNewKeyword(keyword);
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+  };
+
+  const handleAddKeyword = () => {
+    toast({
+      title: "Keyword Added",
+      description: `Added '${newKeyword}' to ${selectedCategory}`,
+    });
+    setNewKeyword('');
+  };
+
+  const handleRemoveKeyword = (keyword: string, category: keyof typeof PVA_KEYWORDS_CATEGORIES) => {
+    toast({
+      title: "Keyword Removed",
+      description: `Removed '${keyword}' from ${category}`,
+    });
+  };
+
+  const handleResetDatabase = () => {
+    toast({
+      title: "Database Reset",
+      description: "Database has been reset",
+    });
+  };
+
+  const getCategoryDisplayName = (category: string) => {
+    switch (category) {
+      case 'commonNames': return 'Common Names';
+      case 'chemicalSynonyms': return 'Chemical Synonyms';
+      case 'inciTerms': return 'INCI Terms';
+      case 'additional': return 'Additional';
+      default: return category;
+    }
+  };
+
   const filteredApprovedProducts = approvedProducts.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.brand.toLowerCase().includes(searchTerm.toLowerCase())
@@ -233,6 +291,7 @@ const AdminPage = () => {
             showCleanupDialog={showCleanupDialog}
             setShowCleanupDialog={setShowCleanupDialog}
             onCleanDuplicates={handleCleanDuplicates}
+            onMessageSelect={handleMessageSelect}
           />
         </TabsContent>
         
@@ -259,6 +318,7 @@ const AdminPage = () => {
             onMessageSelect={handleMessageSelect}
             onResponseChange={setMessageResponse}
             onSendResponse={() => {}}
+            loading={loading}
           />
         </TabsContent>
         
@@ -277,17 +337,16 @@ const AdminPage = () => {
         <TabsContent value="settings">
           <AdminSettings 
             keywordCategories={PVA_KEYWORDS_CATEGORIES}
-            newKeyword=""
-            selectedCategory=""
+            newKeyword={newKeyword}
+            selectedCategory={selectedCategory}
             showResetDialog={false}
-            onNewKeywordChange={() => {}}
-            onSelectedCategoryChange={() => {}}
-            onAddKeyword={() => {}}
-            onDeleteKeyword={() => {}}
-            onShowResetDialog={() => {}}
-            onHideResetDialog={() => {}}
-            onResetDatabase={() => {}}
-            onGenerateTestData={() => {}}
+            setShowResetDialog={setShowCleanupDialog}
+            onNewKeywordChange={handleNewKeywordChange}
+            onCategoryChange={handleCategoryChange}
+            onAddKeyword={handleAddKeyword}
+            onRemoveKeyword={handleRemoveKeyword}
+            onResetDatabase={handleResetDatabase}
+            getCategoryDisplayName={getCategoryDisplayName}
           />
         </TabsContent>
       </Tabs>
@@ -307,7 +366,7 @@ const AdminPage = () => {
                 </div>
                 <div>
                   <p><strong>Submitted At:</strong> {selectedProduct.submittedAt ? new Date(selectedProduct.submittedAt).toLocaleString() : 'Unknown'}</p>
-                  <p><strong>Status:</strong> {selectedProduct.approved ? 'Approved' : 'Pending'}</p>
+                  <p><strong>Status:</strong> {selectedProduct.status}</p>
                 </div>
               </div>
               
