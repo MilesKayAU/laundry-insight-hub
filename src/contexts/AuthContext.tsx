@@ -123,8 +123,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const domain = window.location.origin;
       
       // For development, you can toggle email confirmation
-      // Set emailConfirmation to false for faster testing
-      const emailConfirmation = true;
+      // This is just a flag to control UI messaging, not actual Supabase behavior
+      const skipEmailConfirmation = false;
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -135,8 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             username: email.split('@')[0],
           },
           emailRedirectTo: `${domain}/auth`,
-          // Email confirmation can be disabled for development
-          emailConfirmation: emailConfirmation,
+          // Note: We removed the emailConfirmation property as it's not supported
         }
       });
 
@@ -144,13 +143,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      if (emailConfirmation) {
+      if (!skipEmailConfirmation) {
         toast({
           title: "Account created!",
           description: "Your account has been successfully created. Please check your email for verification.",
         });
       } else {
-        // If email confirmation is disabled, user can log in immediately
+        // If email confirmation is not required (based on our UI flag)
         toast({
           title: "Account created!",
           description: "Your account has been successfully created and you can log in now.",
