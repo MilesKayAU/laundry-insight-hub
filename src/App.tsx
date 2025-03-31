@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,6 +16,7 @@ import PvaFreePage from "./pages/PvaFreePage";
 import CertificationPage from "./pages/CertificationPage";
 import AuthPage from "./pages/AuthPage";
 import BrandProfilePage from "./pages/BrandProfilePage";
+import ProfilePage from "./pages/ProfilePage";
 import PvaPercentageUpdatePage from "./pages/PvaPercentageUpdatePage";
 import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
@@ -65,6 +67,11 @@ const App: React.FC = () => {
                   <Route path="/contribute" element={
                     <AuthGuard>
                       <ContributePage />
+                    </AuthGuard>
+                  } />
+                  <Route path="/profile" element={
+                    <AuthGuard>
+                      <ProfilePage />
                     </AuthGuard>
                   } />
                   <Route path="/database" element={<DatabasePage />} />
