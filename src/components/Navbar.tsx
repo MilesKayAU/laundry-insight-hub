@@ -24,8 +24,8 @@ export function Navbar() {
 
   const openAuthDialog = useCallback(() => {
     setOpen(false);
-    setOpen(true);
-  }, [setOpen]);
+    navigate('/auth');
+  }, [navigate]);
 
   const handleSignOut = async () => {
     try {

@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "@/components/ui/toaster"
 
 import MainLayout from '@/layouts/MainLayout';
@@ -26,9 +27,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <MainLayout>
-            <Toaster />
-            <Routes>
+          <Routes>
+            <Route element={<MainLayout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/database" element={<DatabasePage />} />
               <Route path="/auth" element={<AuthPage />} />
@@ -42,8 +42,9 @@ function App() {
               <Route path="/certification" element={<CertificationPage />} />
               <Route path="/pva-percentage/:brandName/:productName" element={<PvaPercentageUpdatePage />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </MainLayout>
+            </Route>
+          </Routes>
+          <Toaster />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -51,6 +51,14 @@ const AdminPage = () => {
     console.log("Verify product:", product);
   };
 
+  // Define keyword categories
+  const keywordCategories = {
+    commonNames: [],
+    chemicalSynonyms: [],
+    inciTerms: [],
+    additional: []
+  };
+
   return (
     <AuthGuard>
       <div className="container mx-auto py-10 pb-32 px-4">
@@ -82,15 +90,7 @@ const AdminPage = () => {
           <TabsContent value="approved">
             <ApprovedProducts 
               products={sampleApprovedProducts}
-              filteredProducts={sampleApprovedProducts}
-              searchTerm=""
-              onSearchChange={() => {}}
               onViewDetails={handleViewDetails}
-              onUpdateMetadata={() => {}}
-              onArchiveProduct={() => {}}
-              onRestockProduct={() => {}}
-              onDeleteProduct={() => {}}
-              onCreateBroadcast={() => {}}
             />
           </TabsContent>
           
@@ -112,11 +112,11 @@ const AdminPage = () => {
               profiles={[]}
               selectedMessage={null}
               messageResponse=""
-              onSelectMessage={() => {}}
               onChangeResponse={() => {}}
               onSendResponse={() => {}}
               onDeleteMessage={() => {}}
               onCloseMessageDetails={() => {}}
+              onMessageSelect={() => {}}
             />
           </TabsContent>
           
@@ -134,7 +134,7 @@ const AdminPage = () => {
           
           <TabsContent value="settings">
             <AdminSettings 
-              keywordCategories={[]}
+              keywordCategories={keywordCategories}
               newKeyword=""
               selectedCategory=""
               showResetDialog={false}

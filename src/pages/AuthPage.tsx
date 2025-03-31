@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, Microscope } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const AuthPage = () => {
-  const { login, register, isAuthenticated, isLoading, sendPasswordResetEmail } = useAuth();
+  const { signIn, signUp, isAuthenticated, isLoading, sendPasswordResetEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -57,7 +56,7 @@ const AuthPage = () => {
     e.preventDefault();
     setError(null);
     try {
-      await login(loginEmail, loginPassword);
+      await signIn(loginEmail, loginPassword);
       // Navigation happens in useEffect when isAuthenticated changes
     } catch (error: any) {
       // Error is handled in the AuthContext
@@ -68,7 +67,7 @@ const AuthPage = () => {
     e.preventDefault();
     setError(null);
     try {
-      await register(registerName, registerEmail, registerPassword);
+      await signUp(registerName, registerEmail, registerPassword);
       setVerificationSent(true);
       // Navigation happens in useEffect when isAuthenticated changes
     } catch (error: any) {
