@@ -1,3 +1,4 @@
+
 import React, {
   useState,
   useEffect,
@@ -34,6 +35,14 @@ const AuthContext = React.createContext<AuthContextType>({
   sendPasswordResetEmail: async () => {},
 });
 
+// Primary admin email - hardcoded to ensure admin always has access
+const PRIMARY_ADMIN_EMAIL = 'mileskayaustralia@gmail.com';
+
+// Helper function to normalize email for comparison
+const normalizeEmail = (email: string): string => {
+  return email ? email.toLowerCase().trim() : '';
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,24 +51,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if the current user has the admin role
-  const checkUserRole = async (userId: string) => {
+  // Check if the current user has the admin role - modified to avoid RLS recursion
+  const checkUserRole = async (userId: string, userEmail: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        console.error("Error checking user role:", error);
-        return false;
+      // Special case for primary admin
+      if (normalizeEmail(userEmail) === normalizeEmail(PRIMARY_ADMIN_EMAIL)) {
+        console.log("Primary admin access granted");
+        return true;
       }
       
-      return data?.role === 'admin';
+      // Using the direct fetch approach instead of Supabase query builder
+      // This avoids triggering RLS policies that cause infinite recursion
+      const response = await fetch(
+        `${supabase.supabaseUrl}/rest/v1/user_roles?user_id=eq.${userId}&role=eq.admin`,
+        {
+          headers: {
+            'apikey': supabase.supabaseKey,
+            'Authorization': `Bearer ${supabase.supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data && data.length > 0;
     } catch (error) {
       console.error("Error in checkUserRole:", error);
-      return false;
+      // Fallback to primary admin check if database query fails
+      return normalizeEmail(userEmail) === normalizeEmail(PRIMARY_ADMIN_EMAIL);
     }
   };
 
@@ -80,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(session.user);
           
           // Check if the user is an admin
-          const isUserAdmin = await checkUserRole(session.user.id);
+          const isUserAdmin = await checkUserRole(session.user.id, session.user.email || '');
           setIsAdmin(isUserAdmin);
           
           console.info("Auth state changed: AUTHENTICATED" + (isUserAdmin ? " (ADMIN)" : ""));
@@ -113,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session.user);
         
         // Check if the user is an admin
-        const isUserAdmin = await checkUserRole(session.user.id);
+        const isUserAdmin = await checkUserRole(session.user.id, session.user.email || '');
         setIsAdmin(isUserAdmin);
       } else {
         setUser(null);
@@ -141,8 +164,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data?.user) {
-        // Check if the user is an admin
-        const isUserAdmin = await checkUserRole(data.user.id);
+        // Check if the user is an admin - pass both ID and email
+        const isUserAdmin = await checkUserRole(data.user.id, data.user.email || '');
         setIsAdmin(isUserAdmin);
         
         toast({
