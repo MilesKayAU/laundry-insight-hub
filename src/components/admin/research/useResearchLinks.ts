@@ -99,11 +99,15 @@ export const useResearchLinks = () => {
 
   const deleteResearchLink = async (id: string) => {
     try {
+      console.log('Deleting research link with ID:', id);
+      
       if (id.startsWith('initial-') || id.startsWith('local-')) {
+        console.log('Deleting local research link');
         const updatedLinks = researchLinks.filter(link => link.id !== id);
         setResearchLinks(updatedLinks);
         syncResearchData(updatedLinks);
       } else {
+        console.log('Deleting Supabase research link');
         const { error } = await supabase
           .from('research_links')
           .delete()
@@ -114,17 +118,30 @@ export const useResearchLinks = () => {
           throw error;
         }
         
-        // Update local state first for immediate UI feedback
+        // Update local state immediately for better UX
         const updatedLinks = researchLinks.filter(link => link.id !== id);
         setResearchLinks(updatedLinks);
         syncResearchData(updatedLinks);
         
-        // Then trigger a fresh fetch
+        // Then refresh the data
         await loadResearchLinks();
       }
+      
+      toast({
+        title: "Success",
+        description: "Research link successfully deleted",
+      });
+      
       return true;
     } catch (error) {
       console.error('Error deleting research link:', error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to delete research link",
+        variant: "destructive",
+      });
+      
       return false;
     }
   };

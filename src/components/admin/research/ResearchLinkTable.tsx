@@ -78,62 +78,65 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Dialog 
-                    open={deleteDialogOpen && deletingId === link.id} 
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setDeleteDialogOpen(false);
-                        setDeletingId(null);
-                      }
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setDeletingId(link.id);
+                      setDeleteDialogOpen(true);
                     }}
                   >
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          setDeletingId(link.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Confirm Deletion</DialogTitle>
-                        <DialogDescription>
-                          Are you sure you want to delete this research link? This action cannot be undone.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="py-4">
-                        <p className="font-medium">{link.title}</p>
-                      </div>
-                      <DialogFooter>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => {
-                            setDeleteDialogOpen(false);
-                            setDeletingId(null);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button 
-                          variant="destructive"
-                          onClick={() => onDelete(link.id)}
-                        >
-                          Delete
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                    <Trash className="h-4 w-4" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      
+      {/* Move dialog outside of the map to fix deletion issues */}
+      <Dialog 
+        open={deleteDialogOpen} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteDialogOpen(false);
+            setDeletingId(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this research link? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setDeletingId(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if (deletingId) {
+                  onDelete(deletingId);
+                  setDeleteDialogOpen(false);
+                  setDeletingId(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

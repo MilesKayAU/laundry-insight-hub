@@ -85,27 +85,19 @@ const ResearchManagement = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      console.log('Handling delete for ID:', id);
       const success = await deleteResearchLink(id);
       
-      if (success) {
-        toast({
-          title: "Research link deleted",
-          description: "The research link has been successfully deleted.",
-        });
-      } else {
+      if (!success) {
         throw new Error("Failed to delete research link");
       }
-      
-      setDeleteDialogOpen(false);
-      setDeletingId(null);
     } catch (error: any) {
-      console.error('Error deleting research link:', error);
+      console.error('Error in handleDelete:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to delete research link. Please try again.",
         variant: "destructive",
       });
-      setDeletingId(null);
     }
   };
 
