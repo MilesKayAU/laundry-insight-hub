@@ -54,10 +54,18 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     
     // If changing PVA percentage, validate and update the local state
     if (name === 'pvaPercentage') {
-      const numValue = value === '' ? '' : Number(value);
+      // Handle empty string case
+      if (value === '') {
+        setPvaPercentageNumber(null);
+        onDetailsChange({ ...details, [name]: value });
+        return;
+      }
       
-      if (value === '' || (!isNaN(numValue) && numValue >= 0 && numValue <= 100)) {
-        setPvaPercentageNumber(value === '' ? null : Number(value));
+      // Convert to number and validate
+      const numValue = Number(value);
+      
+      if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+        setPvaPercentageNumber(numValue);
         onDetailsChange({ ...details, [name]: value });
       }
     } else {
