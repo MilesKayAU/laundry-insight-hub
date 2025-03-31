@@ -130,21 +130,36 @@ const ResearchManagement = () => {
 
         if (error) throw error;
 
+        // Update the local state to reflect the changes
+        setResearchLinks(prevLinks => 
+          prevLinks.map(link => 
+            link.id === editingLink.id 
+              ? { ...link, title: values.title, description: values.description, url: values.url }
+              : link
+          )
+        );
+
         toast({
           title: "Research link updated",
           description: "The research link has been successfully updated.",
         });
       } else {
         // Add new link
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('research_links')
           .insert([{
             title: values.title,
             description: values.description,
             url: values.url
-          }]);
+          }])
+          .select();
 
         if (error) throw error;
+
+        // Add the new link to the local state
+        if (data && data.length > 0) {
+          setResearchLinks(prevLinks => [data[0] as ResearchLink, ...prevLinks]);
+        }
 
         toast({
           title: "Research link added",
@@ -153,7 +168,6 @@ const ResearchManagement = () => {
       }
 
       setDialogOpen(false);
-      fetchResearchLinks();
       setEditingLink(null);
     } catch (error: any) {
       console.error('Error saving research link:', error);
@@ -176,12 +190,16 @@ const ResearchManagement = () => {
 
       if (error) throw error;
 
+      // Update the local state to remove the deleted item
+      setResearchLinks(prevLinks => 
+        prevLinks.filter(link => link.id !== linkToDelete.id)
+      );
+
       toast({
         title: "Research link deleted",
         description: "The research link has been successfully deleted.",
       });
 
-      fetchResearchLinks();
       setDeleteDialogOpen(false);
       setLinkToDelete(null);
     } catch (error: any) {
