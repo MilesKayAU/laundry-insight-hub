@@ -32,58 +32,62 @@ const AdminPage = () => {
       brand: "EcoBeauty",
       name: "Hydrating Facial Cleanser",
       type: "Cleanser",
-      pvaStatus: "contains",
-      pvaPercentage: "2.5",
+      pvaStatus: "contains" as const,
+      pvaPercentage: 2.5,
       ingredients: "Water, Glycerin, Polyvinyl Alcohol, Aloe Vera Extract, Chamomile Oil",
       websiteUrl: "https://www.ecobeauty.com/products/facial-cleanser",
       submittedBy: "user123",
       timestamp: new Date().toISOString(),
-      status: "approved"
+      approved: true,
+      brandVerified: false
     },
     {
       id: "2",
       brand: "NatureCare",
       name: "Moisturizing Face Cream",
       type: "Moisturizer",
-      pvaStatus: "verified-free",
-      pvaPercentage: "0",
+      pvaStatus: "verified-free" as const,
+      pvaPercentage: 0,
       ingredients: "Aqua, Cetyl Alcohol, Glycerin, Shea Butter, Jojoba Oil",
       websiteUrl: "https://www.naturecare.com/face-cream",
       submittedBy: "user456",
       timestamp: new Date().toISOString(),
-      status: "approved"
+      approved: true,
+      brandVerified: true
     },
     {
       id: "3",
       brand: "PureSkin",
       name: "Exfoliating Scrub",
       type: "Exfoliant",
-      pvaStatus: "needs-verification",
+      pvaStatus: "needs-verification" as const,
       pvaPercentage: null,
       ingredients: "Water, Walnut Shell Powder, Glycerin, Vitamin E, Tea Tree Oil",
       websiteUrl: "https://www.pureskin.com/scrub",
       submittedBy: "user789",
       timestamp: new Date().toISOString(),
-      status: "pending"
+      approved: false,
+      brandVerified: false
     },
     {
       id: "4",
       brand: "GlowUp",
       name: "Vitamin C Serum",
       type: "Serum",
-      pvaStatus: "inconclusive",
+      pvaStatus: "inconclusive" as const,
       pvaPercentage: null,
       ingredients: "Water, Ascorbic Acid, Ferulic Acid, Vitamin E, Hyaluronic Acid",
       websiteUrl: "https://www.glowup.com/vitamin-c-serum",
       submittedBy: "user321",
       timestamp: new Date().toISOString(),
-      status: "pending"
+      approved: false,
+      brandVerified: false
     }
   ];
   
-  // Filter products by status
-  const pendingProducts = mockProducts.filter(product => product.status === "pending");
-  const approvedProducts = mockProducts.filter(product => product.status === "approved");
+  // Filter products by approved status
+  const pendingProducts = mockProducts.filter(product => !product.approved);
+  const approvedProducts = mockProducts.filter(product => product.approved);
   
   // Filter approved products by search term
   const filteredApprovedProducts = searchTerm 
