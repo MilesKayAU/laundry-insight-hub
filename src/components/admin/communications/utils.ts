@@ -8,3 +8,9 @@ export const formatDate = (dateString: string) => {
     minute: '2-digit'
   });
 };
+
+export const truncateText = (text: string, maxLength: number = 100) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+};
