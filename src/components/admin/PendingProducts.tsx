@@ -15,18 +15,18 @@ import { CheckCircle, XCircle, Eye, Search } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 
 interface PendingProductsProps {
-  products?: ProductSubmission[];
-  onViewDetails?: (product: ProductSubmission) => void;
-  onApprove?: (productId: string) => void;
-  onReject?: (productId: string) => void;
+  products: ProductSubmission[];
+  onViewDetails: (product: ProductSubmission) => void;
+  onApprove: (productId: string) => void;
+  onReject: (productId: string) => void;
   onVerify?: (product: ProductSubmission) => void;
 }
 
 const PendingProducts: React.FC<PendingProductsProps> = ({ 
-  products = [], 
-  onViewDetails = () => {}, 
-  onApprove = () => {}, 
-  onReject = () => {},
+  products, 
+  onViewDetails, 
+  onApprove, 
+  onReject,
   onVerify 
 }) => {
   return (
@@ -38,7 +38,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {products && products.length > 0 ? (
+        {products.length > 0 ? (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
