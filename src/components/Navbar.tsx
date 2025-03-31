@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -68,15 +69,11 @@ const Navbar = () => {
     <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto flex justify-between items-center py-3">
         <Link to="/" className="flex items-center gap-1">
-          <div className="relative w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-science-500 to-tech-500 animate-pulse-glow">
-            <Microscope className="h-5 w-5 text-white absolute" />
-          </div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
-            PVAFree
-          </span>
-          <span className="text-2xl font-bold bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
-            .com
-          </span>
+          <img 
+            src="/lovable-uploads/cd180f6c-11af-4fb5-ac51-369676bec032.png" 
+            alt="PVAFree.com Logo" 
+            className="h-10" 
+          />
         </Link>
 
         {isMobile ? (
