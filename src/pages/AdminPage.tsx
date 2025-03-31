@@ -18,10 +18,25 @@ import ResearchManagement from "@/components/admin/ResearchManagement";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("pending");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [messageResponse, setMessageResponse] = useState("");
   
   // Mock data for components to prevent undefined errors
   const emptyProducts = [];
   const emptyVerifications = [];
+  const emptyMessages = [];
+  const emptyProfiles = [];
+  
+  // Mock keyword categories 
+  const mockKeywordCategories = {
+    commonNames: [],
+    chemicalSynonyms: [],
+    inciTerms: [],
+    additional: []
+  };
 
   return (
     <div className="container mx-auto py-10 pb-32 px-4">
@@ -53,12 +68,14 @@ const AdminPage = () => {
           <ApprovedProducts 
             products={emptyProducts}
             filteredProducts={emptyProducts}
-            searchTerm=""
-            onSearchChange={() => {}}
-            onView={() => {}}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onViewDetails={() => {}}
             onDelete={() => {}}
-            onEdit={() => {}}
-            onPvaEdit={() => {}}
+            onBulkUpload={() => {}}
+            showCleanupDialog={showCleanupDialog}
+            setShowCleanupDialog={setShowCleanupDialog}
+            onCleanDuplicates={() => {}}
           />
         </TabsContent>
         
@@ -76,14 +93,15 @@ const AdminPage = () => {
         
         <TabsContent value="brandMessages">
           <BrandMessages 
-            messages={[]}
-            profiles={[]}
+            messages={emptyMessages}
+            profiles={emptyProfiles}
             selectedMessage={null}
-            messageResponse=""
-            onSelectMessage={() => {}}
-            onResponseChange={() => {}}
+            messageResponse={messageResponse}
+            dialogOpen={dialogOpen}
+            onDialogOpenChange={setDialogOpen}
+            onMessageSelect={() => {}}
+            onResponseChange={setMessageResponse}
             onSendResponse={() => {}}
-            onMarkResolved={() => {}}
           />
         </TabsContent>
         
@@ -101,17 +119,17 @@ const AdminPage = () => {
         
         <TabsContent value="settings">
           <AdminSettings 
-            keywordCategories={[]}
+            keywordCategories={mockKeywordCategories}
             newKeyword=""
             selectedCategory=""
-            showResetDialog={false}
+            showResetDialog={showResetDialog}
+            setShowResetDialog={setShowResetDialog}
             onNewKeywordChange={() => {}}
             onCategoryChange={() => {}}
             onAddKeyword={() => {}}
-            onDeleteKeyword={() => {}}
-            onOpenResetDialog={() => {}}
-            onCloseResetDialog={() => {}}
-            onResetData={() => {}}
+            onRemoveKeyword={() => {}}
+            onResetDatabase={() => {}}
+            getCategoryDisplayName={() => ""}
           />
         </TabsContent>
       </Tabs>
