@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Mail, Github, Twitter, ShieldCheck } from "lucide-react";
 
@@ -8,9 +9,9 @@ const Footer = () => {
         <div className="flex flex-col items-center mb-8">
           <div className="flex flex-col items-center gap-2 mb-4">
             <img 
-              src="/lovable-uploads/917843be-b30b-4aa2-9450-565ac4810963.png" 
+              src="/lovable-uploads/0fdd04f0-7cdc-4a8e-94a4-1e07f79dafe1.png" 
               alt="PVAFree.com Logo" 
-              className="h-20" 
+              className="h-24" 
             />
           </div>
           <p className="text-gray-300 max-w-md text-center mt-3">
