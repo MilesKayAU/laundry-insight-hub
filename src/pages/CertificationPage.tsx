@@ -157,9 +157,18 @@ const CertificationPage = () => {
         <p className="max-w-xl mx-auto mb-6 text-muted-foreground">
           Join the growing network of environmentally responsible businesses offering PVA-free laundry solutions.
         </p>
-        <Button size="lg" className="bg-science-600 hover:bg-science-700">
-          <Send className="mr-2 h-4 w-4" /> Contact Us for Certification
-        </Button>
+        <div className="flex flex-col items-center">
+          <Button size="lg" className="bg-science-600 hover:bg-science-700 mb-6">
+            <Send className="mr-2 h-4 w-4" /> Contact Us for Certification
+          </Button>
+          <div className="mt-4 flex items-center">
+            <img 
+              src="/lovable-uploads/91001aa0-b74b-47cb-95ba-9aeb3f69c77a.png" 
+              alt="Certification Number" 
+              className="h-16" 
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

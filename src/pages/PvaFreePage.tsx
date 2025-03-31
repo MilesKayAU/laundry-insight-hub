@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Search } from "lucide-react";
@@ -29,7 +28,6 @@ const PvaFreePage = () => {
   const [pvaFreeProducts, setPvaFreeProducts] = useState([]);
   
   useEffect(() => {
-    // Get all approved products with 0% PVA or pvaStatus is 'verified-free'
     const products = getProductSubmissions().filter(
       product => product.approved && (
         product.pvaStatus === 'verified-free' || 
@@ -39,7 +37,6 @@ const PvaFreePage = () => {
     
     setPvaFreeProducts(products);
     
-    // Check if we have products
     if (products.length === 0) {
       toast({
         title: "Data Loading",
@@ -50,13 +47,11 @@ const PvaFreePage = () => {
     }
   }, [toast]);
 
-  // Filter products based on search term
   const filteredProducts = pvaFreeProducts.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     product.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Helper function to check if a product is eligible for certification badge
   const isProductCertified = (product) => {
     return product.approved && 
            product.pvaStatus === 'verified-free' && 
@@ -76,7 +71,7 @@ const PvaFreePage = () => {
   }
 
   return (
-    <div className="container mx-auto py-10 px-4 pb-32"> {/* Added pb-32 for more bottom padding */}
+    <div className="container mx-auto py-10 px-4 pb-32">
       <div className="text-center mb-10">
         <div className="inline-block bg-green-50 rounded-full px-4 py-2 mb-4">
           <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
@@ -95,7 +90,6 @@ const PvaFreePage = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="max-w-md mx-auto mb-8 relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
         <Input
@@ -106,12 +100,10 @@ const PvaFreePage = () => {
         />
       </div>
 
-      {/* Products Grid */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20"> {/* Added mb-20 for more spacing */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
           {filteredProducts.map((product) => (
             <Card key={product.id} className="overflow-hidden flex flex-col h-full relative">
-              {/* Add certification badge for eligible products */}
               {isProductCertified(product) && (
                 <div className="absolute top-3 right-3 z-10">
                   <PvaCertificationBadge size="sm" />
@@ -155,7 +147,6 @@ const PvaFreePage = () => {
                   </Collapsible>
                 )}
                 
-                {/* Show certification note for certified products */}
                 {isProductCertified(product) && (
                   <div className="my-2 text-xs text-science-700 italic">
                     This product is PVA-Free Certified. <Link to="/certification" className="underline">Learn more</Link>
@@ -190,7 +181,7 @@ const PvaFreePage = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 bg-muted/50 rounded-lg mb-20"> {/* Added mb-20 for more spacing */}
+        <div className="text-center py-12 bg-muted/50 rounded-lg mb-20">
           <h3 className="text-lg font-medium mb-2">No PVA-free products found</h3>
           <p className="text-muted-foreground mb-4">
             We couldn't find any products matching your search criteria.
