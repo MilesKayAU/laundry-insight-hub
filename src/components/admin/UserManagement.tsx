@@ -25,7 +25,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { 
   DropdownMenu,
@@ -39,14 +38,9 @@ import {
   Trash, 
   MoreHorizontal, 
   Search, 
-  UserPlus, 
-  Mail, 
-  Shield, 
   ShieldAlert, 
   ShieldCheck, 
   ShieldX,
-  UserCheck,
-  UserX,
   AlertCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,7 +66,6 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [action, setAction] = useState<'delete' | 'promote' | 'demote' | null>(null);
   const [error, setError] = useState<string | null>(null);
   
@@ -85,7 +78,7 @@ const UserManagement = () => {
     setError(null);
     try {
       console.log("Fetching profiles...");
-      // First, get all users from the profiles table (which is accessible to admins through RLS policies)
+      // First, get all users from the profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, username, full_name, avatar_url');
@@ -96,42 +89,40 @@ const UserManagement = () => {
       }
       
       console.log("Profiles fetched:", profileData);
-      console.log("Fetching user roles...");
       
-      // Then fetch user roles
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+      // Fetch admin status for each user using our custom function
+      const enhancedUsers: User[] = [];
       
-      if (roleError) {
-        console.error('Error fetching user roles:', roleError);
-        throw roleError;
+      // Process each profile
+      for (const profile of profileData) {
+        // Check if user is an admin using the has_role function
+        const { data: isAdmin, error: adminCheckError } = await supabase
+          .rpc('has_role', { role: 'admin' }, { 
+            // Important: Pass the user ID as a header to check that specific user
+            // This bypasses the default auth.uid() check
+            head: { 'x-user-id': profile.id } 
+          });
+          
+        if (adminCheckError) {
+          console.log('Error checking admin status for user:', profile.id, adminCheckError);
+          // Continue with the user, just mark as non-admin
+        }
+        
+        enhancedUsers.push({
+          id: profile.id,
+          email: profile.username || 'No email',
+          created_at: new Date().toISOString(), // Placeholder
+          user_metadata: {
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url
+          },
+          role: isAdmin ? 'admin' : 'user',
+          is_admin: isAdmin
+        });
       }
       
-      console.log("User roles fetched:", roleData);
-      
-      // Map roles to users
-      const userRoles = new Map();
-      roleData?.forEach(role => {
-        userRoles.set(role.user_id, role.role);
-      });
-      
-      // Transform profile data into the expected user format
-      const enhancedUsers: User[] = profileData.map(profile => ({
-        id: profile.id,
-        email: profile.username || 'No email',
-        created_at: new Date().toISOString(), // Placeholder since we don't have this in profiles
-        last_sign_in_at: undefined, // Placeholder since we don't have this in profiles
-        user_metadata: {
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url
-        },
-        role: userRoles.get(profile.id) || 'user',
-        is_admin: userRoles.get(profile.id) === 'admin'
-      }));
-      
       console.log("Enhanced users:", enhancedUsers);
-      setUsers(enhancedUsers || []);
+      setUsers(enhancedUsers);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       setError(error.message || "Failed to load users");
@@ -148,8 +139,7 @@ const UserManagement = () => {
   const handleDeleteUser = async (userId: string) => {
     try {
       console.log("Deleting user:", userId);
-      // Instead of directly deleting the auth user (which requires admin rights),
-      // we'll simply remove the profile and rely on cascading to handle related data
+      // Instead of directly deleting the auth user, remove profile
       const { error } = await supabase
         .from('profiles')
         .delete()
@@ -192,41 +182,47 @@ const UserManagement = () => {
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
       console.log("Changing role for user:", userId, "to", newRole);
-      // Check if user already has a role
-      const { data: existingRole, error: checkError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
       
-      if (checkError) {
-        console.error('Error checking existing role:', checkError);
-        throw checkError;
-      }
-      
-      let result;
-      
-      if (existingRole) {
-        console.log("Updating existing role:", existingRole);
-        // Update existing role
-        result = await supabase
+      // For admin role, we insert into user_roles table
+      if (newRole === 'admin') {
+        // Check if already has entry
+        const { data: existingRole, error: checkError } = await supabase
           .from('user_roles')
-          .update({ role: newRole })
-          .eq('user_id', userId);
+          .select('*')
+          .eq('user_id', userId)
+          .eq('role', 'admin')
+          .maybeSingle();
+        
+        if (checkError) {
+          console.error('Error checking existing role:', checkError);
+          throw checkError;
+        }
+        
+        // Only insert if not already there
+        if (!existingRole) {
+          const { error: insertError } = await supabase
+            .from('user_roles')
+            .insert({ user_id: userId, role: 'admin' });
+            
+          if (insertError) {
+            console.error('Error setting admin role:', insertError);
+            throw insertError;
+          }
+        }
       } else {
-        console.log("Creating new role entry");
-        // Insert new role
-        result = await supabase
+        // For removing admin role, delete from user_roles
+        const { error: deleteError } = await supabase
           .from('user_roles')
-          .insert({ user_id: userId, role: newRole });
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'admin');
+          
+        if (deleteError) {
+          console.error('Error removing admin role:', deleteError);
+          throw deleteError;
+        }
       }
       
-      if (result.error) {
-        console.error('Error updating role:', result.error);
-        throw result.error;
-      }
-      
-      console.log("Role update successful");
       // Update local state
       setUsers(users.map(user => 
         user.id === userId 

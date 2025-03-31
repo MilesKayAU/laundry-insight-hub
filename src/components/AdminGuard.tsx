@@ -40,7 +40,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
             return;
           }
           
-          // Use the has_role function we created
+          // Use the has_role function - using RPC to avoid recursion issues
           const { data, error } = await supabase.rpc('has_role', {
             role: 'admin'
           });
