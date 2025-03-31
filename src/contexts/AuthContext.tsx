@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,9 +10,11 @@ interface AuthContextType {
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<any>;
   signup: (email: string, password: string, metadata?: any) => Promise<any>;
+  register: (name: string, email: string, password: string) => Promise<any>;
   loginWithGoogle: () => Promise<any>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<any>;
+  sendPasswordResetEmail: (email: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -212,6 +213,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const register = async (name: string, email: string, password: string) => {
+    return signup(email, password, { name });
+  };
+
   const loginWithGoogle = async () => {
     setIsLoading(true);
     try {
@@ -282,6 +287,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const sendPasswordResetEmail = async (email: string) => {
+    return resetPassword(email);
+  };
+
   const contextValue: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -289,9 +298,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAdmin,
     login,
     signup,
+    register,
     loginWithGoogle,
     logout,
-    resetPassword
+    resetPassword,
+    sendPasswordResetEmail
   };
 
   return (
