@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -57,6 +58,24 @@ const formSchema = z.object({
   url: z.string().url("Must be a valid URL")
 });
 
+// Helper function to synchronize data across components
+const syncResearchData = (data: ResearchLink[]) => {
+  const storageValue = JSON.stringify(data);
+  localStorage.setItem('research_links', storageValue);
+  
+  // Using a custom event for more reliable cross-component communication
+  const customEvent = new CustomEvent('research_links_updated', { 
+    detail: { data: data }
+  });
+  window.dispatchEvent(customEvent);
+  
+  // Also dispatch the storage event for backward compatibility
+  window.dispatchEvent(new StorageEvent('storage', {
+    key: 'research_links',
+    newValue: storageValue
+  }));
+};
+
 const ResearchManagement = () => {
   const { toast } = useToast();
   const [researchLinks, setResearchLinks] = useState<ResearchLink[]>([]);
@@ -77,7 +96,20 @@ const ResearchManagement = () => {
 
   useEffect(() => {
     fetchResearchLinks();
+
+    // Listen for custom events from other components
+    window.addEventListener('research_links_updated', handleResearchLinksUpdated);
+    
+    return () => {
+      window.removeEventListener('research_links_updated', handleResearchLinksUpdated);
+    };
   }, []);
+
+  const handleResearchLinksUpdated = (event: any) => {
+    if (event.detail && event.detail.data) {
+      setResearchLinks(event.detail.data);
+    }
+  };
 
   useEffect(() => {
     if (editingLink) {
@@ -94,16 +126,6 @@ const ResearchManagement = () => {
       });
     }
   }, [editingLink, form]);
-
-  const updateLocalStorageAndNotify = (data: ResearchLink[]) => {
-    const storageValue = JSON.stringify(data);
-    localStorage.setItem('research_links', storageValue);
-    
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'research_links',
-      newValue: storageValue
-    }));
-  };
 
   const fetchResearchLinks = async () => {
     try {
@@ -122,11 +144,11 @@ const ResearchManagement = () => {
           created_at: new Date().toISOString()
         }));
         
-        updateLocalStorageAndNotify(initialData);
         setResearchLinks(initialData);
+        syncResearchData(initialData);
       } else if (data && data.length > 0) {
         setResearchLinks(data);
-        updateLocalStorageAndNotify(data);
+        syncResearchData(data);
       } else {
         const initialData = initialResearchLinks.map((link, index) => ({
           ...link,
@@ -134,8 +156,8 @@ const ResearchManagement = () => {
           created_at: new Date().toISOString()
         }));
         
-        updateLocalStorageAndNotify(initialData);
         setResearchLinks(initialData);
+        syncResearchData(initialData);
         
         try {
           await seedInitialData();
@@ -148,15 +170,21 @@ const ResearchManagement = () => {
       
       const storedLinks = localStorage.getItem('research_links');
       if (storedLinks) {
-        setResearchLinks(JSON.parse(storedLinks));
+        try {
+          const parsedLinks = JSON.parse(storedLinks);
+          setResearchLinks(parsedLinks);
+        } catch (parseError) {
+          console.error('Error parsing stored links:', parseError);
+          setResearchLinks([]);
+        }
       } else {
         const initialData = initialResearchLinks.map((link, index) => ({
           ...link,
           id: `initial-${index}`,
           created_at: new Date().toISOString()
         }));
-        updateLocalStorageAndNotify(initialData);
         setResearchLinks(initialData);
+        syncResearchData(initialData);
       }
       
       toast({
@@ -195,12 +223,13 @@ const ResearchManagement = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       if (editingLink) {
+        // Handle editing
         if (editingLink.id.startsWith('initial-')) {
           const updatedLinks = researchLinks.map(link => 
             link.id === editingLink.id ? { ...link, ...values } : link
           );
           setResearchLinks(updatedLinks);
-          updateLocalStorageAndNotify(updatedLinks);
+          syncResearchData(updatedLinks);
         } else {
           const { error } = await supabase
             .from('research_links')
@@ -213,11 +242,8 @@ const ResearchManagement = () => {
 
           if (error) throw error;
           
-          const updatedLinks = researchLinks.map(link => 
-            link.id === editingLink.id ? { ...link, ...values } : link
-          );
-          setResearchLinks(updatedLinks);
-          updateLocalStorageAndNotify(updatedLinks);
+          // Refresh data from server after update
+          await fetchResearchLinks();
         }
 
         toast({
@@ -225,6 +251,7 @@ const ResearchManagement = () => {
           description: "The research link has been successfully updated.",
         });
       } else {
+        // Handle adding
         try {
           const { data, error } = await supabase
             .from('research_links')
@@ -237,11 +264,8 @@ const ResearchManagement = () => {
 
           if (error) throw error;
           
-          if (data && data.length > 0) {
-            const newLinks = [data[0], ...researchLinks];
-            setResearchLinks(newLinks);
-            updateLocalStorageAndNotify(newLinks);
-          }
+          // Refresh data from server after addition
+          await fetchResearchLinks();
         } catch (supabaseError) {
           console.error('Error adding to Supabase, using local storage:', supabaseError);
           
@@ -255,7 +279,7 @@ const ResearchManagement = () => {
           
           const updatedLinks = [newLink, ...researchLinks];
           setResearchLinks(updatedLinks);
-          updateLocalStorageAndNotify(updatedLinks);
+          syncResearchData(updatedLinks);
         }
 
         toast({
@@ -283,7 +307,7 @@ const ResearchManagement = () => {
       if (id.startsWith('initial-') || id.startsWith('local-')) {
         const updatedLinks = researchLinks.filter(link => link.id !== id);
         setResearchLinks(updatedLinks);
-        updateLocalStorageAndNotify(updatedLinks);
+        syncResearchData(updatedLinks);
       } else {
         const { error } = await supabase
           .from('research_links')
@@ -295,19 +319,8 @@ const ResearchManagement = () => {
           throw error;
         }
         
-        const { data: freshData, error: fetchError } = await supabase
-          .from('research_links')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (fetchError) {
-          const updatedLinks = researchLinks.filter(link => link.id !== id);
-          setResearchLinks(updatedLinks);
-          updateLocalStorageAndNotify(updatedLinks);
-        } else {
-          setResearchLinks(freshData || []);
-          updateLocalStorageAndNotify(freshData || []);
-        }
+        // Always refresh from the server after deletion
+        await fetchResearchLinks();
       }
 
       toast({

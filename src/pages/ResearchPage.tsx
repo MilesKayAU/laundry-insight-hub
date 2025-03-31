@@ -10,7 +10,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Book, ExternalLink } from "lucide-react";
+import { Book, ExternalLink, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,15 +35,28 @@ const ResearchPage = () => {
     // Listen for localStorage changes made from other tabs/components
     window.addEventListener('storage', handleStorageChange);
     
+    // Listen for custom events for more reliable updates
+    window.addEventListener('research_links_updated', handleResearchLinksUpdated);
+    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('research_links_updated', handleResearchLinksUpdated);
     };
   }, []);
 
-  // Handle changes in localStorage made by other components (like ResearchManagement)
+  // Handle custom event updates
+  const handleResearchLinksUpdated = (event: any) => {
+    if (event.detail && event.detail.data) {
+      console.log('Research page received updated links via custom event', event.detail.data);
+      setResearchLinks(event.detail.data);
+    }
+  };
+
+  // Handle changes in localStorage made by other components
   const handleStorageChange = (e: StorageEvent) => {
     if (e.key === 'research_links' && e.newValue) {
       try {
+        console.log('Research page received updated links via storage event');
         const updatedLinks = JSON.parse(e.newValue);
         setResearchLinks(updatedLinks);
       } catch (error) {
@@ -54,6 +67,7 @@ const ResearchPage = () => {
 
   const fetchResearchLinks = async () => {
     try {
+      console.log('Research page fetching links');
       setLoading(true);
       // Always fetch fresh data from Supabase
       const { data, error } = await supabase
@@ -67,22 +81,23 @@ const ResearchPage = () => {
 
       // If data exists in Supabase, use it
       if (data && data.length > 0) {
+        console.log('Research page setting links from Supabase');
         setResearchLinks(data);
-        // Update localStorage with the latest data for backup
-        // Use dispatched event to ensure cross-component synchronization
-        const storageValue = JSON.stringify(data);
-        localStorage.setItem('research_links', storageValue);
-        // Dispatch a custom event to notify other components of the change
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'research_links',
-          newValue: storageValue
-        }));
+        
+        // Update localStorage for consistency
+        localStorage.setItem('research_links', JSON.stringify(data));
       } else {
         // Try to use data from localStorage if no Supabase data
         const storedLinks = localStorage.getItem('research_links');
         if (storedLinks) {
-          const parsedLinks = JSON.parse(storedLinks);
-          setResearchLinks(parsedLinks);
+          try {
+            console.log('Research page setting links from localStorage');
+            const parsedLinks = JSON.parse(storedLinks);
+            setResearchLinks(parsedLinks);
+          } catch (parseError) {
+            console.error('Error parsing stored links:', parseError);
+            setResearchLinks([]);
+          }
         } else {
           setResearchLinks([]);
         }
@@ -94,7 +109,8 @@ const ResearchPage = () => {
       const storedLinks = localStorage.getItem('research_links');
       if (storedLinks) {
         try {
-          setResearchLinks(JSON.parse(storedLinks));
+          const parsedLinks = JSON.parse(storedLinks);
+          setResearchLinks(parsedLinks);
         } catch (e) {
           console.error('Error parsing localStorage data:', e);
           setResearchLinks([]);
@@ -111,9 +127,9 @@ const ResearchPage = () => {
     }
   };
 
-  // Force refresh data when user navigates to this page
+  // Force refresh less often but make it a manual option too
   useEffect(() => {
-    const refreshInterval = setInterval(fetchResearchLinks, 60000); // Refresh every minute
+    const refreshInterval = setInterval(fetchResearchLinks, 300000); // Refresh every 5 minutes
     
     return () => {
       clearInterval(refreshInterval);
@@ -130,19 +146,20 @@ const ResearchPage = () => {
           </p>
         </div>
         
-        {isAdmin && (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
+          {isAdmin && (
             <Button asChild>
               <Link to="/admin">
                 <Book className="h-4 w-4 mr-2" />
                 Manage Research Links
               </Link>
             </Button>
-            <Button variant="outline" onClick={fetchResearchLinks}>
-              Refresh Data
-            </Button>
-          </div>
-        )}
+          )}
+          <Button variant="outline" onClick={fetchResearchLinks}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Data
+          </Button>
+        </div>
       </div>
       
       <Card className="mb-8">
