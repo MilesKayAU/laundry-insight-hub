@@ -299,11 +299,13 @@ const ResearchManagement = () => {
           .delete()
           .eq('id', id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error deleting from Supabase:', error);
+          throw error;
+        }
         
-        // Update local state to reflect changes
-        const updatedLinks = researchLinks.filter(link => link.id !== id);
-        setResearchLinks(updatedLinks);
+        // Once deletion is successful in Supabase, update local state
+        setResearchLinks(prev => prev.filter(link => link.id !== id));
       }
 
       toast({
@@ -312,6 +314,7 @@ const ResearchManagement = () => {
       });
       
       setDeleteDialogOpen(false);
+      setDeleting(null);
     } catch (error: any) {
       console.error('Error deleting research link:', error);
       toast({
@@ -319,7 +322,6 @@ const ResearchManagement = () => {
         description: error.message || "Failed to delete research link. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setDeleting(null);
     }
   };
@@ -480,10 +482,15 @@ const ResearchManagement = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Dialog open={deleteDialogOpen && deleting === link.id} onOpenChange={(open) => {
-                          setDeleteDialogOpen(open);
-                          if (!open) setDeleting(null);
-                        }}>
+                        <Dialog 
+                          open={deleteDialogOpen && deleting === link.id} 
+                          onOpenChange={(open) => {
+                            if (!open) {
+                              setDeleteDialogOpen(false);
+                              setDeleting(null);
+                            }
+                          }}
+                        >
                           <DialogTrigger asChild>
                             <Button
                               variant="outline"
@@ -509,7 +516,10 @@ const ResearchManagement = () => {
                             <DialogFooter>
                               <Button 
                                 variant="outline" 
-                                onClick={() => setDeleteDialogOpen(false)}
+                                onClick={() => {
+                                  setDeleteDialogOpen(false);
+                                  setDeleting(null);
+                                }}
                               >
                                 Cancel
                               </Button>

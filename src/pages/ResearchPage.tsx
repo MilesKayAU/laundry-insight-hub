@@ -45,9 +45,31 @@ const ResearchPage = () => {
         throw error;
       }
 
-      setResearchLinks(data || []);
+      if (data && data.length > 0) {
+        setResearchLinks(data);
+      } else {
+        // Check if we have data in localStorage as a fallback
+        const storedLinks = localStorage.getItem('research_links');
+        if (storedLinks) {
+          setResearchLinks(JSON.parse(storedLinks));
+        } else {
+          setResearchLinks([]);
+        }
+      }
     } catch (error: any) {
       console.error('Error fetching research links:', error);
+      
+      // Try to get data from localStorage if Supabase query fails
+      const storedLinks = localStorage.getItem('research_links');
+      if (storedLinks) {
+        try {
+          setResearchLinks(JSON.parse(storedLinks));
+        } catch (e) {
+          console.error('Error parsing localStorage data:', e);
+          setResearchLinks([]);
+        }
+      }
+      
       toast({
         title: "Error",
         description: "Failed to load research data. Please try again later.",
