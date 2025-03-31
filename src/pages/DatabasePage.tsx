@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Card, 
   CardContent, 
@@ -7,73 +8,20 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { mockProducts } from "@/lib/mockData";
-import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
-import { requestBrandOwnership } from "@/lib/bulkUpload";
 import { useToast } from "@/components/ui/use-toast";
-import { 
-  BadgeCheck, 
-  Shield, 
-  Filter, 
-  Search as SearchIcon,
-  ChevronDown,
-  ChevronUp,
-  BarChart as BarChartIcon,
-  Globe,
-  Map,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  HelpCircle,
-  XCircle,
-  Percent
-} from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table } from "lucide-react";
+import { requestBrandOwnership } from "@/lib/bulkUpload";
+import { useAuth } from "@/contexts/AuthContext";
 import DataCharts from "@/components/DataCharts";
 import CountrySelector from "@/components/CountrySelector";
+import { useProductsData, useProductFilters } from "@/hooks/useProductsData";
+import ProductTable from "@/components/database/ProductTable";
+import PaginationControls from "@/components/database/PaginationControls";
+import FilterControls from "@/components/database/FilterControls";
+import ProductOwnershipDialog from "@/components/database/ProductOwnershipDialog";
+import { ProductSubmission } from "@/lib/textExtractor";
+import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 
 const availableCountries = [
   "Global",
@@ -94,156 +42,34 @@ const availableCountries = [
 
 const DatabasePage = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filterType, setFilterType] = useState<string>("all");
-  const [filterPvaStatus, setFilterPvaStatus] = useState<string>("all");
   const [chartView, setChartView] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("Global");
   const [countrySelected, setCountrySelected] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [allSubmissions, setAllSubmissions] = useState<ProductSubmission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const itemsPerPage = 10;
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
-  const [contactEmail, setContactEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  useEffect(() => {
-    setCountrySelected(false);
-    handleRefreshData();
-    
-    const intervalId = setInterval(() => {
-      handleRefreshData();
-    }, 30000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
+  // Custom hooks for data fetching and filtering
+  const { combinedApprovedProducts, loading, handleRefreshData, refreshKey } = useProductsData(selectedCountry);
   
-  const handleRefreshData = () => {
-    setLoading(true);
-    const freshData = getProductSubmissions();
-    console.info(`Refreshed data: Found ${freshData.length} submission(s)`);
-    setAllSubmissions(freshData);
-    setLoading(false);
-    setRefreshKey(prev => prev + 1);
-    
-    toast({
-      title: "Data refreshed",
-      description: "The product database has been refreshed with the latest data.",
-    });
-  };
-  
-  const approvedSubmissions = allSubmissions.filter(submission => submission.approved);
-  
-  const approvedProducts = approvedSubmissions.length > 0 ? [] : mockProducts.filter(product => product.approved);
-  
-  const normalizeCountry = (country: string | undefined | null): string => {
-    if (!country) return "Global";
-    
-    const normalizedCountry = country.trim();
-    
-    const countryAliases = {
-      'usa': 'United States',
-      'us': 'United States',
-      'united states of america': 'United States',
-      'uk': 'United Kingdom',
-      'great britain': 'United Kingdom',
-      'nz': 'New Zealand',
-      'aus': 'Australia'
-    };
-    
-    return countryAliases[normalizedCountry.toLowerCase()] || normalizedCountry;
-  };
-  
-  const isProductSubmission = (product: any): product is ProductSubmission => {
-    return 'pvaStatus' in product;
-  };
-  
-  const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions].filter(product => {
-    if (selectedCountry === "Global") return true;
-    
-    if (!product.country || product.country.trim() === '') {
-      return selectedCountry === "Global";
-    }
-    
-    const productCountry = normalizeCountry(product.country);
-    const normalizedSelectedCountry = normalizeCountry(selectedCountry);
-    
-    console.log(`Comparing product country: "${productCountry}" with selected: "${normalizedSelectedCountry}"`);
-    
-    return productCountry.toLowerCase() === normalizedSelectedCountry.toLowerCase();
-  });
-  
-  const filteredProducts = combinedApprovedProducts.filter(product => {
-    const matchesSearch = 
-      searchTerm === "" || 
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      product.brand.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = 
-      filterType === "all" || 
-      product.type === filterType;
-    
-    let matchesPvaStatus = filterPvaStatus === "all";
-    
-    if (isProductSubmission(product)) {
-      if (filterPvaStatus === "contains" && product.pvaStatus === 'contains') {
-        matchesPvaStatus = true;
-      } else if (filterPvaStatus === "free" && product.pvaStatus === 'verified-free') {
-        matchesPvaStatus = true;
-      } else if (filterPvaStatus === "unknown" && (product.pvaStatus === 'needs-verification' || product.pvaStatus === 'inconclusive')) {
-        matchesPvaStatus = true;
-      }
-    } else {
-      if (filterPvaStatus === "contains" && product.pvaPercentage !== null && product.pvaPercentage > 0) {
-        matchesPvaStatus = true;
-      } else if (filterPvaStatus === "free" && product.pvaPercentage === 0) {
-        matchesPvaStatus = true;
-      } else if (filterPvaStatus === "unknown" && product.pvaPercentage === null) {
-        matchesPvaStatus = true;
-      }
-    }
-    
-    return matchesSearch && matchesType && matchesPvaStatus;
-  });
-  
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    const brandA = a.brand.toLowerCase();
-    const brandB = b.brand.toLowerCase();
-    
-    if (sortDirection === 'asc') {
-      return brandA.localeCompare(brandB);
-    } else {
-      return brandB.localeCompare(brandA);
-    }
-  });
-  
-  const toggleSortDirection = () => {
-    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-  };
-  
-  const productTypes = Array.from(new Set(combinedApprovedProducts.map(p => p.type)));
-  
-  const paginateData = (data) => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return data.slice(startIndex, endIndex);
-  };
-  
-  const paginatedProducts = paginateData(sortedProducts);
-  
-  const getTotalPages = (totalItems) => {
-    return Math.ceil(totalItems / itemsPerPage);
-  };
-  
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
+  const {
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    filterType,
+    setFilterType,
+    filterPvaStatus,
+    setFilterPvaStatus,
+    sortDirection,
+    toggleSortDirection,
+    productTypes,
+    filteredProducts,
+    paginatedProducts,
+    itemsPerPage
+  } = useProductFilters(combinedApprovedProducts);
   
   const handleCountrySelect = (country: string) => {
     console.log("Country selected:", country);
@@ -259,7 +85,7 @@ const DatabasePage = () => {
     setSelectedCountry("Global");
   };
 
-  const handleBrandOwnershipRequest = () => {
+  const handleBrandOwnershipRequest = (contactEmail: string) => {
     if (!selectedProduct) return;
     
     if (!contactEmail || !contactEmail.includes('@') || !contactEmail.includes('.')) {
@@ -290,7 +116,6 @@ const DatabasePage = () => {
         description: "Your request has been sent to our administrators for verification.",
       });
       setIsDialogOpen(false);
-      setContactEmail("");
     } else {
       toast({
         title: "Request failed",
@@ -304,176 +129,9 @@ const DatabasePage = () => {
     navigate(`/update-pva/${encodeURIComponent(brand)}/${encodeURIComponent(product)}`);
   };
 
-  const PaginationControls = ({ totalItems }) => {
-    const totalPages = getTotalPages(totalItems);
-    
-    if (totalPages <= 1) return null;
-    
-    return (
-      <Pagination className="mt-4">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious 
-              onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-              className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-            />
-          </PaginationItem>
-          
-          {Array.from({ length: totalPages }).map((_, index) => (
-            <PaginationItem key={index}>
-              <PaginationLink
-                isActive={currentPage === index + 1}
-                onClick={() => handlePageChange(index + 1)}
-                className="cursor-pointer"
-              >
-                {index + 1}
-              </PaginationLink>
-            </PaginationItem>
-          ))}
-          
-          <PaginationItem>
-            <PaginationNext 
-              onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-              className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
-    );
-  };
-
-  const renderPvaValue = (product) => {
-    if (isProductSubmission(product)) {
-      return product.pvaPercentage ? `${product.pvaPercentage}%` : 'Unknown';
-    } else if (product.pvaPercentage !== null && product.pvaPercentage !== undefined) {
-      return `${product.pvaPercentage}%`;
-    } else {
-      return (
-        <span className="flex items-center gap-1">
-          <Badge variant="outline" className="bg-gray-100 text-gray-800">
-            Unknown
-          </Badge>
-        </span>
-      );
-    }
-  };
-  
-  const renderPvaStatus = (product) => {
-    if (isProductSubmission(product)) {
-      if (product.pvaStatus === 'contains') {
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Contains PVA
-          </Badge>
-        );
-      } else if (product.pvaStatus === 'verified-free') {
-        return (
-          <Badge variant="outline" className="bg-green-100 text-green-800 flex items-center gap-1">
-            <CheckCircle className="h-3 w-3" />
-            PVA-Free
-          </Badge>
-        );
-      } else if (product.pvaStatus === 'needs-verification') {
-        return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
-            <HelpCircle className="h-3 w-3" />
-            Needs Verification
-          </Badge>
-        );
-      } else {
-        return (
-          <Badge variant="outline" className="bg-gray-100 text-gray-800 flex items-center gap-1">
-            <HelpCircle className="h-3 w-3" />
-            Inconclusive
-          </Badge>
-        );
-      }
-    } else if (product.pvaPercentage === 0) {
-      return (
-        <Badge variant="outline" className="bg-green-100 text-green-800 flex items-center gap-1">
-          <CheckCircle className="h-3 w-3" />
-          PVA-Free
-        </Badge>
-      );
-    } else if (product.pvaPercentage && product.pvaPercentage > 0) {
-      return (
-        <Badge variant="destructive" className="flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" />
-          Contains PVA
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="outline" className="bg-gray-100 text-gray-800 flex items-center gap-1">
-          <HelpCircle className="h-3 w-3" />
-          Unknown
-        </Badge>
-      );
-    }
-  };
-  
-  const renderBrandVerification = (product) => {
-    if (!isProductSubmission(product)) return null;
-    
-    if (product.brandVerified) {
-      return (
-        <Badge variant="outline" className="bg-green-100 text-green-800 ml-2">
-          <BadgeCheck className="h-3 w-3 mr-1" />
-          Verified
-        </Badge>
-      );
-    } else if (product.brandOwnershipRequested) {
-      return (
-        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 ml-2">
-          Verification Pending
-        </Badge>
-      );
-    }
-    return null;
-  };
-
-  const renderActionButtons = (product) => {
-    const buttons = [];
-    
-    if (isProductSubmission(product) && !product.brandVerified && !product.brandOwnershipRequested) {
-      buttons.push(
-        <Button
-          key="brand-ownership"
-          variant="outline"
-          size="sm"
-          className="ml-2 text-xs"
-          onClick={() => {
-            setSelectedProduct(product as ProductSubmission);
-            setIsDialogOpen(true);
-          }}
-        >
-          <Shield className="h-3 w-3 mr-1" />
-          Own this brand?
-        </Button>
-      );
-    }
-    
-    const hasPvaPercentage = isProductSubmission(product) 
-      ? !!product.pvaPercentage 
-      : product.pvaPercentage !== null && product.pvaPercentage !== undefined;
-      
-    if (!hasPvaPercentage || product.pvaPercentage === 'Unknown') {
-      buttons.push(
-        <Button
-          key="pva-update"
-          variant="outline"
-          size="sm"
-          className={buttons.length > 0 ? "ml-2 text-xs" : "text-xs"}
-          onClick={() => handlePvaUpdateClick(product.brand, product.name)}
-        >
-          <Percent className="h-3 w-3 mr-1" />
-          Submit PVA %
-        </Button>
-      );
-    }
-    
-    return buttons.length > 0 ? <div className="flex flex-wrap gap-2">{buttons}</div> : null;
+  const handleOwnershipRequest = (product: ProductSubmission) => {
+    setSelectedProduct(product);
+    setIsDialogOpen(true);
   };
 
   if (loading) {
@@ -566,92 +224,16 @@ const DatabasePage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-6 space-y-4">
-            <div className="flex flex-col md:flex-row gap-3">
-              <div className="relative flex-1">
-                <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by product or brand name..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="pl-8"
-                />
-              </div>
-              
-              <div className="flex gap-3">
-                <Select 
-                  value={filterType} 
-                  onValueChange={(value) => {
-                    setFilterType(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Product Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {productTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      PVA Filter
-                      <ChevronDown className="h-4 w-4 ml-1" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Filter by PVA</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem
-                      checked={filterPvaStatus === "all"}
-                      onCheckedChange={() => {
-                        setFilterPvaStatus("all");
-                        setCurrentPage(1);
-                      }}
-                    >
-                      All Products
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={filterPvaStatus === "contains"}
-                      onCheckedChange={() => {
-                        setFilterPvaStatus("contains");
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Contains PVA
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={filterPvaStatus === "free"}
-                      onCheckedChange={() => {
-                        setFilterPvaStatus("free");
-                        setCurrentPage(1);
-                      }}
-                    >
-                      PVA-Free
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={filterPvaStatus === "unknown"}
-                      onCheckedChange={() => {
-                        setFilterPvaStatus("unknown");
-                        setCurrentPage(1);
-                      }}
-                    >
-                      Unknown PVA
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </div>
+          <FilterControls
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            filterType={filterType}
+            setFilterType={setFilterType}
+            filterPvaStatus={filterPvaStatus}
+            setFilterPvaStatus={setFilterPvaStatus}
+            productTypes={productTypes}
+            setCurrentPage={setCurrentPage}
+          />
           
           {chartView ? (
             <div className="mb-20">
@@ -665,116 +247,30 @@ const DatabasePage = () => {
             </div>
           ) : (
             <div className="mb-20">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <button 
-                          onClick={toggleSortDirection} 
-                          className="flex items-center focus:outline-none hover:text-blue-600 transition-colors"
-                        >
-                          Brand
-                          {sortDirection === 'asc' ? (
-                            <ChevronUp className="ml-1 h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="ml-1 h-4 w-4" />
-                          )}
-                        </button>
-                      </TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>PVA Status</TableHead>
-                      <TableHead className="text-right">PVA %</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedProducts.length > 0 ? (
-                      paginatedProducts.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell>
-                            <Link 
-                              to={`/brand/${product.brand}`}
-                              className="text-blue-600 hover:underline hover:text-blue-800 text-[115%] font-medium"
-                            >
-                              {product.brand}
-                            </Link>
-                            {renderBrandVerification(product)}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {product.name}
-                          </TableCell>
-                          <TableCell>{product.type}</TableCell>
-                          <TableCell>{renderPvaStatus(product)}</TableCell>
-                          <TableCell className="text-right">
-                            {renderPvaValue(product)}
-                          </TableCell>
-                          <TableCell>
-                            {renderActionButtons(product)}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                          No products matching your search criteria
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-              <PaginationControls totalItems={filteredProducts.length} />
+              <ProductTable 
+                products={paginatedProducts} 
+                sortDirection={sortDirection} 
+                toggleSortDirection={toggleSortDirection} 
+                onOwnershipRequest={handleOwnershipRequest}
+                onPvaUpdateClick={handlePvaUpdateClick}
+              />
+              <PaginationControls 
+                currentPage={currentPage}
+                totalItems={filteredProducts.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </CardContent>
       </Card>
       
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Verify Brand Ownership</DialogTitle>
-            <DialogDescription>
-              {selectedProduct && (
-                <>
-                  Submit a request to verify that you represent {selectedProduct.brand}. 
-                  Our administrators will review your request.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="contact-email" className="text-right">
-                Business Email
-              </Label>
-              <Input
-                id="contact-email"
-                type="email"
-                placeholder="your@company.com"
-                className="col-span-3"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-              />
-            </div>
-            
-            <div className="col-span-4 text-sm text-muted-foreground">
-              <p>Please use an email address associated with your brand's domain for faster verification.</p>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleBrandOwnershipRequest}>
-              Submit Verification Request
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProductOwnershipDialog
+        isOpen={isDialogOpen}
+        setIsOpen={setIsDialogOpen}
+        selectedProduct={selectedProduct}
+        onSubmit={handleBrandOwnershipRequest}
+      />
     </div>
   );
 };
