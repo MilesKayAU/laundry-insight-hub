@@ -24,7 +24,7 @@ type AuthDialogProps = {
 };
 
 const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
-  const { signIn, signUp, isLoading, sendPasswordResetEmail } = useAuth();
+  const { login, register, isLoading, sendPasswordResetEmail } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   
@@ -48,7 +48,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signIn(loginEmail, loginPassword);
+      await login(loginEmail, loginPassword);
       setOpen(false);
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -59,7 +59,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signUp(registerName, registerEmail, registerPassword);
+      await register(registerName, registerEmail, registerPassword);
       setVerificationSent(true);
     } catch (error) {
       // Error handled in the AuthContext

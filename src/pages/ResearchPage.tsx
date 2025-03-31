@@ -1,23 +1,29 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from "react";
 import { 
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { BookOpen, ExternalLink, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { ResearchLink } from '@/lib/researchData';
-import { initialResearchLinks } from '@/lib/researchData';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link } from "react-router-dom";
+import { Book, ExternalLink } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-const ResearchPage: React.FC = () => {
+interface ResearchLink {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  created_at: string;
+}
+
+const ResearchPage = () => {
   const [researchLinks, setResearchLinks] = useState<ResearchLink[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -30,8 +36,6 @@ const ResearchPage: React.FC = () => {
   const fetchResearchLinks = async () => {
     try {
       setLoading(true);
-      
-      // Fetch research links from Supabase
       const { data, error } = await supabase
         .from('research_links')
         .select('*')
@@ -41,19 +45,13 @@ const ResearchPage: React.FC = () => {
         throw error;
       }
 
-      if (data) {
-        setResearchLinks(data as ResearchLink[]);
-      }
+      setResearchLinks(data || []);
     } catch (error: any) {
       console.error('Error fetching research links:', error);
-      
-      // Fallback to initial data if database query fails
-      setResearchLinks(initialResearchLinks as any);
-      
       toast({
-        title: 'Error loading research',
-        description: 'Using local data instead.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load research data. Please try again later.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -61,61 +59,74 @@ const ResearchPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-10 px-4 pb-32">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">PVA Research</h1>
-            <p className="text-muted-foreground mt-2">
-              Explore the latest research on Polyvinyl Alcohol (PVA) - its properties, applications, and environmental impact
-            </p>
-          </div>
-          {isAdmin && (
-            <Button asChild variant="outline">
-              <Link to="/admin">
-                <Plus className="mr-2 h-4 w-4" />
-                Manage Research Links
-              </Link>
-            </Button>
-          )}
+    <div className="container mx-auto py-10 px-4">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">PVA Research</h1>
+          <p className="text-muted-foreground mt-2">
+            Latest research on Polyvinyl Alcohol (PVA), its applications, and environmental impacts
+          </p>
         </div>
-
+        
+        {isAdmin && (
+          <Button asChild>
+            <Link to="/admin">
+              <Book className="h-4 w-4 mr-2" />
+              Manage Research Links
+            </Link>
+          </Button>
+        )}
+      </div>
+      
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>About PVA Research</CardTitle>
+          <CardDescription>
+            Scientific studies and findings about Polyvinyl Alcohol
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            This page collects and presents the latest scientific research about Polyvinyl Alcohol (PVA), 
+            including its environmental impact, toxicity, biodegradability, and usage in consumer products. 
+            The research presented here aims to provide evidence-based information to help consumers make 
+            informed decisions about products containing PVA.
+          </p>
+        </CardContent>
+      </Card>
+      
+      <div className="grid grid-cols-1 gap-8">
         {loading ? (
-          <div className="text-center py-12">
+          <div className="text-center py-10">
             <p className="text-muted-foreground">Loading research data...</p>
           </div>
-        ) : researchLinks.length === 0 ? (
-          <div className="text-center py-12 border rounded-lg">
-            <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No research links available at this time.</p>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {researchLinks.map((research, index) => (
-              <Card key={research.id || index}>
-                <CardHeader>
-                  <CardTitle>{research.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base text-foreground mb-4">
-                    {research.description}
-                  </CardDescription>
-                </CardContent>
-                <CardFooter>
-                  <Button asChild variant="outline" size="sm">
+        ) : researchLinks.length > 0 ? (
+          researchLinks.map((research) => (
+            <Card key={research.id} className="overflow-hidden">
+              <CardHeader>
+                <CardTitle className="text-xl">{research.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">{research.description}</p>
+                <div className="flex justify-end">
+                  <Button variant="outline" asChild>
                     <a 
                       href={research.url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="inline-flex items-center"
+                      className="flex items-center"
                     >
-                      Read Research
-                      <ExternalLink className="h-3.5 w-3.5 ml-2" />
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Research
                     </a>
                   </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">No research links available yet.</p>
           </div>
         )}
       </div>

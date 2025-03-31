@@ -1,247 +1,206 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu } from "lucide-react";
-
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  Menu, 
+  ChevronDown, 
+  Home, 
+  UploadCloud, 
+  Database, 
+  Settings, 
+  Beaker, 
+  Microscope, 
+  FlaskConical,
+  LogOut,
+  User,
+} from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 
-interface MobileNavProps {
-  isAuthenticated: boolean;
-  isAdmin: boolean;
-  openAuthDialog: () => void;
-  handleSignOut: () => void;
-}
+const navLinks = [
+  { label: "Home", path: "/" },
+  { label: "Database", path: "/database" },
+  { label: "Research", path: "/research" },
+  { label: "About PVA", path: "/about" },
+  { label: "PVA Free", path: "/pva-free" },
+  { label: "Certification", path: "/certification" },
+];
 
-export function Navbar() {
-  const { isAuthenticated, isAdmin, signOut } = useAuth();
-  const [open, setOpen] = useState(false);
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+const Navbar = () => {
+  const isMobile = useIsMobile();
+  const [isOpen, setIsOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
-  const openAuthDialog = useCallback(() => {
-    setOpen(false);
-    navigate('/auth');
-  }, [navigate]);
+  // Check if user is admin
+  const isAdmin = () => {
+    if (!user || !user.email) return false;
+    const adminEmails = ['mileskayaustralia@gmail.com'];
+    return adminEmails.includes(user.email.toLowerCase().trim());
+  };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/auth');
-    } catch (error: any) {
-      console.error("Sign out error:", error.message);
-      toast({
-        title: "Sign Out Failed",
-        description: error.message || "Failed to sign out. Please try again later.",
-        variant: "destructive",
-      });
-    }
+  const menuItems = [
+    { name: "Home", path: "/", icon: <Home className="h-4 w-4 mr-2" /> },
+    { name: "About PVA", path: "/about", icon: <FlaskConical className="h-4 w-4 mr-2" /> },
+    { name: "Database", path: "/database", icon: <Database className="h-4 w-4 mr-2" /> },
+    { name: "Contribute", path: "/contribute", icon: <UploadCloud className="h-4 w-4 mr-2" /> },
+    // PVA Free removed as requested
+    // Only include Admin link if user is admin
+    ...(isAdmin() ? [{ name: "Admin", path: "/admin", icon: <Settings className="h-4 w-4 mr-2" /> }] : []),
+  ];
+
+  const handleLogout = async () => {
+    await logout();
+    setIsOpen(false);
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <Link to="/" className="mr-6 flex items-center space-x-2">
-          <img src="/placeholder.svg" alt="Logo" className="h-6 w-6" />
-          <span className="hidden font-bold sm:inline-block">
-            PVA Insight
+    <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+      <div className="container mx-auto flex justify-between items-center py-3">
+        <Link to="/" className="flex items-center gap-1">
+          <div className="relative w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-science-500 to-tech-500 animate-pulse-glow">
+            <Microscope className="h-5 w-5 text-white absolute" />
+          </div>
+          <span className="text-2xl font-bold bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
+            PVAFree
+          </span>
+          <span className="text-2xl font-bold bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
+            .com
           </span>
         </Link>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link
-              to="/database"
-              className={cn(
-                "transition-colors hover:text-foreground/80",
-                pathname === "/database" ? "text-foreground" : "text-foreground/60"
-              )}
-            >
-              Database
-            </Link>
-            <Link
-              to="/about-pva"
-              className={cn(
-                "transition-colors hover:text-foreground/80",
-                pathname === "/about-pva" ? "text-foreground" : "text-foreground/60"
-              )}
-            >
-              About PVA
-            </Link>
-            <Link
-              to="/research"
-              className={cn(
-                "transition-colors hover:text-foreground/80",
-                pathname === "/research" ? "text-foreground" : "text-foreground/60"
-              )}
-            >
-              Research
-            </Link>
-            <Link
-              to="/pva-free"
-              className={cn(
-                "transition-colors hover:text-foreground/80",
-                pathname === "/pva-free" ? "text-foreground" : "text-foreground/60"
-              )}
-            >
-              PVA Free Products
-            </Link>
-            <Link
-              to="/contribute"
-              className={cn(
-                "transition-colors hover:text-foreground/80",
-                pathname === "/contribute" ? "text-foreground" : "text-foreground/60"
-              )}
-            >
-              Contribute
-            </Link>
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className={cn(
-                  "transition-colors hover:text-foreground/80",
-                  pathname === "/admin" ? "text-foreground" : "text-foreground/60"
-                )}
-              >
-                Admin
-              </Link>
-            )}
-          </nav>
-          <div className="flex items-center">
-            {!isAuthenticated ? (
-              <Button variant="ghost" onClick={openAuthDialog}>
-                Sign In
+
+        {isMobile ? (
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-science-700">
+                <Menu className="h-5 w-5" />
               </Button>
-            ) : (
-              <>
-                <Link to="/profile">
-                  <Button variant="ghost">Profile</Button>
-                </Link>
-                <Button variant="ghost" onClick={handleSignOut}>
-                  Sign Out
-                </Button>
-              </>
-            )}
-            
-            <MobileNav
-              isAuthenticated={isAuthenticated}
-              isAdmin={isAdmin}
-              openAuthDialog={openAuthDialog}
-              handleSignOut={handleSignOut}
-            />
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function MobileNav({ isAuthenticated, isAdmin, openAuthDialog, handleSignOut }: MobileNavProps) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu />
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left">
-        <Link
-          to="/"
-          className="flex items-center"
-          onClick={() => setOpen(false)}
-        >
-          <img src="/placeholder.svg" alt="Logo" className="h-6 w-6" />
-          <span className="ml-2 font-bold">PVA Insight</span>
-        </Link>
-        <div className="mt-6 flex flex-col space-y-3">
-          <SheetClose asChild>
-            <Link
-              to="/database"
-              className="block px-2 py-1 text-lg hover:underline"
-            >
-              Database
-            </Link>
-          </SheetClose>
-          <SheetClose asChild>
-            <Link
-              to="/about-pva"
-              className="block px-2 py-1 text-lg hover:underline"
-            >
-              About PVA
-            </Link>
-          </SheetClose>
-          <SheetClose asChild>
-            <Link
-              to="/research"
-              className="block px-2 py-1 text-lg hover:underline"
-            >
-              Research
-            </Link>
-          </SheetClose>
-          <SheetClose asChild>
-            <Link
-              to="/pva-free"
-              className="block px-2 py-1 text-lg hover:underline"
-            >
-              PVA Free Products
-            </Link>
-          </SheetClose>
-          <SheetClose asChild>
-            <Link
-              to="/contribute"
-              className="block px-2 py-1 text-lg hover:underline"
-            >
-              Contribute
-            </Link>
-          </SheetClose>
-          {isAdmin && (
-            <SheetClose asChild>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[250px] sm:w-[300px] border-l border-science-100">
+              <nav className="flex flex-col gap-4 mt-8">
+                {menuItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    className="flex items-center px-3 py-2 rounded-md hover:bg-science-50 transition-colors text-science-800"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </Link>
+                ))}
+                <div className="mt-4 border-t pt-4">
+                  {isAuthenticated ? (
+                    <>
+                      <div className="px-3 py-2 flex items-center">
+                        <Avatar className="h-8 w-8 mr-2">
+                          <AvatarImage src={user?.user_metadata?.avatar_url} />
+                          <AvatarFallback className="bg-science-100 text-science-700">
+                            {getInitials(user?.user_metadata?.full_name || user?.email || 'User')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="text-sm font-medium truncate">
+                            {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center px-3 py-2 rounded-md hover:bg-science-50 transition-colors text-science-800 mt-2"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      to="/auth"
+                      className="flex items-center px-3 py-2 rounded-md hover:bg-science-50 transition-colors text-science-800"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Login / Register
+                    </Link>
+                  )}
+                </div>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <div className="flex items-center space-x-1">
+            {menuItems.map((item) => (
               <Link
-                to="/admin"
-                className="block px-2 py-1 text-lg hover:underline"
+                key={item.name}
+                to={item.path}
+                className="flex items-center px-3 py-2 rounded-md hover:bg-science-50 transition-colors text-science-800"
               >
-                Admin
+                {item.icon}
+                {item.name}
               </Link>
-            </SheetClose>
-          )}
-          {isAuthenticated ? (
-            <>
-              <SheetClose asChild>
-                <Link
-                  to="/profile"
-                  className="block px-2 py-1 text-lg hover:underline"
-                >
-                  Profile
-                </Link>
-              </SheetClose>
-              <SheetClose asChild>
-                <Button
-                  variant="ghost"
-                  className="justify-start px-2 w-full text-lg"
-                  onClick={handleSignOut}
-                >
-                  Sign Out
-                </Button>
-              </SheetClose>
-            </>
-          ) : (
-            <Button
-              variant="ghost"
-              className="justify-start px-2 w-full text-lg"
-              onClick={() => {
-                setOpen(false);
-                openAuthDialog();
-              }}
-            >
-              Sign In
-            </Button>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+            ))}
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative px-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.user_metadata?.avatar_url} />
+                      <AvatarFallback className="bg-science-100 text-science-700">
+                        {getInitials(user?.user_metadata?.full_name || user?.email || 'User')}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span>{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
+                      <span className="text-xs font-normal text-muted-foreground">{user?.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer">
+                      <User className="h-4 w-4 mr-2" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild variant="outline" size="sm" className="ml-2">
+                <Link to="/auth">Login / Register</Link>
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </nav>
   );
-}
+};
+
+export default Navbar;

@@ -11,14 +11,62 @@ interface AdminGuardProps {
 }
 
 const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, user, isAdmin } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const [checkingAdmin, setCheckingAdmin] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [checkingAdmin, setCheckingAdmin] = useState<boolean>(true);
+
+  // Primary admin email as a fallback
+  const PRIMARY_ADMIN_EMAIL = 'mileskayaustralia@gmail.com';
+
+  // Helper function to normalize email for comparison
+  const normalizeEmail = (email: string): string => {
+    return email ? email.toLowerCase().trim() : '';
+  };
 
   useEffect(() => {
-    if (!isLoading) {
+    const checkAdminStatus = async () => {
+      if (!isLoading && isAuthenticated && user) {
+        try {
+          // Special case for primary admin
+          if (normalizeEmail(user.email || '') === normalizeEmail(PRIMARY_ADMIN_EMAIL)) {
+            console.log('AdminGuard: Primary admin access granted');
+            setIsAdmin(true);
+            setCheckingAdmin(false);
+            return;
+          }
+          
+          // Check user_roles table
+          const { data, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('role', 'admin')
+            .single();
+          
+          if (error && error.code !== 'PGRST116') {
+            console.error('AdminGuard: Error checking admin status', error);
+          }
+          
+          setIsAdmin(!!data);
+          console.log('AdminGuard: Admin check result', { data, isAdmin: !!data });
+        } catch (error) {
+          console.error('AdminGuard: Error checking admin status', error);
+        } finally {
+          setCheckingAdmin(false);
+        }
+      } else {
+        setCheckingAdmin(false);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [isAuthenticated, isLoading, user]);
+
+  useEffect(() => {
+    if (!isLoading && !checkingAdmin) {
       if (!isAuthenticated) {
         // Redirect to login page with return URL
         console.log('AdminGuard: Not authenticated, redirecting to auth page');
@@ -37,7 +85,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
         console.log('AdminGuard: User is an admin', { userId: user?.id });
       }
     }
-  }, [isAuthenticated, isLoading, isAdmin, navigate, location.pathname, user, toast]);
+  }, [isAuthenticated, isLoading, isAdmin, checkingAdmin, navigate, location.pathname, user, toast]);
 
   if (isLoading || checkingAdmin) {
     return (

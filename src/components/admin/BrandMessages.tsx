@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Table, 
@@ -42,18 +43,16 @@ interface BrandProfile {
   verified: boolean;
 }
 
-export interface BrandMessagesProps {
+interface BrandMessagesProps {
   messages: BrandMessage[];
   profiles: BrandProfile[];
   selectedMessage: BrandMessage | null;
   messageResponse: string;
-  onMessageSelect?: (message: BrandMessage) => void;
-  onChangeResponse: (response: string) => void;
+  dialogOpen: boolean;
+  onDialogOpenChange: (open: boolean) => void;
+  onMessageSelect: (message: BrandMessage) => void;
+  onResponseChange: (response: string) => void;
   onSendResponse: () => void;
-  onDeleteMessage: (id: string) => void;
-  onCloseMessageDetails: () => void;
-  dialogOpen?: boolean;
-  onDialogOpenChange?: (open: boolean) => void;
 }
 
 const BrandMessages: React.FC<BrandMessagesProps> = ({
@@ -61,13 +60,11 @@ const BrandMessages: React.FC<BrandMessagesProps> = ({
   profiles,
   selectedMessage,
   messageResponse,
-  onChangeResponse,
-  onSendResponse,
-  onDeleteMessage,
-  onCloseMessageDetails,
+  dialogOpen,
+  onDialogOpenChange,
   onMessageSelect,
-  dialogOpen = false,
-  onDialogOpenChange = () => {}
+  onResponseChange,
+  onSendResponse
 }) => {
   return (
     <>
@@ -178,7 +175,7 @@ const BrandMessages: React.FC<BrandMessagesProps> = ({
                   placeholder="Type your response to the brand representative..."
                   rows={6}
                   value={messageResponse}
-                  onChange={(e) => onChangeResponse(e.target.value)}
+                  onChange={(e) => onResponseChange(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
                   This response will be stored and can be emailed to the brand contact.

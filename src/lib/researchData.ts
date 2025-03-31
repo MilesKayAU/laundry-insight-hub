@@ -1,10 +1,3 @@
-export interface ResearchLink {
-  id: string;
-  title: string;
-  description: string;
-  url: string;
-  created_at: string;
-}
 
 export const initialResearchLinks = [
   {
