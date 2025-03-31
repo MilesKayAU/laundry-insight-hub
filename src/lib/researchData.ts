@@ -1,5 +1,11 @@
 
-export const initialResearchLinks = [
+export interface InitialResearchLink {
+  title: string;
+  description: string;
+  url: string;
+}
+
+export const initialResearchLinks: InitialResearchLink[] = [
   {
     title: "Degradation of Polyvinyl Alcohol in US Wastewater Treatment",
     description: "This study examines how PVA behaves in wastewater treatment plants, highlighting its potential to persist in aquatic environments and affect gas exchanges.",
