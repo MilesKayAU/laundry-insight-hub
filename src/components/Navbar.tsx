@@ -67,12 +67,12 @@ const Navbar = () => {
 
   return (
     <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-      <div className="container mx-auto flex justify-between items-center py-4">
+      <div className="container mx-auto flex justify-between items-center py-2">
         <Link to="/" className="flex items-center">
           <img 
-            src="/lovable-uploads/0fdd04f0-7cdc-4a8e-94a4-1e07f79dafe1.png" 
+            src="/lovable-uploads/81ba1971-9504-4977-a9a9-493f5351c835.png" 
             alt="PVAFree.com Logo" 
-            className="h-72" 
+            className="h-12 md:h-16" 
           />
         </Link>
 

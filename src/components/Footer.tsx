@@ -9,9 +9,9 @@ const Footer = () => {
         <div className="flex flex-col items-center mb-8">
           <div className="flex flex-col items-center gap-2 mb-4">
             <img 
-              src="/lovable-uploads/0fdd04f0-7cdc-4a8e-94a4-1e07f79dafe1.png" 
+              src="/lovable-uploads/81ba1971-9504-4977-a9a9-493f5351c835.png" 
               alt="PVAFree.com Logo" 
-              className="h-72" 
+              className="h-24" 
             />
           </div>
           <p className="text-gray-300 max-w-md text-center mt-3">
