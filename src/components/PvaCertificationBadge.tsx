@@ -23,7 +23,7 @@ const PvaCertificationBadge: React.FC<PvaCertificationBadgeProps> = ({
     <div className={`relative ${className}`}>
       <div className={`${sizeMap[size]} relative`}>
         <img 
-          src="/lovable-uploads/aced3aca-ecdf-4457-8c76-a378d8b54fec.png" 
+          src="/lovable-uploads/c2a9463b-c388-442e-bcc3-872bb1382d00.png" 
           alt="PVA Free Certified" 
           className="w-full h-full" 
         />
