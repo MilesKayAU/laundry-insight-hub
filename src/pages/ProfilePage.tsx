@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { 
   Card, 
@@ -58,14 +57,8 @@ const ProfilePage = () => {
           setProfile(profileData);
         }
         
-        // Get product submissions from local storage
-        const allSubmissions = getProductSubmissions();
-        // Filter submissions by user ID if that information is stored
-        // For now, we'll just show all approved submissions since local storage
-        // might not track which user submitted what
-        const userSubmissions = allSubmissions.filter(
-          submission => submission.approved
-        );
+        // Get product submissions from local storage, filtered for this user
+        const userSubmissions = getProductSubmissions(user.id);
         setSubmissions(userSubmissions);
         
         // Fetch uploaded images
@@ -150,17 +143,17 @@ const ProfilePage = () => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p>{user.email}</p>
+                <p>{user?.email}</p>
               </div>
               
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Username</p>
-                <p>{profile?.username || user.email?.split('@')[0]}</p>
+                <p>{profile?.username || user?.email?.split('@')[0]}</p>
               </div>
               
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Member Since</p>
-                <p>{new Date(user.created_at).toLocaleDateString()}</p>
+                <p>{user ? new Date(user.created_at).toLocaleDateString() : 'Loading...'}</p>
               </div>
             </div>
           </CardContent>

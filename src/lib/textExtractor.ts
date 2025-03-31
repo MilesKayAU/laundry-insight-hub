@@ -63,6 +63,7 @@ export interface ProductSubmission {
   brandContactEmail?: string;
   brandOwnershipRequestDate?: string;
   brandVerificationDate?: string;
+  uploadedBy?: string; // Add user ID who submitted the product
 }
 
 // Now let's define the ProductSubmitData interface that's referenced elsewhere
@@ -122,18 +123,29 @@ export const deleteProductSubmission = (productId: string) => {
 };
 
 // Modified function to add fallback data if localStorage is empty
-export const getProductSubmissions = (): ProductSubmission[] => {
+export const getProductSubmissions = (userId?: string): ProductSubmission[] => {
   try {
     const storedSubmissions = localStorage.getItem('product_submissions');
     
     if (storedSubmissions) {
-      return JSON.parse(storedSubmissions);
+      const submissions = JSON.parse(storedSubmissions);
+      
+      // If a userId is provided, filter submissions to only show those from this user
+      if (userId) {
+        return submissions.filter(submission => 
+          submission.uploadedBy === userId || 
+          // If no uploadedBy field exists, don't include in user-specific results
+          (submission.uploadedBy === undefined && submission.id.startsWith('default_'))
+        );
+      }
+      
+      return submissions;
     } else {
       console.warn('No product submissions found in localStorage, using fallback data');
       // Fallback data with pre-populated Australian products
       const fallbackData: ProductSubmission[] = [
         {
-          id: 'aus_product_1',
+          id: 'default_product_1',
           brand: 'Lil\' Bit Better',
           name: 'Laundry Detergent Sheets',
           type: 'Laundry Sheets',
@@ -148,10 +160,11 @@ export const getProductSubmissions = (): ProductSubmission[] => {
           dateSubmitted: new Date().toISOString(),
           brandVerified: true,
           brandContactEmail: "",
-          ingredients: "Sodium dodecyl sulfate, Sodium carbonate, Sodium silicate, Sodium percarbonate, Sodium carboxymethyl cellulose, Water conditioner, Brightening agent, Fragrance"
+          ingredients: "Sodium dodecyl sulfate, Sodium carbonate, Sodium silicate, Sodium percarbonate, Sodium carboxymethyl cellulose, Water conditioner, Brightening agent, Fragrance",
+          uploadedBy: 'system'  // Mark as system-added to distinguish from user submissions
         },
         {
-          id: 'aus_product_2',
+          id: 'default_product_2',
           brand: 'Zero Co',
           name: 'Laundry Liquid',
           type: 'Laundry Liquid',
@@ -166,10 +179,11 @@ export const getProductSubmissions = (): ProductSubmission[] => {
           dateSubmitted: new Date().toISOString(),
           brandVerified: true,
           brandContactEmail: "",
-          ingredients: "Water, Decyl Glucoside, Sodium Lauryl Ether Sulfate, Cocamidopropyl Betaine, Sodium Citrate, Glycerin"
+          ingredients: "Water, Decyl Glucoside, Sodium Lauryl Ether Sulfate, Cocamidopropyl Betaine, Sodium Citrate, Glycerin",
+          uploadedBy: 'system'  // Mark as system-added
         },
         {
-          id: 'aus_product_3',
+          id: 'default_product_3',
           brand: 'Dirt',
           name: 'Laundry Powder',
           type: 'Laundry Powder',
@@ -184,10 +198,11 @@ export const getProductSubmissions = (): ProductSubmission[] => {
           dateSubmitted: new Date().toISOString(),
           brandVerified: true,
           brandContactEmail: "",
-          ingredients: "Sodium carbonate, Sodium bicarbonate, Sodium percarbonate, Sodium citrate, Plant-derived surfactants"
+          ingredients: "Sodium carbonate, Sodium bicarbonate, Sodium percarbonate, Sodium citrate, Plant-derived surfactants",
+          uploadedBy: 'system'  // Mark as system-added
         },
         {
-          id: 'aus_product_4',
+          id: 'default_product_4',
           brand: 'That Red House',
           name: 'Soapberries',
           type: 'Soapberries',
@@ -202,12 +217,19 @@ export const getProductSubmissions = (): ProductSubmission[] => {
           dateSubmitted: new Date().toISOString(),
           brandVerified: true,
           brandContactEmail: "",
-          ingredients: "100% Sapindus Mukorossi (Soapberry shells)"
+          ingredients: "100% Sapindus Mukorossi (Soapberry shells)",
+          uploadedBy: 'system'  // Mark as system-added
         }
       ];
       
       // Store the fallback data in localStorage for future sessions
       localStorage.setItem('product_submissions', JSON.stringify(fallbackData));
+      
+      // If a userId is provided, return an empty array as these are system defaults
+      if (userId) {
+        return [];
+      }
+      
       return fallbackData;
     }
   } catch (error) {
@@ -325,7 +347,7 @@ export const analyzePastedIngredients = (ingredients: string): {
 };
 
 // Simulate product submission
-export const submitProduct = async (data: ProductSubmitData): Promise<boolean> => {
+export const submitProduct = async (data: ProductSubmitData, userId?: string): Promise<boolean> => {
   // Simulated product submission
   console.info("Product submission:", data);
   
@@ -347,10 +369,11 @@ export const submitProduct = async (data: ProductSubmitData): Promise<boolean> =
       pvaPercentage: data.pvaPercentage !== undefined ? data.pvaPercentage : null,
       brandVerified: false,
       brandOwnershipRequested: false,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      uploadedBy: userId // Store the user ID who submitted this product
     };
     
-    // Simulating PVA detection from ingredients if available
+    // Simulate PVA detection from ingredients if available
     if (data.ingredients) {
       const ingredientsLower = data.ingredients.toLowerCase();
       if (ingredientsLower.includes('polyvinyl alcohol') || 
@@ -378,7 +401,7 @@ export const submitProduct = async (data: ProductSubmitData): Promise<boolean> =
       newSubmission.pvaPercentage = 25;
     }
     
-    // Simulating image analysis (would be server-side in production)
+    // Simulate image analysis (would be server-side in production)
     if (data.media && data.media.length > 0) {
       // Simulate delay for "processing" images
       await new Promise(resolve => setTimeout(resolve, 1000));
