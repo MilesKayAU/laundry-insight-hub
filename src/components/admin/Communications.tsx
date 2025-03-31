@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import PaginationControls from "@/components/database/PaginationControls";
 
 interface Communication {
   id: string;
@@ -60,6 +61,8 @@ interface Communication {
   updated_at: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 const Communications = () => {
   const { toast } = useToast();
   const [communications, setCommunications] = useState<Communication[]>([]);
@@ -68,6 +71,7 @@ const Communications = () => {
   const [selectedCommunication, setSelectedCommunication] = useState<Communication | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [responseText, setResponseText] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   
   useEffect(() => {
     fetchCommunications();
@@ -147,6 +151,10 @@ const Communications = () => {
     comm.message?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -221,6 +229,9 @@ const Communications = () => {
               formatDate={formatDate}
               getStatusBadge={getStatusBadge}
               filter="all"
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              itemsPerPage={ITEMS_PER_PAGE}
             />
           </TabsContent>
 
@@ -232,6 +243,9 @@ const Communications = () => {
               formatDate={formatDate}
               getStatusBadge={getStatusBadge}
               filter="pending"
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              itemsPerPage={ITEMS_PER_PAGE}
             />
           </TabsContent>
 
@@ -243,6 +257,9 @@ const Communications = () => {
               formatDate={formatDate}
               getStatusBadge={getStatusBadge}
               filter="responded"
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              itemsPerPage={ITEMS_PER_PAGE}
             />
           </TabsContent>
 
@@ -254,6 +271,9 @@ const Communications = () => {
               formatDate={formatDate}
               getStatusBadge={getStatusBadge}
               filter="resolved"
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              itemsPerPage={ITEMS_PER_PAGE}
             />
           </TabsContent>
         </Tabs>
@@ -334,7 +354,10 @@ const MessageTable = ({
   openMessageDialog, 
   formatDate, 
   getStatusBadge,
-  filter 
+  filter,
+  currentPage,
+  onPageChange,
+  itemsPerPage
 }) => {
   if (loading) {
     return (
@@ -356,44 +379,59 @@ const MessageTable = ({
     );
   }
   
+  // Pagination logic
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCommunications = communications.slice(startIndex, startIndex + itemsPerPage);
+  
   return (
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Company</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Message</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {communications.map((comm) => (
-            <TableRow key={comm.id}>
-              <TableCell className="font-medium">{comm.company_name}</TableCell>
-              <TableCell>{comm.sender_email}</TableCell>
-              <TableCell className="max-w-xs truncate">
-                {comm.message.substring(0, 60)}{comm.message.length > 60 ? '...' : ''}
-              </TableCell>
-              <TableCell>{formatDate(comm.created_at)}</TableCell>
-              <TableCell>{getStatusBadge(comm.status)}</TableCell>
-              <TableCell className="text-right">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => openMessageDialog(comm)}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View
-                </Button>
-              </TableCell>
+    <>
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Company</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Message</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {paginatedCommunications.map((comm) => (
+              <TableRow key={comm.id}>
+                <TableCell className="font-medium">{comm.company_name}</TableCell>
+                <TableCell>{comm.sender_email}</TableCell>
+                <TableCell className="max-w-xs truncate">
+                  {comm.message.substring(0, 60)}{comm.message.length > 60 ? '...' : ''}
+                </TableCell>
+                <TableCell>{formatDate(comm.created_at)}</TableCell>
+                <TableCell>{getStatusBadge(comm.status)}</TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => openMessageDialog(comm)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      
+      {communications.length > itemsPerPage && (
+        <PaginationControls
+          currentPage={currentPage}
+          totalItems={communications.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={onPageChange}
+        />
+      )}
+    </>
   );
 };
 

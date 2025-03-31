@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -41,8 +41,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { Book, Plus, Trash, ExternalLink, Edit } from "lucide-react";
+import { Book, Plus, Trash, ExternalLink, Edit, RefreshCw } from "lucide-react";
 import { initialResearchLinks } from "@/lib/researchData";
+import PaginationControls from "@/components/database/PaginationControls";
 
 interface ResearchLink {
   id: string;
@@ -57,6 +58,8 @@ const formSchema = z.object({
   description: z.string().min(20, "Description must be at least 20 characters"),
   url: z.string().url("Must be a valid URL")
 });
+
+const ITEMS_PER_PAGE = 10;
 
 // Helper function to synchronize data across components
 const syncResearchData = (data: ResearchLink[]) => {
@@ -84,6 +87,8 @@ const ResearchManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -94,40 +99,8 @@ const ResearchManagement = () => {
     }
   });
 
-  useEffect(() => {
-    fetchResearchLinks();
-
-    // Listen for custom events from other components
-    window.addEventListener('research_links_updated', handleResearchLinksUpdated);
-    
-    return () => {
-      window.removeEventListener('research_links_updated', handleResearchLinksUpdated);
-    };
-  }, []);
-
-  const handleResearchLinksUpdated = (event: any) => {
-    if (event.detail && event.detail.data) {
-      setResearchLinks(event.detail.data);
-    }
-  };
-
-  useEffect(() => {
-    if (editingLink) {
-      form.reset({
-        title: editingLink.title,
-        description: editingLink.description,
-        url: editingLink.url
-      });
-    } else {
-      form.reset({
-        title: "",
-        description: "",
-        url: ""
-      });
-    }
-  }, [editingLink, form]);
-
-  const fetchResearchLinks = async () => {
+  // Memoized fetch function to avoid recreation on renders
+  const fetchResearchLinks = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -147,6 +120,7 @@ const ResearchManagement = () => {
         setResearchLinks(initialData);
         syncResearchData(initialData);
       } else if (data && data.length > 0) {
+        console.log('Setting research links from Supabase:', data);
         setResearchLinks(data);
         syncResearchData(data);
       } else {
@@ -195,7 +169,40 @@ const ResearchManagement = () => {
     } finally {
       setLoading(false);
     }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchResearchLinks();
+
+    // Listen for custom events from other components
+    window.addEventListener('research_links_updated', handleResearchLinksUpdated);
+    
+    return () => {
+      window.removeEventListener('research_links_updated', handleResearchLinksUpdated);
+    };
+  }, [fetchResearchLinks]);
+
+  const handleResearchLinksUpdated = (event: any) => {
+    if (event.detail && event.detail.data) {
+      setResearchLinks(event.detail.data);
+    }
   };
+
+  useEffect(() => {
+    if (editingLink) {
+      form.reset({
+        title: editingLink.title,
+        description: editingLink.description,
+        url: editingLink.url
+      });
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+        url: ""
+      });
+    }
+  }, [editingLink, form]);
 
   const seedInitialData = async () => {
     const { data } = await supabase
@@ -319,7 +326,11 @@ const ResearchManagement = () => {
           throw error;
         }
         
-        // Always refresh from the server after deletion
+        // Update local state first for immediate UI feedback
+        const updatedLinks = researchLinks.filter(link => link.id !== id);
+        setResearchLinks(updatedLinks);
+        
+        // Then trigger a fresh fetch
         await fetchResearchLinks();
       }
 
@@ -341,6 +352,22 @@ const ResearchManagement = () => {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Filter links by search term
+  const filteredLinks = researchLinks.filter(link => 
+    link.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    link.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Paginate filtered links
+  const paginatedLinks = filteredLinks.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -353,99 +380,113 @@ const ResearchManagement = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-end mb-4">
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditingLink(null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Research Link
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px]">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingLink ? "Edit Research Link" : "Add Research Link"}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingLink 
-                    ? "Update the details of the research link"
-                    : "Add a new research link to the database"
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Research title" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          The title of the research paper or study
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="A brief description of the research and its findings"
-                            className="min-h-[100px]"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Summarize the key findings and relevance to PVA
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>URL</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://example.com/research" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Link to the original research paper or publication
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button 
-                      variant="outline" 
-                      type="button"
-                      onClick={() => {
-                        setDialogOpen(false);
-                        setEditingLink(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit">
-                      {editingLink ? "Update" : "Add"} Research Link
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+        <div className="flex justify-between items-center mb-4">
+          <div className="w-full max-w-sm">
+            <Input 
+              placeholder="Search research links..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mb-4 md:mb-0"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={fetchResearchLinks}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditingLink(null)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Research Link
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[550px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingLink ? "Edit Research Link" : "Add Research Link"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingLink 
+                      ? "Update the details of the research link"
+                      : "Add a new research link to the database"
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Title</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Research title" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            The title of the research paper or study
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="A brief description of the research and its findings"
+                              className="min-h-[100px]"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Summarize the key findings and relevance to PVA
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="url"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://example.com/research" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Link to the original research paper or publication
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <Button 
+                        variant="outline" 
+                        type="button"
+                        onClick={() => {
+                          setDialogOpen(false);
+                          setEditingLink(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit">
+                        {editingLink ? "Update" : "Add"} Research Link
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {loading ? (
@@ -457,103 +498,116 @@ const ResearchManagement = () => {
             <p className="text-muted-foreground">No research links available. Add your first one!</p>
           </div>
         ) : (
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>URL</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {researchLinks.map((link) => (
-                  <TableRow key={link.id}>
-                    <TableCell className="font-medium">{link.title}</TableCell>
-                    <TableCell className="max-w-[300px]">
-                      <div className="truncate">{link.description}</div>
-                    </TableCell>
-                    <TableCell>
-                      <a 
-                        href={link.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center text-blue-600 hover:underline"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        <span className="truncate max-w-[150px]">{link.url}</span>
-                      </a>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => {
-                            setEditingLink(link);
-                            setDialogOpen(true);
-                          }}
+          <>
+            <div className="border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>URL</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedLinks.map((link) => (
+                    <TableRow key={link.id}>
+                      <TableCell className="font-medium">{link.title}</TableCell>
+                      <TableCell className="max-w-[300px]">
+                        <div className="truncate">{link.description}</div>
+                      </TableCell>
+                      <TableCell>
+                        <a 
+                          href={link.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center text-blue-600 hover:underline"
                         >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Dialog 
-                          open={deleteDialogOpen && deleting === link.id} 
-                          onOpenChange={(open) => {
-                            if (!open) {
-                              setDeleteDialogOpen(false);
-                              setDeleting(null);
-                            }
-                          }}
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => {
-                                setDeleting(link.id);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Confirm Deletion</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to delete this research link? This action cannot be undone.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4">
-                              <p className="font-medium">{link.title}</p>
-                            </div>
-                            <DialogFooter>
-                              <Button 
-                                variant="outline" 
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          <span className="truncate max-w-[150px]">{link.url}</span>
+                        </a>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              setEditingLink(link);
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Dialog 
+                            open={deleteDialogOpen && deleting === link.id} 
+                            onOpenChange={(open) => {
+                              if (!open) {
+                                setDeleteDialogOpen(false);
+                                setDeleting(null);
+                              }
+                            }}
+                          >
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
                                 onClick={() => {
-                                  setDeleteDialogOpen(false);
-                                  setDeleting(null);
+                                  setDeleting(link.id);
+                                  setDeleteDialogOpen(true);
                                 }}
                               >
-                                Cancel
+                                <Trash className="h-4 w-4" />
                               </Button>
-                              <Button 
-                                variant="destructive"
-                                onClick={() => handleDelete(link.id)}
-                              >
-                                Delete
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Confirm Deletion</DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to delete this research link? This action cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="py-4">
+                                <p className="font-medium">{link.title}</p>
+                              </div>
+                              <DialogFooter>
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => {
+                                    setDeleteDialogOpen(false);
+                                    setDeleting(null);
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  variant="destructive"
+                                  onClick={() => handleDelete(link.id)}
+                                >
+                                  Delete
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {filteredLinks.length > ITEMS_PER_PAGE && (
+              <div className="mt-4">
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalItems={filteredLinks.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

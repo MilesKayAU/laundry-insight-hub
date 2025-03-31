@@ -14,6 +14,7 @@ import { Book, ExternalLink, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import PaginationControls from "@/components/database/PaginationControls";
 
 interface ResearchLink {
   id: string;
@@ -23,9 +24,12 @@ interface ResearchLink {
   created_at: string;
 }
 
+const ITEMS_PER_PAGE = 5;
+
 const ResearchPage = () => {
   const [researchLinks, setResearchLinks] = useState<ResearchLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 
@@ -49,6 +53,9 @@ const ResearchPage = () => {
     if (event.detail && event.detail.data) {
       console.log('Research page received updated links via custom event', event.detail.data);
       setResearchLinks(event.detail.data);
+    } else {
+      // If no data was provided, fetch fresh data
+      fetchResearchLinks();
     }
   };
 
@@ -61,6 +68,8 @@ const ResearchPage = () => {
         setResearchLinks(updatedLinks);
       } catch (error) {
         console.error('Error parsing research links from storage event:', error);
+        // If there's an error parsing, fetch fresh data
+        fetchResearchLinks();
       }
     }
   };
@@ -81,7 +90,7 @@ const ResearchPage = () => {
 
       // If data exists in Supabase, use it
       if (data && data.length > 0) {
-        console.log('Research page setting links from Supabase');
+        console.log('Research page setting links from Supabase:', data);
         setResearchLinks(data);
         
         // Update localStorage for consistency
@@ -129,12 +138,23 @@ const ResearchPage = () => {
 
   // Force refresh less often but make it a manual option too
   useEffect(() => {
-    const refreshInterval = setInterval(fetchResearchLinks, 300000); // Refresh every 5 minutes
+    const refreshInterval = setInterval(fetchResearchLinks, 10 * 60 * 1000); // Refresh every 10 minutes instead of 5
     
     return () => {
       clearInterval(refreshInterval);
     };
   }, []);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo(0, 0);
+  };
+
+  // Pagination logic
+  const paginatedLinks = researchLinks.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="container mx-auto py-10 px-4">
@@ -184,30 +204,40 @@ const ResearchPage = () => {
           <div className="text-center py-10">
             <p className="text-muted-foreground">Loading research data...</p>
           </div>
-        ) : researchLinks.length > 0 ? (
-          researchLinks.map((research) => (
-            <Card key={research.id} className="overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-xl">{research.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">{research.description}</p>
-                <div className="flex justify-end">
-                  <Button variant="outline" asChild>
-                    <a 
-                      href={research.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Research
-                    </a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+        ) : paginatedLinks.length > 0 ? (
+          <>
+            {paginatedLinks.map((research) => (
+              <Card key={research.id} className="overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="text-xl">{research.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4">{research.description}</p>
+                  <div className="flex justify-end">
+                    <Button variant="outline" asChild>
+                      <a 
+                        href={research.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View Research
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            {/* Add pagination controls */}
+            <PaginationControls 
+              currentPage={currentPage}
+              totalItems={researchLinks.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={handlePageChange}
+            />
+          </>
         ) : (
           <div className="text-center py-10">
             <p className="text-muted-foreground">No research links available yet.</p>
