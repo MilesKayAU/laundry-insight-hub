@@ -99,15 +99,22 @@ export const useResearchLinks = () => {
 
   const deleteResearchLink = async (id: string) => {
     try {
-      console.log('Deleting research link with ID:', id);
+      console.log('Executing deleteResearchLink for ID:', id);
       
       if (id.startsWith('initial-') || id.startsWith('local-')) {
         console.log('Deleting local research link');
         const updatedLinks = researchLinks.filter(link => link.id !== id);
         setResearchLinks(updatedLinks);
         syncResearchData(updatedLinks);
+        
+        toast({
+          title: "Success",
+          description: "Research link successfully deleted",
+        });
+        
+        return true;
       } else {
-        console.log('Deleting Supabase research link');
+        console.log('Deleting Supabase research link with ID:', id);
         const { error } = await supabase
           .from('research_links')
           .delete()
@@ -123,22 +130,19 @@ export const useResearchLinks = () => {
         setResearchLinks(updatedLinks);
         syncResearchData(updatedLinks);
         
-        // Then refresh the data
-        await loadResearchLinks();
+        toast({
+          title: "Success",
+          description: "Research link successfully deleted",
+        });
+        
+        return true;
       }
-      
-      toast({
-        title: "Success",
-        description: "Research link successfully deleted",
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error deleting research link:', error);
+    } catch (error: any) {
+      console.error('Error in deleteResearchLink:', error);
       
       toast({
         title: "Error",
-        description: "Failed to delete research link",
+        description: "Failed to delete research link: " + (error.message || "Unknown error"),
         variant: "destructive",
       });
       

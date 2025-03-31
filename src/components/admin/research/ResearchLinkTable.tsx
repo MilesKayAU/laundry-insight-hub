@@ -11,14 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Edit, Trash } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ResearchLink } from './utils';
 
 interface ResearchLinkTableProps {
@@ -40,6 +41,15 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
   setDeleteDialogOpen,
   setDeletingId
 }) => {
+  const handleDeleteConfirm = () => {
+    if (deletingId) {
+      console.log('Confirming deletion of research link with ID:', deletingId);
+      onDelete(deletingId);
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="border rounded-md">
       <Table>
@@ -82,6 +92,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
                     variant="outline"
                     size="icon"
                     onClick={() => {
+                      console.log('Setting deletingId:', link.id);
                       setDeletingId(link.id);
                       setDeleteDialogOpen(true);
                     }}
@@ -95,8 +106,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
         </TableBody>
       </Table>
       
-      {/* Move dialog outside of the map to fix deletion issues */}
-      <Dialog 
+      <AlertDialog 
         open={deleteDialogOpen} 
         onOpenChange={(open) => {
           if (!open) {
@@ -105,38 +115,26 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
           }
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete this research link? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setDeletingId(null);
-              }}
-            >
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteDialogOpen(false);
+              setDeletingId(null);
+            }}>
               Cancel
-            </Button>
-            <Button 
-              variant="destructive"
-              onClick={() => {
-                if (deletingId) {
-                  onDelete(deletingId);
-                  setDeleteDialogOpen(false);
-                  setDeletingId(null);
-                }
-              }}
-            >
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
               Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
