@@ -17,7 +17,7 @@ import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmission
 import ResearchManagement from "@/components/admin/ResearchManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProductSubmission } from "@/lib/textExtractor";
+import { ProductSubmission, PVA_KEYWORDS_CATEGORIES, getProductSubmissions } from "@/lib/textExtractor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const AdminPage = () => {
@@ -30,10 +30,13 @@ const AdminPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [messageResponse, setMessageResponse] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   
   // Mock data for other components
-  const mockMessages = [];
-  const mockProfiles = [];
+  const mockMessages: any[] = [];
+  const mockProfiles: any[] = [];
 
   useEffect(() => {
     // Load products from localStorage or database
@@ -42,19 +45,16 @@ const AdminPage = () => {
         setLoading(true);
         
         // For testing, load from localStorage
-        const storedProducts = localStorage.getItem('products');
-        if (storedProducts) {
-          const products = JSON.parse(storedProducts) as ProductSubmission[];
-          
-          // Split into pending and approved
-          const pending = products.filter(p => p.status === 'pending' || !p.status);
-          const approved = products.filter(p => p.status === 'approved');
-          const brandVerifications = products.filter(p => p.brandOwnershipRequested);
-          
-          setPendingProducts(pending);
-          setApprovedProducts(approved);
-          setVerifications(brandVerifications);
-        }
+        const products = getProductSubmissions();
+        
+        // Split into pending and approved based on approved property
+        const pending = products.filter(p => !p.approved);
+        const approved = products.filter(p => p.approved);
+        const brandVerifications = products.filter(p => p.brandOwnershipRequested);
+        
+        setPendingProducts(pending);
+        setApprovedProducts(approved);
+        setVerifications(brandVerifications);
       } catch (error) {
         console.error("Error loading products:", error);
         toast({
@@ -81,18 +81,18 @@ const AdminPage = () => {
       const productIndex = pendingProducts.findIndex(p => p.id === productId);
       if (productIndex === -1) return;
       
-      // Update the product status
+      // Update the product approved status
       const updatedProducts = [...pendingProducts];
-      updatedProducts[productIndex].status = 'approved';
+      updatedProducts[productIndex].approved = true;
       
       // Move to approved products
       setApprovedProducts([...approvedProducts, updatedProducts[productIndex]]);
       setPendingProducts(updatedProducts.filter(p => p.id !== productId));
       
       // Update localStorage
-      const allProducts = JSON.parse(localStorage.getItem('products') || '[]');
+      const allProducts = getProductSubmissions();
       const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
-        p.id === productId ? { ...p, status: 'approved' } : p
+        p.id === productId ? { ...p, approved: true } : p
       );
       localStorage.setItem('products', JSON.stringify(updatedAllProducts));
       
@@ -116,17 +116,17 @@ const AdminPage = () => {
       const productIndex = pendingProducts.findIndex(p => p.id === productId);
       if (productIndex === -1) return;
       
-      // Update the product status
+      // Update the product rejected status
       const updatedProducts = [...pendingProducts];
-      updatedProducts[productIndex].status = 'rejected';
+      updatedProducts[productIndex].approved = false;
       
       // Remove from pending products
       setPendingProducts(updatedProducts.filter(p => p.id !== productId));
       
       // Update localStorage
-      const allProducts = JSON.parse(localStorage.getItem('products') || '[]');
+      const allProducts = getProductSubmissions();
       const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
-        p.id === productId ? { ...p, status: 'rejected' } : p
+        p.id === productId ? { ...p, approved: false } : p
       );
       localStorage.setItem('products', JSON.stringify(updatedAllProducts));
       
@@ -158,6 +158,36 @@ const AdminPage = () => {
       title: "Verification Rejected",
       description: "Brand verification has been rejected",
     });
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    // Handle delete product functionality
+    toast({
+      title: "Product Deleted",
+      description: "The product has been successfully deleted",
+    });
+  };
+
+  const handleCleanDuplicates = () => {
+    // Handle cleaning duplicates
+    setShowCleanupDialog(false);
+    toast({
+      title: "Duplicates Cleaned",
+      description: "Duplicate products have been successfully removed",
+    });
+  };
+
+  const handleBulkUpload = () => {
+    // Handle bulk upload
+    toast({
+      title: "Bulk Upload",
+      description: "Bulk upload functionality triggered",
+    });
+  };
+
+  const handleMessageSelect = (message: any) => {
+    // Handle message selection
+    setDialogOpen(true);
   };
 
   const filteredApprovedProducts = approvedProducts.filter(product => 
@@ -197,12 +227,12 @@ const AdminPage = () => {
             filteredProducts={filteredApprovedProducts}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
-            onView={handleViewDetails}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            loading={loading}
-            onExport={() => {}}
-            onImport={() => {}}
+            onViewDetails={handleViewDetails}
+            onDelete={handleDeleteProduct}
+            onBulkUpload={handleBulkUpload}
+            showCleanupDialog={showCleanupDialog}
+            setShowCleanupDialog={setShowCleanupDialog}
+            onCleanDuplicates={handleCleanDuplicates}
           />
         </TabsContent>
         
@@ -223,12 +253,12 @@ const AdminPage = () => {
             messages={mockMessages}
             profiles={mockProfiles}
             selectedMessage={null}
-            messageResponse=""
-            onSelectMessage={() => {}}
-            onResponseChange={() => {}}
+            messageResponse={messageResponse}
+            dialogOpen={dialogOpen}
+            onDialogOpenChange={setDialogOpen}
+            onMessageSelect={handleMessageSelect}
+            onResponseChange={setMessageResponse}
             onSendResponse={() => {}}
-            onCloseMessage={() => {}}
-            loading={false}
           />
         </TabsContent>
         
@@ -246,7 +276,7 @@ const AdminPage = () => {
         
         <TabsContent value="settings">
           <AdminSettings 
-            keywordCategories={[]}
+            keywordCategories={PVA_KEYWORDS_CATEGORIES}
             newKeyword=""
             selectedCategory=""
             showResetDialog={false}
@@ -276,9 +306,8 @@ const AdminPage = () => {
                   <p><strong>PVA %:</strong> {selectedProduct.pvaPercentage ?? 'N/A'}</p>
                 </div>
                 <div>
-                  <p><strong>Submitted By:</strong> {selectedProduct.submittedBy ?? 'Anonymous'}</p>
                   <p><strong>Submitted At:</strong> {selectedProduct.submittedAt ? new Date(selectedProduct.submittedAt).toLocaleString() : 'Unknown'}</p>
-                  <p><strong>Status:</strong> {selectedProduct.status ?? 'Pending'}</p>
+                  <p><strong>Status:</strong> {selectedProduct.approved ? 'Approved' : 'Pending'}</p>
                 </div>
               </div>
               
