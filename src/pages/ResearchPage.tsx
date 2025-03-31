@@ -138,7 +138,7 @@ const ResearchPage = () => {
 
   // Force refresh less often but make it a manual option too
   useEffect(() => {
-    const refreshInterval = setInterval(fetchResearchLinks, 10 * 60 * 1000); // Refresh every 10 minutes instead of 5
+    const refreshInterval = setInterval(fetchResearchLinks, 10 * 60 * 1000); // Refresh every 10 minutes
     
     return () => {
       clearInterval(refreshInterval);

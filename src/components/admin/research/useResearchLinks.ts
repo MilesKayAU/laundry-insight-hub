@@ -44,12 +44,19 @@ export const useResearchLinks = () => {
 
   const addResearchLink = async (link: Omit<ResearchLink, 'id' | 'created_at'>) => {
     try {
+      console.log('Adding research link:', link);
+      
       const { data, error } = await supabase
         .from('research_links')
         .insert([link])
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding to Supabase:', error);
+        throw error;
+      }
+      
+      console.log('Successfully added research link:', data);
       
       // Refresh data from server after addition
       await loadResearchLinks();
@@ -60,12 +67,12 @@ export const useResearchLinks = () => {
       });
       
       return true;
-    } catch (error) {
-      console.error('Error adding to Supabase:', error);
+    } catch (error: any) {
+      console.error('Error adding research link:', error);
       
       toast({
         title: "Error",
-        description: "Failed to add research link",
+        description: error.message || "Failed to add research link",
         variant: "destructive",
       });
       
@@ -75,6 +82,8 @@ export const useResearchLinks = () => {
 
   const updateResearchLink = async (id: string, link: Omit<ResearchLink, 'id' | 'created_at'>) => {
     try {
+      console.log('Updating research link with ID:', id, 'New data:', link);
+      
       // For local links (starting with 'initial-' or 'local-'), update in local state
       if (id.startsWith('initial-') || id.startsWith('local-')) {
         const updatedLinks = researchLinks.map(item => 
@@ -97,7 +106,12 @@ export const useResearchLinks = () => {
           .update(link)
           .eq('id', id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating in Supabase:', error);
+          throw error;
+        }
+        
+        console.log('Successfully updated research link in Supabase');
         
         // Refresh data from server after update
         await loadResearchLinks();
@@ -109,12 +123,12 @@ export const useResearchLinks = () => {
         
         return true;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating research link:', error);
       
       toast({
         title: "Error",
-        description: "Failed to update research link",
+        description: error.message || "Failed to update research link",
         variant: "destructive",
       });
       
