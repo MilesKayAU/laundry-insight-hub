@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
   TabsContent, 
@@ -15,7 +15,7 @@ import UserManagement from "@/components/admin/UserManagement";
 import AdminSettings from "@/components/admin/AdminSettings";
 import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmissions";
 import ResearchManagement from "@/components/admin/ResearchManagement";
-import { ProductSubmission } from "@/lib/textExtractor";
+import { ProductSubmission, getProductSubmissions } from "@/lib/textExtractor";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("pending");
@@ -24,70 +24,17 @@ const AdminPage = () => {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [messageResponse, setMessageResponse] = useState("");
+  const [products, setProducts] = useState<ProductSubmission[]>([]);
   
-  // Mock data for products with realistic values
-  const mockProducts: ProductSubmission[] = [
-    {
-      id: "1",
-      brand: "EcoBeauty",
-      name: "Hydrating Facial Cleanser",
-      type: "Cleanser",
-      pvaStatus: "contains" as const,
-      pvaPercentage: 2.5,
-      ingredients: "Water, Glycerin, Polyvinyl Alcohol, Aloe Vera Extract, Chamomile Oil",
-      websiteUrl: "https://www.ecobeauty.com/products/facial-cleanser",
-      submittedBy: "user123",
-      timestamp: new Date().toISOString(),
-      approved: true,
-      brandVerified: false
-    },
-    {
-      id: "2",
-      brand: "NatureCare",
-      name: "Moisturizing Face Cream",
-      type: "Moisturizer",
-      pvaStatus: "verified-free" as const,
-      pvaPercentage: 0,
-      ingredients: "Aqua, Cetyl Alcohol, Glycerin, Shea Butter, Jojoba Oil",
-      websiteUrl: "https://www.naturecare.com/face-cream",
-      submittedBy: "user456",
-      timestamp: new Date().toISOString(),
-      approved: true,
-      brandVerified: true
-    },
-    {
-      id: "3",
-      brand: "PureSkin",
-      name: "Exfoliating Scrub",
-      type: "Exfoliant",
-      pvaStatus: "needs-verification" as const,
-      pvaPercentage: null,
-      ingredients: "Water, Walnut Shell Powder, Glycerin, Vitamin E, Tea Tree Oil",
-      websiteUrl: "https://www.pureskin.com/scrub",
-      submittedBy: "user789",
-      timestamp: new Date().toISOString(),
-      approved: false,
-      brandVerified: false
-    },
-    {
-      id: "4",
-      brand: "GlowUp",
-      name: "Vitamin C Serum",
-      type: "Serum",
-      pvaStatus: "inconclusive" as const,
-      pvaPercentage: null,
-      ingredients: "Water, Ascorbic Acid, Ferulic Acid, Vitamin E, Hyaluronic Acid",
-      websiteUrl: "https://www.glowup.com/vitamin-c-serum",
-      submittedBy: "user321",
-      timestamp: new Date().toISOString(),
-      approved: false,
-      brandVerified: false
-    }
-  ];
+  // Load real product submissions from localStorage
+  useEffect(() => {
+    const loadedProducts = getProductSubmissions();
+    setProducts(loadedProducts);
+  }, []);
   
   // Filter products by approved status
-  const pendingProducts = mockProducts.filter(product => !product.approved);
-  const approvedProducts = mockProducts.filter(product => product.approved);
+  const pendingProducts = products.filter(product => !product.approved);
+  const approvedProducts = products.filter(product => product.approved);
   
   // Filter approved products by search term
   const filteredApprovedProducts = searchTerm 
