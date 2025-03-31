@@ -54,11 +54,6 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
     }
   };
 
-  const handleDialogClose = () => {
-    setDeleteDialogOpen(false);
-    setDeletingId(null);
-  };
-
   return (
     <div className="border rounded-md">
       <Table>
@@ -123,7 +118,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleDialogClose}>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>

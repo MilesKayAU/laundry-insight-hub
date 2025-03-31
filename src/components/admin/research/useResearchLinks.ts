@@ -23,7 +23,6 @@ export const useResearchLinks = () => {
       }
       
       setResearchLinks(data);
-      syncResearchData(data);
       
       // Try to seed database if needed
       try {
@@ -54,32 +53,45 @@ export const useResearchLinks = () => {
       
       // Refresh data from server after addition
       await loadResearchLinks();
-      return true;
-    } catch (supabaseError) {
-      console.error('Error adding to Supabase, using local storage:', supabaseError);
       
-      const newLink = {
-        id: `local-${Date.now()}`,
-        ...link,
-        created_at: new Date().toISOString()
-      };
+      toast({
+        title: "Success",
+        description: "Research link successfully added",
+      });
       
-      const updatedLinks = [newLink, ...researchLinks];
-      setResearchLinks(updatedLinks);
-      syncResearchData(updatedLinks);
       return true;
+    } catch (error) {
+      console.error('Error adding to Supabase:', error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to add research link",
+        variant: "destructive",
+      });
+      
+      return false;
     }
   };
 
   const updateResearchLink = async (id: string, link: Omit<ResearchLink, 'id' | 'created_at'>) => {
     try {
+      // For local links (starting with 'initial-' or 'local-'), update in local state
       if (id.startsWith('initial-') || id.startsWith('local-')) {
         const updatedLinks = researchLinks.map(item => 
           item.id === id ? { ...item, ...link } : item
         );
         setResearchLinks(updatedLinks);
         syncResearchData(updatedLinks);
-      } else {
+        
+        toast({
+          title: "Success",
+          description: "Research link successfully updated",
+        });
+        
+        return true;
+      } 
+      // For Supabase links, update in database
+      else {
         const { error } = await supabase
           .from('research_links')
           .update(link)
@@ -89,21 +101,23 @@ export const useResearchLinks = () => {
         
         // Refresh data from server after update
         await loadResearchLinks();
+        
+        toast({
+          title: "Success",
+          description: "Research link successfully updated",
+        });
+        
+        return true;
       }
-      
-      toast({
-        title: "Success",
-        description: "Research link successfully updated",
-      });
-      
-      return true;
     } catch (error) {
       console.error('Error updating research link:', error);
+      
       toast({
         title: "Error",
         description: "Failed to update research link",
         variant: "destructive",
       });
+      
       return false;
     }
   };
@@ -112,10 +126,15 @@ export const useResearchLinks = () => {
     try {
       console.log('Executing deleteResearchLink for ID:', id);
       
+      // For local links (starting with 'initial-' or 'local-'), delete from local state
       if (id.startsWith('initial-') || id.startsWith('local-')) {
         console.log('Deleting local research link');
+        
+        // Update state first for immediate feedback
         const updatedLinks = researchLinks.filter(link => link.id !== id);
         setResearchLinks(updatedLinks);
+        
+        // Then update localStorage
         syncResearchData(updatedLinks);
         
         toast({
@@ -124,8 +143,11 @@ export const useResearchLinks = () => {
         });
         
         return true;
-      } else {
+      } 
+      // For Supabase links, delete from database
+      else {
         console.log('Deleting Supabase research link with ID:', id);
+        
         const { error } = await supabase
           .from('research_links')
           .delete()
@@ -162,19 +184,6 @@ export const useResearchLinks = () => {
 
   useEffect(() => {
     loadResearchLinks();
-
-    // Listen for custom events from other components
-    const handleResearchLinksUpdated = (event: any) => {
-      if (event.detail && event.detail.data) {
-        setResearchLinks(event.detail.data);
-      }
-    };
-    
-    window.addEventListener('research_links_updated', handleResearchLinksUpdated);
-    
-    return () => {
-      window.removeEventListener('research_links_updated', handleResearchLinksUpdated);
-    };
   }, [loadResearchLinks]);
 
   // Filter links by search term

@@ -47,18 +47,10 @@ const ResearchManagement = () => {
     try {
       if (editingLink) {
         // Handle editing
-        const success = await updateResearchLink(editingLink.id, values);
-        
-        if (!success) {
-          throw new Error("Failed to update research link");
-        }
+        await updateResearchLink(editingLink.id, values);
       } else {
         // Handle adding
-        const success = await addResearchLink(values);
-        
-        if (!success) {
-          throw new Error("Failed to add research link");
-        }
+        await addResearchLink(values);
       }
 
       setDialogOpen(false);
@@ -76,12 +68,9 @@ const ResearchManagement = () => {
   const handleDelete = async (id: string) => {
     try {
       console.log('Handling delete for ID:', id);
-      const success = await deleteResearchLink(id);
+      await deleteResearchLink(id);
       
-      if (!success) {
-        throw new Error("Failed to delete research link");
-      }
-      
+      // Dialog will be closed via the AlertDialog onOpenChange
       setDeleteDialogOpen(false);
       setDeletingId(null);
     } catch (error: any) {
@@ -151,6 +140,7 @@ const ResearchManagement = () => {
             <ResearchLinkTable 
               links={paginatedLinks}
               onEdit={(link) => {
+                console.log('Editing link:', link);
                 setEditingLink(link);
                 setDialogOpen(true);
               }}
