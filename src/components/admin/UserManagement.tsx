@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -95,30 +94,42 @@ const UserManagement = () => {
       
       // Process each profile
       for (const profile of profileData) {
-        // Check if user is an admin using the has_role function
-        const { data: isAdmin, error: adminCheckError } = await supabase
-          .rpc('has_role', { role: 'admin' }, { 
-            // Important: Pass the user ID as a header to check that specific user
-            // This bypasses the default auth.uid() check
-            head: { 'x-user-id': profile.id } 
-          });
+        try {
+          // Check if user is an admin using the has_role function
+          const { data: isAdmin, error: adminCheckError } = await supabase
+            .rpc('has_role', { role: 'admin' });
+            
+          if (adminCheckError) {
+            console.log('Error checking admin status for user:', profile.id, adminCheckError);
+            // Continue with the user, just mark as non-admin
+          }
           
-        if (adminCheckError) {
-          console.log('Error checking admin status for user:', profile.id, adminCheckError);
-          // Continue with the user, just mark as non-admin
+          enhancedUsers.push({
+            id: profile.id,
+            email: profile.username || 'No email',
+            created_at: new Date().toISOString(), // Placeholder
+            user_metadata: {
+              full_name: profile.full_name,
+              avatar_url: profile.avatar_url
+            },
+            role: isAdmin ? 'admin' : 'user',
+            is_admin: isAdmin
+          });
+        } catch (checkError) {
+          console.error('Error processing user:', profile.id, checkError);
+          // Add the user without admin status
+          enhancedUsers.push({
+            id: profile.id,
+            email: profile.username || 'No email',
+            created_at: new Date().toISOString(),
+            user_metadata: {
+              full_name: profile.full_name,
+              avatar_url: profile.avatar_url
+            },
+            role: 'user',
+            is_admin: false
+          });
         }
-        
-        enhancedUsers.push({
-          id: profile.id,
-          email: profile.username || 'No email',
-          created_at: new Date().toISOString(), // Placeholder
-          user_metadata: {
-            full_name: profile.full_name,
-            avatar_url: profile.avatar_url
-          },
-          role: isAdmin ? 'admin' : 'user',
-          is_admin: isAdmin
-        });
       }
       
       console.log("Enhanced users:", enhancedUsers);
