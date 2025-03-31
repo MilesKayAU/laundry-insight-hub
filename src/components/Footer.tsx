@@ -11,7 +11,7 @@ const Footer = () => {
             <img 
               src="/lovable-uploads/81ba1971-9504-4977-a9a9-493f5351c835.png" 
               alt="PVAFree.com Logo" 
-              className="h-24" 
+              className="h-30" 
             />
           </div>
           <p className="text-gray-300 max-w-md text-center mt-3">

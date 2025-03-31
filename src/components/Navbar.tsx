@@ -72,7 +72,7 @@ const Navbar = () => {
           <img 
             src="/lovable-uploads/81ba1971-9504-4977-a9a9-493f5351c835.png" 
             alt="PVAFree.com Logo" 
-            className="h-12 md:h-16" 
+            className="h-15 md:h-20" 
           />
         </Link>
 
