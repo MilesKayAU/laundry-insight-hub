@@ -155,6 +155,60 @@ export type Database = {
         }
         Relationships: []
       }
+      product_submissions: {
+        Row: {
+          approved: boolean | null
+          brand: string
+          country: string | null
+          createdat: string | null
+          description: string | null
+          id: string
+          imageurl: string | null
+          name: string
+          owner_id: string | null
+          pvapercentage: number | null
+          pvastatus: string | null
+          type: string
+          updatedat: string | null
+          videourl: string | null
+          websiteurl: string | null
+        }
+        Insert: {
+          approved?: boolean | null
+          brand: string
+          country?: string | null
+          createdat?: string | null
+          description?: string | null
+          id?: string
+          imageurl?: string | null
+          name: string
+          owner_id?: string | null
+          pvapercentage?: number | null
+          pvastatus?: string | null
+          type: string
+          updatedat?: string | null
+          videourl?: string | null
+          websiteurl?: string | null
+        }
+        Update: {
+          approved?: boolean | null
+          brand?: string
+          country?: string | null
+          createdat?: string | null
+          description?: string | null
+          id?: string
+          imageurl?: string | null
+          name?: string
+          owner_id?: string | null
+          pvapercentage?: number | null
+          pvastatus?: string | null
+          type?: string
+          updatedat?: string | null
+          videourl?: string | null
+          websiteurl?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

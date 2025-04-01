@@ -23,7 +23,27 @@ const fetchProductsFromSupabase = async () => {
     }
     
     console.log(`Fetched ${data?.length || 0} products from Supabase`);
-    return data || [];
+    
+    // Transform the Supabase data to match our ProductSubmission type
+    // This handles differences in column naming conventions
+    const transformedData = data.map(item => ({
+      id: item.id,
+      name: item.name,
+      brand: item.brand,
+      type: item.type,
+      description: item.description,
+      pvaStatus: item.pvastatus || item.pvaStatus || 'needs-verification',
+      pvaPercentage: item.pvapercentage || item.pvaPercentage || null,
+      approved: item.approved || false,
+      country: item.country || 'Global',
+      websiteUrl: item.websiteurl || item.websiteUrl || '',
+      videoUrl: item.videourl || item.videoUrl || '',
+      imageUrl: item.imageurl || item.imageUrl || '',
+      brandVerified: false,
+      timestamp: Date.now()
+    }));
+    
+    return transformedData || [];
   } catch (error) {
     console.error("Exception fetching products from Supabase:", error);
     return [];
