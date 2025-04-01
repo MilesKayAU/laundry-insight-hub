@@ -79,11 +79,6 @@ const Footer = () => {
                   Certified Products
                 </Link>
               </li>
-              <li>
-                <a href="#" className="text-gray-300 hover:text-science-300 transition-colors">
-                  Apply for Certification
-                </a>
-              </li>
             </ul>
           </div>
           <div>
