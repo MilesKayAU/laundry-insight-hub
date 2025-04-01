@@ -2,6 +2,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "./types";
 
+// Define interfaces for our RPC function returns to help TypeScript
+interface UserMetadataResponse {
+  marketing_consent: boolean;
+  email: string;
+  created_at: string;
+}
+
 export const fetchUsers = async (): Promise<User[]> => {
   try {
     console.log("Fetching profiles...");
@@ -20,20 +27,28 @@ export const fetchUsers = async (): Promise<User[]> => {
     
     for (const profile of profileData) {
       try {
-        // Use the properly typed RPC function
-        const { data: userData, error: userError } = await supabase
-          .rpc('get_user_metadata', { user_id: profile.id });
+        // Explicitly type the RPC calls to overcome TypeScript limitations
+        const { data, error: userError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', profile.id)
+          .single()
+          .then(async () => {
+            // Use a separate function call with explicit typing
+            return await supabase.rpc<UserMetadataResponse>('get_user_metadata', { user_id: profile.id });
+          });
         
         if (userError) {
           console.error('Error fetching user metadata:', userError);
         }
         
         // Safely access marketing_consent
-        const marketingConsent = userData ? Boolean(userData.marketing_consent) : false;
+        const marketingConsent = data?.marketing_consent !== undefined ? Boolean(data.marketing_consent) : false;
         
-        // Use the properly typed RPC function for checking admin role
-        const { data: isAdmin, error: adminCheckError } = await supabase
-          .rpc('has_role', { role: 'admin' });
+        // Use explicit typing for the admin check
+        const adminCheck = await supabase.rpc<boolean>('has_role', { role: 'admin' });
+        const isAdmin = adminCheck.data;
+        const adminCheckError = adminCheck.error;
           
         if (adminCheckError) {
           console.log('Error checking admin status for user:', profile.id, adminCheckError);
