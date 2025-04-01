@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type AuthDialogProps = {
   children: React.ReactNode;
@@ -36,6 +37,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
   
   // Verification state
   const [verificationSent, setVerificationSent] = useState(false);
@@ -59,7 +61,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await register(registerName, registerEmail, registerPassword);
+      await register(registerName, registerEmail, registerPassword, { marketingConsent });
       setVerificationSent(true);
     } catch (error) {
       // Error handled in the AuthContext
@@ -283,6 +285,19 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
                       onChange={(e) => setRegisterPassword(e.target.value)}
                       required
                     />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox 
+                      id="marketing-consent" 
+                      checked={marketingConsent}
+                      onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+                    />
+                    <Label 
+                      htmlFor="marketing-consent" 
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      I consent to receiving occasional emails about PVAFree updates and news
+                    </Label>
                   </div>
                 </div>
                 

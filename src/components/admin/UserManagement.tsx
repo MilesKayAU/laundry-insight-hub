@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Edit, 
   Trash, 
@@ -40,10 +41,14 @@ import {
   ShieldAlert, 
   ShieldCheck, 
   ShieldX,
-  AlertCircle
+  AlertCircle,
+  MailCheck,
+  MailX,
+  Download
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface User {
   id: string;
@@ -53,6 +58,7 @@ interface User {
   user_metadata?: {
     full_name?: string;
     avatar_url?: string;
+    marketing_consent?: boolean;
   };
   role?: string;
   is_admin?: boolean;
@@ -67,6 +73,7 @@ const UserManagement = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [action, setAction] = useState<'delete' | 'promote' | 'demote' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [marketingFilter, setMarketingFilter] = useState<'all' | 'consented' | 'not-consented'>('all');
   
   useEffect(() => {
     fetchUsers();
@@ -95,6 +102,16 @@ const UserManagement = () => {
       // Process each profile
       for (const profile of profileData) {
         try {
+          // Fetch user metadata from auth.users using the admin API
+          const { data: userData, error: userError } = await supabase
+            .rpc('get_user_metadata', { user_id: profile.id });
+          
+          if (userError) {
+            console.error('Error fetching user metadata:', userError);
+          }
+          
+          const marketingConsent = userData?.marketing_consent || false;
+          
           // Check if user is an admin using the has_role function
           const { data: isAdmin, error: adminCheckError } = await supabase
             .rpc('has_role', { role: 'admin' });
@@ -110,7 +127,8 @@ const UserManagement = () => {
             created_at: new Date().toISOString(), // Placeholder
             user_metadata: {
               full_name: profile.full_name,
-              avatar_url: profile.avatar_url
+              avatar_url: profile.avatar_url,
+              marketing_consent: marketingConsent
             },
             role: isAdmin ? 'admin' : 'user',
             is_admin: isAdmin
@@ -124,7 +142,8 @@ const UserManagement = () => {
             created_at: new Date().toISOString(),
             user_metadata: {
               full_name: profile.full_name,
-              avatar_url: profile.avatar_url
+              avatar_url: profile.avatar_url,
+              marketing_consent: false
             },
             role: 'user',
             is_admin: false
@@ -256,16 +275,72 @@ const UserManagement = () => {
     setConfirmDialogOpen(false);
   };
   
+  const handleDownloadMarketingEmails = () => {
+    try {
+      // Filter users who have consented to marketing emails
+      const consentedUsers = users.filter(user => user.user_metadata?.marketing_consent === true);
+      
+      if (consentedUsers.length === 0) {
+        toast({
+          title: "No marketing emails",
+          description: "No users have consented to marketing emails",
+          variant: "warning"
+        });
+        return;
+      }
+      
+      // Create CSV content
+      let csvContent = "Name,Email\n";
+      consentedUsers.forEach(user => {
+        const name = user.user_metadata?.full_name || '';
+        const email = user.email || '';
+        csvContent += `"${name}","${email}"\n`;
+      });
+      
+      // Create and download the file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'marketing_emails.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Download complete",
+        description: `Downloaded ${consentedUsers.length} marketing email contacts`,
+      });
+    } catch (error: any) {
+      console.error('Error downloading marketing emails:', error);
+      toast({
+        title: "Download failed",
+        description: error.message || "Failed to download marketing emails",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const openConfirmDialog = (user: User, actionType: 'delete' | 'promote' | 'demote') => {
     setSelectedUser(user);
     setAction(actionType);
     setConfirmDialogOpen(true);
   };
 
-  const filteredUsers = users.filter(user =>
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.user_metadata?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    // First filter by search term
+    const matchesSearch = user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          user.user_metadata?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Then filter by marketing consent
+    if (marketingFilter === 'all') {
+      return matchesSearch;
+    } else if (marketingFilter === 'consented') {
+      return matchesSearch && user.user_metadata?.marketing_consent === true;
+    } else {
+      return matchesSearch && user.user_metadata?.marketing_consent !== true;
+    }
+  });
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Never';
@@ -285,7 +360,7 @@ const UserManagement = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div className="relative w-full md:w-72">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -295,8 +370,30 @@ const UserManagement = () => {
               className="pl-10"
             />
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => fetchUsers()}>
+          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+            <Select
+              value={marketingFilter}
+              onValueChange={(value: any) => setMarketingFilter(value)}
+            >
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filter by consent" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                <SelectItem value="consented">Marketing Consented</SelectItem>
+                <SelectItem value="not-consented">No Marketing Consent</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button 
+              size="sm" 
+              onClick={handleDownloadMarketingEmails}
+              variant="outline"
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export Marketing
+            </Button>
+            <Button size="sm" onClick={fetchUsers}>
               Refresh
             </Button>
           </div>
@@ -327,6 +424,7 @@ const UserManagement = () => {
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Marketing</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead>Last Sign In</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -358,6 +456,19 @@ const UserManagement = () => {
                       >
                         {user.role || 'User'}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.user_metadata?.marketing_consent ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+                          <MailCheck className="h-3 w-3" />
+                          Subscribed
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 flex items-center gap-1">
+                          <MailX className="h-3 w-3" />
+                          Not subscribed
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>{formatDate(user.created_at)}</TableCell>
                     <TableCell>{formatDate(user.last_sign_in_at)}</TableCell>

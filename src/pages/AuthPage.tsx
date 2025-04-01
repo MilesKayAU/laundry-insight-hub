@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, Microscope } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const AuthPage = () => {
   const { login, register, isAuthenticated, isLoading, sendPasswordResetEmail } = useAuth();
@@ -22,6 +22,7 @@ const AuthPage = () => {
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
   
   // Error state
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +69,7 @@ const AuthPage = () => {
     e.preventDefault();
     setError(null);
     try {
-      await register(registerName, registerEmail, registerPassword);
+      await register(registerName, registerEmail, registerPassword, { marketingConsent });
       setVerificationSent(true);
       // Navigation happens in useEffect when isAuthenticated changes
     } catch (error: any) {
@@ -297,6 +298,20 @@ const AuthPage = () => {
                         onChange={(e) => setRegisterPassword(e.target.value)}
                         required
                       />
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox 
+                        id="marketing-consent" 
+                        checked={marketingConsent}
+                        onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+                      />
+                      <Label 
+                        htmlFor="marketing-consent" 
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        I consent to receiving occasional emails about PVAFree updates and news
+                      </Label>
                     </div>
                     
                     <Button type="submit" className="w-full" disabled={isLoading}>

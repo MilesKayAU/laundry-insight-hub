@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +10,7 @@ interface AuthContextType {
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<any>;
   signup: (email: string, password: string, metadata?: any) => Promise<any>;
-  register: (name: string, email: string, password: string) => Promise<any>;
+  register: (name: string, email: string, password: string, options?: { marketingConsent?: boolean }) => Promise<any>;
   loginWithGoogle: () => Promise<any>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<any>;
@@ -167,6 +166,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             full_name: metadata?.name,
             username: email.split('@')[0],
+            marketing_consent: metadata?.marketingConsent || false,
+            ...metadata
           },
           emailRedirectTo: `${domain}/auth`,
         }
@@ -211,8 +212,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    return signup(email, password, { name });
+  const register = async (name: string, email: string, password: string, options?: { marketingConsent?: boolean }) => {
+    return signup(email, password, { 
+      name, 
+      marketingConsent: options?.marketingConsent || false 
+    });
   };
 
   const loginWithGoogle = async () => {
