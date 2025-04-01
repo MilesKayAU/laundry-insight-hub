@@ -1,6 +1,23 @@
 
 import { Link } from "react-router-dom";
 import { Mail, Github, Twitter, ShieldCheck } from "lucide-react";
+import { useEffect } from "react";
+
+// Custom link component that scrolls to top on click
+const ScrollTopLink = ({ to, children, className }) => {
+  const handleClick = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+
+  return (
+    <Link to={to} className={className} onClick={handleClick}>
+      {children}
+    </Link>
+  );
+};
 
 const Footer = () => {
   return (
@@ -24,24 +41,24 @@ const Footer = () => {
             <h3 className="font-bold text-lg mb-4 text-science-300">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/" className="text-gray-300 hover:text-science-300 transition-colors">
                   Home
-                </Link>
+                </ScrollTopLink>
               </li>
               <li>
-                <Link to="/contribute" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/contribute" className="text-gray-300 hover:text-science-300 transition-colors">
                   Contribute
-                </Link>
+                </ScrollTopLink>
               </li>
               <li>
-                <Link to="/database" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/database" className="text-gray-300 hover:text-science-300 transition-colors">
                   Product Database
-                </Link>
+                </ScrollTopLink>
               </li>
               <li>
-                <Link to="/about" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/about" className="text-gray-300 hover:text-science-300 transition-colors">
                   About PVA
-                </Link>
+                </ScrollTopLink>
               </li>
             </ul>
           </div>
@@ -49,19 +66,19 @@ const Footer = () => {
             <h3 className="font-bold text-lg mb-4 text-science-300">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/research" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/research" className="text-gray-300 hover:text-science-300 transition-colors">
                   Research Papers
-                </Link>
+                </ScrollTopLink>
               </li>
               <li>
-                <Link to="/methodology" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/methodology" className="text-gray-300 hover:text-science-300 transition-colors">
                   Our Methodology
-                </Link>
+                </ScrollTopLink>
               </li>
               <li>
-                <Link to="/faq" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/faq" className="text-gray-300 hover:text-science-300 transition-colors">
                   FAQ
-                </Link>
+                </ScrollTopLink>
               </li>
             </ul>
           </div>
@@ -69,15 +86,15 @@ const Footer = () => {
             <h3 className="font-bold text-lg mb-4 text-science-300">Certification</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/certification" className="text-gray-300 hover:text-science-300 transition-colors flex items-center gap-1">
+                <ScrollTopLink to="/certification" className="text-gray-300 hover:text-science-300 transition-colors flex items-center gap-1">
                   <ShieldCheck className="h-4 w-4" />
                   PVA-Free Certification
-                </Link>
+                </ScrollTopLink>
               </li>
               <li>
-                <Link to="/pva-free" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/pva-free" className="text-gray-300 hover:text-science-300 transition-colors">
                   Certified Products
-                </Link>
+                </ScrollTopLink>
               </li>
             </ul>
           </div>
@@ -85,14 +102,14 @@ const Footer = () => {
             <h3 className="font-bold text-lg mb-4 text-science-300">Legal</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/privacy" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/privacy" className="text-gray-300 hover:text-science-300 transition-colors">
                   Privacy Policy
-                </Link>
+                </ScrollTopLink>
               </li>
               <li>
-                <Link to="/terms" className="text-gray-300 hover:text-science-300 transition-colors">
+                <ScrollTopLink to="/terms" className="text-gray-300 hover:text-science-300 transition-colors">
                   Terms of Service
-                </Link>
+                </ScrollTopLink>
               </li>
             </ul>
           </div>
