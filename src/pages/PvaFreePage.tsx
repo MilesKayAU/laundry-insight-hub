@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Search } from "lucide-react";
@@ -22,44 +21,90 @@ import { getProductSubmissions } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
 import PvaCertificationBadge from "@/components/PvaCertificationBadge";
 import { mockProducts } from "@/lib/mockData";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PvaFreePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [pvaFreeProducts, setPvaFreeProducts] = useState([]);
+  const { isAuthenticated } = useAuth();
   
   useEffect(() => {
-    // Get user submissions that are PVA-free
-    const userSubmissions = getProductSubmissions().filter(
-      product => product.approved && (
-        product.pvaStatus === 'verified-free' || 
-        (product.pvaPercentage !== null && product.pvaPercentage === 0)
-      )
-    );
-    console.info(`PvaFreePage: Found ${userSubmissions.length} PVA-free submissions`);
+    const fetchData = async () => {
+      setLoading(true);
+      
+      // Get user submissions that are PVA-free
+      const userSubmissions = getProductSubmissions().filter(
+        product => product.approved && (
+          product.pvaStatus === 'verified-free' || 
+          (product.pvaPercentage !== null && product.pvaPercentage === 0)
+        )
+      );
+      console.info(`PvaFreePage: Found ${userSubmissions.length} PVA-free submissions`);
+      
+      // Get Supabase products that are PVA-free
+      let supabaseProducts = [];
+      try {
+        const { data, error } = await supabase
+          .from('product_submissions')
+          .select('*')
+          .eq('approved', true)
+          .or('pvastatus.eq.verified-free,pvapercentage.eq.0');
+          
+        if (error) {
+          console.error("Error fetching products from Supabase:", error);
+        } else if (data) {
+          // Transform Supabase data to match our expected format
+          supabaseProducts = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            brand: item.brand,
+            type: item.type,
+            description: item.description || '',
+            pvaStatus: item.pvastatus || 'needs-verification',
+            pvaPercentage: item.pvapercentage || null,
+            approved: item.approved || false,
+            country: item.country || 'Global',
+            websiteUrl: item.websiteurl || '',
+            videoUrl: item.videourl || '',
+            imageUrl: item.imageurl || '',
+            brandVerified: false,
+            timestamp: Date.now()
+          }));
+        }
+      } catch (error) {
+        console.error("Exception fetching products from Supabase:", error);
+      }
+      console.info(`PvaFreePage: Found ${supabaseProducts.length} Supabase PVA-free products`);
+      
+      // Get mock products that are PVA-free - only for non-authenticated users
+      const mockPvaFreeProducts = isAuthenticated 
+        ? [] 
+        : mockProducts.filter(
+            product => product.approved && 
+              (product.pvaPercentage === 0 || product.pvaPercentage === null)
+          );
+      console.info(`PvaFreePage: Including ${mockPvaFreeProducts.length} mock PVA-free products (isAuthenticated: ${isAuthenticated})`);
+      
+      // Combine both sources with priority: Supabase > Local > Mock
+      const allPvaFreeProducts = [...supabaseProducts, ...userSubmissions, ...mockPvaFreeProducts];
+      console.info(`PvaFreePage: Total ${allPvaFreeProducts.length} PVA-free products to display`);
+      
+      setPvaFreeProducts(allPvaFreeProducts);
+      setLoading(false);
+      
+      if (allPvaFreeProducts.length === 0) {
+        toast({
+          title: "Data Loading",
+          description: "Loading product data from our database...",
+        });
+      }
+    };
     
-    // Get mock products that are PVA-free
-    const mockPvaFreeProducts = mockProducts.filter(
-      product => product.approved && 
-        (product.pvaPercentage === 0 || product.pvaPercentage === null)
-    );
-    console.info(`PvaFreePage: Found ${mockPvaFreeProducts.length} mock PVA-free products`);
-    
-    // Combine both sources
-    const allPvaFreeProducts = [...mockPvaFreeProducts, ...userSubmissions];
-    console.info(`PvaFreePage: Total ${allPvaFreeProducts.length} PVA-free products to display`);
-    
-    setPvaFreeProducts(allPvaFreeProducts);
-    setLoading(false);
-    
-    if (allPvaFreeProducts.length === 0) {
-      toast({
-        title: "Data Loading",
-        description: "Loading product data from our database...",
-      });
-    }
-  }, [toast]);
+    fetchData();
+  }, [toast, isAuthenticated]);
 
   const filteredProducts = pvaFreeProducts.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 

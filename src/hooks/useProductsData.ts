@@ -7,6 +7,7 @@ import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Define custom typing for product submissions from Supabase
 type SupabaseProductSubmission = {
@@ -78,6 +79,7 @@ export const useProductsData = (selectedCountry: string) => {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
 
   // Fetch product submissions from both local and Supabase
   const { data: supabaseProducts, refetch } = useQuery({
@@ -135,19 +137,25 @@ export const useProductsData = (selectedCountry: string) => {
   const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved);
   console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
-  // Get all approved submissions from Supabase
+  // Get all approved submissions from Supabase - ensure we have data
   const approvedSupabaseSubmissions = supabaseProducts || [];
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
+  console.info("Supabase submissions details:", JSON.stringify(approvedSupabaseSubmissions));
   
-  // Always include mock products if needed for demonstration
-  const mockProductsToInclude = mockProducts.filter(product => product.approved);
-  console.info(`Including ${mockProductsToInclude.length} mock products`);
+  // Get mock products based on user's authentication status
+  // Always include mock products for demonstration if not authenticated
+  // For authenticated users, limit mock data to avoid confusion
+  const mockProductsToInclude = isAuthenticated 
+    ? [] // No mock products for authenticated users
+    : mockProducts.filter(product => product.approved);
   
-  // Combine all data sources
+  console.info(`Including ${mockProductsToInclude.length} mock products (isAuthenticated: ${isAuthenticated})`);
+  
+  // Combine all data sources with priority: Supabase > Local > Mock
   const allApprovedProducts = [
-    ...mockProductsToInclude, 
+    ...approvedSupabaseSubmissions, 
     ...approvedLocalSubmissions,
-    ...approvedSupabaseSubmissions
+    ...mockProductsToInclude
   ];
   
   console.info(`Total products before country filtering: ${allApprovedProducts.length}`);
@@ -167,6 +175,12 @@ export const useProductsData = (selectedCountry: string) => {
   });
 
   console.info(`Total combined products after country filtering: ${combinedApprovedProducts.length}`);
+  console.info("Data source breakdown:", {
+    supabase: approvedSupabaseSubmissions.length,
+    local: approvedLocalSubmissions.length,
+    mock: mockProductsToInclude.length,
+    combined: combinedApprovedProducts.length
+  });
 
   return {
     combinedApprovedProducts,

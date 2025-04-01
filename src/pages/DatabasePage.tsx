@@ -62,6 +62,8 @@ const DatabasePage = () => {
   } = useProductsData(selectedCountry);
   
   console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedLocalSubmissions?.length || 0} local, ${approvedSupabaseSubmissions?.length || 0} from Supabase, ${mockProductsToInclude?.length || 0} mock)`);
+  console.info("Authentication status:", isAuthenticated ? "Authenticated" : "Not authenticated");
+  console.info("Products data:", combinedApprovedProducts);
   
   const {
     searchTerm,
