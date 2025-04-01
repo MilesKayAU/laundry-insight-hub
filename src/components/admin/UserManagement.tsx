@@ -64,13 +64,6 @@ interface User {
   is_admin?: boolean;
 }
 
-interface UserMetadataResponse {
-  marketing_consent: boolean;
-  email?: string;
-  created_at?: string;
-  [key: string]: any;
-}
-
 const UserManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
@@ -107,7 +100,7 @@ const UserManagement = () => {
       for (const profile of profileData) {
         try {
           const { data: userData, error: userError } = await supabase
-            .rpc<UserMetadataResponse, { user_id: string }>('get_user_metadata', { 
+            .rpc('get_user_metadata', { 
               user_id: profile.id 
             });
           
@@ -115,7 +108,7 @@ const UserManagement = () => {
             console.error('Error fetching user metadata:', userError);
           }
           
-          const marketingConsent = userData?.marketing_consent || false;
+          const marketingConsent = userData ? userData.marketing_consent || false : false;
           
           const { data: isAdmin, error: adminCheckError } = await supabase
             .rpc('has_role', { role: 'admin' });
