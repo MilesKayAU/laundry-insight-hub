@@ -20,12 +20,9 @@ export const fetchUsers = async (): Promise<User[]> => {
     
     for (const profile of profileData) {
       try {
-        // Use type casting to fix the RPC function call
+        // Call the get_user_metadata RPC function
         const { data: userData, error: userError } = await supabase
-          .rpc('get_user_metadata', { user_id: profile.id }) as { 
-            data: Record<string, any> | null; 
-            error: any; 
-          };
+          .rpc('get_user_metadata', { user_id: profile.id });
         
         if (userError) {
           console.error('Error fetching user metadata:', userError);
@@ -36,12 +33,9 @@ export const fetchUsers = async (): Promise<User[]> => {
           ? Boolean(userData.marketing_consent) 
           : false;
         
-        // Use type casting to fix the RPC function call for boolean return
+        // Call the has_role RPC function
         const { data: isAdmin, error: adminCheckError } = await supabase
-          .rpc('has_role', { role: 'admin' }) as {
-            data: boolean | null;
-            error: any;
-          };
+          .rpc('has_role', { role: 'admin' });
           
         if (adminCheckError) {
           console.log('Error checking admin status for user:', profile.id, adminCheckError);
