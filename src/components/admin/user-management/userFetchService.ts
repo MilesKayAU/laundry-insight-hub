@@ -34,8 +34,10 @@ export const fetchUsers = async (): Promise<User[]> => {
           .eq('id', profile.id)
           .single()
           .then(async () => {
-            // Use a separate function call with explicit typing
-            return await supabase.rpc<UserMetadataResponse>('get_user_metadata', { user_id: profile.id });
+            // Use a separate function call with explicit typing for both return type and params
+            return await supabase.rpc<UserMetadataResponse, { user_id: string }>('get_user_metadata', { 
+              user_id: profile.id 
+            });
           });
         
         if (userError) {
@@ -45,8 +47,8 @@ export const fetchUsers = async (): Promise<User[]> => {
         // Safely access marketing_consent
         const marketingConsent = data?.marketing_consent !== undefined ? Boolean(data.marketing_consent) : false;
         
-        // Use explicit typing for the admin check
-        const adminCheck = await supabase.rpc<boolean>('has_role', { role: 'admin' });
+        // Use explicit typing for the admin check with both return type and params
+        const adminCheck = await supabase.rpc<boolean, { role: string }>('has_role', { role: 'admin' });
         const isAdmin = adminCheck.data;
         const adminCheckError = adminCheck.error;
           
