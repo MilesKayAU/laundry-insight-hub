@@ -1,3 +1,4 @@
+
 // Add type declarations for our custom RPC function to get user metadata
 interface Database {
   public: {
