@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { mockProducts } from "@/lib/mockData";
 import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
@@ -7,25 +6,10 @@ import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { Database } from "@/integrations/supabase/types";
 
 // Type for raw Supabase product_submissions table data
-type SupabaseProductSubmission = {
-  id: string;
-  name: string;
-  brand: string;
-  type: string;
-  description?: string | null;
-  pvastatus?: string | null;
-  pvapercentage?: number | null;
-  approved?: boolean | null;
-  country?: string | null;
-  websiteurl?: string | null;
-  videourl?: string | null;
-  imageurl?: string | null;
-  owner_id?: string | null;
-  createdat?: string | null;
-  updatedat?: string | null;
-}
+type SupabaseProductSubmission = Database['public']['Tables']['product_submissions']['Row'];
 
 // Function to fetch products from Supabase
 const fetchProductsFromSupabase = async () => {
@@ -35,7 +19,7 @@ const fetchProductsFromSupabase = async () => {
     const { data, error } = await supabase
       .from('product_submissions')
       .select('*')
-      .eq('approved', true) as { data: SupabaseProductSubmission[] | null, error: any };
+      .eq('approved', true);
     
     if (error) {
       console.error("Error fetching products from Supabase:", error);
