@@ -8,14 +8,34 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+// Type for raw Supabase product_submissions table data
+type SupabaseProductSubmission = {
+  id: string;
+  name: string;
+  brand: string;
+  type: string;
+  description?: string | null;
+  pvastatus?: string | null;
+  pvapercentage?: number | null;
+  approved?: boolean | null;
+  country?: string | null;
+  websiteurl?: string | null;
+  videourl?: string | null;
+  imageurl?: string | null;
+  owner_id?: string | null;
+  createdat?: string | null;
+  updatedat?: string | null;
+}
+
 // Function to fetch products from Supabase
 const fetchProductsFromSupabase = async () => {
   console.log("Fetching products from Supabase...");
   try {
+    // Use the correct typing for Supabase query
     const { data, error } = await supabase
       .from('product_submissions')
       .select('*')
-      .eq('approved', true);
+      .eq('approved', true) as { data: SupabaseProductSubmission[] | null, error: any };
     
     if (error) {
       console.error("Error fetching products from Supabase:", error);
@@ -24,6 +44,9 @@ const fetchProductsFromSupabase = async () => {
     
     console.log(`Fetched ${data?.length || 0} products from Supabase`);
     
+    // Handle the case when data is null
+    if (!data) return [];
+    
     // Transform the Supabase data to match our ProductSubmission type
     // This handles differences in column naming conventions
     const transformedData = data.map(item => ({
@@ -31,14 +54,14 @@ const fetchProductsFromSupabase = async () => {
       name: item.name,
       brand: item.brand,
       type: item.type,
-      description: item.description,
-      pvaStatus: item.pvastatus || item.pvaStatus || 'needs-verification',
-      pvaPercentage: item.pvapercentage || item.pvaPercentage || null,
+      description: item.description || '',
+      pvaStatus: item.pvastatus || 'needs-verification',
+      pvaPercentage: item.pvapercentage || null,
       approved: item.approved || false,
       country: item.country || 'Global',
-      websiteUrl: item.websiteurl || item.websiteUrl || '',
-      videoUrl: item.videourl || item.videoUrl || '',
-      imageUrl: item.imageurl || item.imageUrl || '',
+      websiteUrl: item.websiteurl || '',
+      videoUrl: item.videourl || '',
+      imageUrl: item.imageurl || '',
       brandVerified: false,
       timestamp: Date.now()
     }));

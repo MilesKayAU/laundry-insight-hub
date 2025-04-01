@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -50,9 +51,16 @@ const DatabasePage = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { combinedApprovedProducts, loading, handleRefreshData, refreshKey, approvedSubmissions } = useProductsData(selectedCountry);
+  const { 
+    combinedApprovedProducts, 
+    loading, 
+    handleRefreshData, 
+    refreshKey, 
+    approvedLocalSubmissions, 
+    approvedSupabaseSubmissions 
+  } = useProductsData(selectedCountry);
   
-  console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedSubmissions.length} from submissions)`);
+  console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedLocalSubmissions?.length || 0} local, ${approvedSupabaseSubmissions?.length || 0} from Supabase)`);
   
   const {
     searchTerm,
