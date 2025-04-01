@@ -48,6 +48,8 @@ interface Database {
         };
         Returns: {
           marketing_consent: boolean;
+          email?: string;
+          created_at?: string;
           [key: string]: any;
         };
       };

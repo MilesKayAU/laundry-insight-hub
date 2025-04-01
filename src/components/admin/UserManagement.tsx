@@ -91,7 +91,6 @@ const UserManagement = () => {
     setError(null);
     try {
       console.log("Fetching profiles...");
-      // First, get all users from the profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, username, full_name, avatar_url');
@@ -103,15 +102,12 @@ const UserManagement = () => {
       
       console.log("Profiles fetched:", profileData);
       
-      // Fetch admin status for each user using our custom function
       const enhancedUsers: User[] = [];
       
-      // Process each profile
       for (const profile of profileData) {
         try {
-          // Fetch user metadata from auth.users using the admin API
           const { data: userData, error: userError } = await supabase
-            .rpc<UserMetadataResponse>('get_user_metadata', { 
+            .rpc<UserMetadataResponse, { user_id: string }>('get_user_metadata', { 
               user_id: profile.id 
             });
           
@@ -121,30 +117,39 @@ const UserManagement = () => {
           
           const marketingConsent = userData?.marketing_consent || false;
           
-          // Check if user is an admin using the has_role function
           const { data: isAdmin, error: adminCheckError } = await supabase
             .rpc('has_role', { role: 'admin' });
             
           if (adminCheckError) {
             console.log('Error checking admin status for user:', profile.id, adminCheckError);
-            // Continue with the user, just mark as non-admin
+            enhancedUsers.push({
+              id: profile.id,
+              email: profile.username || 'No email',
+              created_at: new Date().toISOString(),
+              user_metadata: {
+                full_name: profile.full_name,
+                avatar_url: profile.avatar_url,
+                marketing_consent: false
+              },
+              role: 'user',
+              is_admin: false
+            });
+          } else {
+            enhancedUsers.push({
+              id: profile.id,
+              email: profile.username || 'No email',
+              created_at: new Date().toISOString(),
+              user_metadata: {
+                full_name: profile.full_name,
+                avatar_url: profile.avatar_url,
+                marketing_consent: marketingConsent
+              },
+              role: isAdmin ? 'admin' : 'user',
+              is_admin: isAdmin
+            });
           }
-          
-          enhancedUsers.push({
-            id: profile.id,
-            email: profile.username || 'No email',
-            created_at: new Date().toISOString(), // Placeholder
-            user_metadata: {
-              full_name: profile.full_name,
-              avatar_url: profile.avatar_url,
-              marketing_consent: marketingConsent
-            },
-            role: isAdmin ? 'admin' : 'user',
-            is_admin: isAdmin
-          });
         } catch (checkError) {
           console.error('Error processing user:', profile.id, checkError);
-          // Add the user without admin status
           enhancedUsers.push({
             id: profile.id,
             email: profile.username || 'No email',
@@ -178,7 +183,6 @@ const UserManagement = () => {
   const handleDeleteUser = async (userId: string) => {
     try {
       console.log("Deleting user:", userId);
-      // Instead of directly deleting the auth user, remove profile
       const { error } = await supabase
         .from('profiles')
         .delete()
@@ -190,7 +194,6 @@ const UserManagement = () => {
       }
       
       console.log("Profile deleted, removing from user_roles...");
-      // Remove from user_roles table as well
       const { error: roleError } = await supabase
         .from('user_roles')
         .delete()
@@ -198,7 +201,6 @@ const UserManagement = () => {
         
       if (roleError) {
         console.error('Error deleting user role:', roleError);
-        // Don't throw here, as the main profile deletion was successful
       }
       
       setUsers(users.filter(user => user.id !== userId));
@@ -222,9 +224,7 @@ const UserManagement = () => {
     try {
       console.log("Changing role for user:", userId, "to", newRole);
       
-      // For admin role, we insert into user_roles table
       if (newRole === 'admin') {
-        // Check if already has entry
         const { data: existingRole, error: checkError } = await supabase
           .from('user_roles')
           .select('*')
@@ -237,7 +237,6 @@ const UserManagement = () => {
           throw checkError;
         }
         
-        // Only insert if not already there
         if (!existingRole) {
           const { error: insertError } = await supabase
             .from('user_roles')
@@ -249,7 +248,6 @@ const UserManagement = () => {
           }
         }
       } else {
-        // For removing admin role, delete from user_roles
         const { error: deleteError } = await supabase
           .from('user_roles')
           .delete()
@@ -262,7 +260,6 @@ const UserManagement = () => {
         }
       }
       
-      // Update local state
       setUsers(users.map(user => 
         user.id === userId 
           ? { ...user, role: newRole, is_admin: newRole === 'admin' } 
@@ -286,7 +283,6 @@ const UserManagement = () => {
   
   const handleDownloadMarketingEmails = () => {
     try {
-      // Filter users who have consented to marketing emails
       const consentedUsers = users.filter(user => user.user_metadata?.marketing_consent === true);
       
       if (consentedUsers.length === 0) {
@@ -298,7 +294,6 @@ const UserManagement = () => {
         return;
       }
       
-      // Create CSV content
       let csvContent = "Name,Email\n";
       consentedUsers.forEach(user => {
         const name = user.user_metadata?.full_name || '';
@@ -306,7 +301,6 @@ const UserManagement = () => {
         csvContent += `"${name}","${email}"\n`;
       });
       
-      // Create and download the file
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -337,11 +331,9 @@ const UserManagement = () => {
   };
 
   const filteredUsers = users.filter(user => {
-    // First filter by search term
     const matchesSearch = user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           user.user_metadata?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Then filter by marketing consent
     if (marketingFilter === 'all') {
       return matchesSearch;
     } else if (marketingFilter === 'consented') {
@@ -516,7 +508,6 @@ const UserManagement = () => {
           </div>
         )}
 
-        {/* Confirmation Dialog */}
         <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
           <DialogContent>
             <DialogHeader>
