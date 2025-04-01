@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { mockProducts } from "@/lib/mockData";
 import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
@@ -39,10 +38,12 @@ export const useProductsData = (selectedCountry: string) => {
 
   // Get all approved submissions
   const approvedSubmissions = allSubmissions.filter(submission => submission.approved);
+  console.info(`Found ${approvedSubmissions.length} approved submissions`);
   
-  // Always include mock products if there are no or few approved submissions
+  // Always include mock products if there are no approved submissions
   // This ensures we always have data for demonstration purposes
   const mockProductsToInclude = mockProducts.filter(product => product.approved);
+  console.info(`Including ${mockProductsToInclude.length} mock products`);
   
   // Combine both data sources
   const combinedApprovedProducts = [...mockProductsToInclude, ...approvedSubmissions].filter(product => {
@@ -58,11 +59,15 @@ export const useProductsData = (selectedCountry: string) => {
     return productCountry.toLowerCase() === normalizedSelectedCountry.toLowerCase();
   });
 
+  console.info(`Total combined products after country filtering: ${combinedApprovedProducts.length}`);
+
   return {
     combinedApprovedProducts,
     loading,
     refreshKey,
-    handleRefreshData
+    handleRefreshData,
+    approvedSubmissions,
+    mockProductsToInclude
   };
 };
 

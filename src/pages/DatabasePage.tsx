@@ -50,9 +50,9 @@ const DatabasePage = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { combinedApprovedProducts, loading, handleRefreshData, refreshKey } = useProductsData(selectedCountry);
+  const { combinedApprovedProducts, loading, handleRefreshData, refreshKey, approvedSubmissions } = useProductsData(selectedCountry);
   
-  console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display`);
+  console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedSubmissions.length} from submissions)`);
   
   const {
     searchTerm,

@@ -37,15 +37,18 @@ const PvaFreePage = () => {
         (product.pvaPercentage !== null && product.pvaPercentage === 0)
       )
     );
+    console.info(`PvaFreePage: Found ${userSubmissions.length} PVA-free submissions`);
     
     // Get mock products that are PVA-free
     const mockPvaFreeProducts = mockProducts.filter(
       product => product.approved && 
         (product.pvaPercentage === 0 || product.pvaPercentage === null)
     );
+    console.info(`PvaFreePage: Found ${mockPvaFreeProducts.length} mock PVA-free products`);
     
     // Combine both sources
     const allPvaFreeProducts = [...mockPvaFreeProducts, ...userSubmissions];
+    console.info(`PvaFreePage: Total ${allPvaFreeProducts.length} PVA-free products to display`);
     
     setPvaFreeProducts(allPvaFreeProducts);
     setLoading(false);
