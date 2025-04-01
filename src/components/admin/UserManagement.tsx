@@ -101,13 +101,10 @@ const UserManagement = () => {
       for (const profile of profileData) {
         try {
           const { data: userData, error: userError } = await supabase
-            .rpc<{
-              marketing_consent: boolean;
-              email?: string;
-              created_at?: string;
-            }>('get_user_metadata', { 
-              user_id: profile.id 
-            });
+            .rpc<Database['public']['Functions']['get_user_metadata']['Returns'], Database['public']['Functions']['get_user_metadata']['Args']>(
+              'get_user_metadata', 
+              { user_id: profile.id }
+            );
           
           if (userError) {
             console.error('Error fetching user metadata:', userError);
@@ -116,7 +113,10 @@ const UserManagement = () => {
           const marketingConsent = userData ? userData.marketing_consent : false;
           
           const { data: isAdmin, error: adminCheckError } = await supabase
-            .rpc<boolean>('has_role', { role: 'admin' });
+            .rpc<boolean, Database['public']['Functions']['has_role']['Args']>(
+              'has_role', 
+              { role: 'admin' }
+            );
             
           if (adminCheckError) {
             console.log('Error checking admin status for user:', profile.id, adminCheckError);
