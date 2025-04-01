@@ -18,6 +18,7 @@ import AuthPage from "./pages/AuthPage";
 import BrandProfilePage from "./pages/BrandProfilePage";
 import ProfilePage from "./pages/ProfilePage";
 import ResearchPage from "./pages/ResearchPage";
+import MethodologyPage from "./pages/MethodologyPage";
 import PvaPercentageUpdatePage from "./pages/PvaPercentageUpdatePage";
 import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
@@ -77,6 +78,7 @@ const App: React.FC = () => {
                   } />
                   <Route path="/database" element={<DatabasePage />} />
                   <Route path="/research" element={<ResearchPage />} />
+                  <Route path="/methodology" element={<MethodologyPage />} />
                   <Route path="/brand/:brandName" element={<BrandProfilePage />} />
                   <Route path="/update-pva/:brandName/:productName" element={<PvaPercentageUpdatePage />} />
                   <Route path="/admin" element={
