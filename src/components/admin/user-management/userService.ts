@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/lib/types";
+import { Database } from "@/integrations/supabase/types";
 
 export type User = {
   id: string;
@@ -35,10 +34,7 @@ export const fetchUsers = async (): Promise<User[]> => {
     for (const profile of profileData) {
       try {
         const { data: userData, error: userError } = await supabase
-          .rpc<Database['public']['Functions']['get_user_metadata']['Returns'], Database['public']['Functions']['get_user_metadata']['Args']>(
-            'get_user_metadata', 
-            { user_id: profile.id }
-          );
+          .rpc('get_user_metadata', { user_id: profile.id });
         
         if (userError) {
           console.error('Error fetching user metadata:', userError);
@@ -48,10 +44,7 @@ export const fetchUsers = async (): Promise<User[]> => {
         const marketingConsent = userData && 'marketing_consent' in userData ? Boolean(userData.marketing_consent) : false;
         
         const { data: isAdmin, error: adminCheckError } = await supabase
-          .rpc<boolean, Database['public']['Functions']['has_role']['Args']>(
-            'has_role', 
-            { role: 'admin' }
-          );
+          .rpc('has_role', { role: 'admin' });
           
         if (adminCheckError) {
           console.log('Error checking admin status for user:', profile.id, adminCheckError);
