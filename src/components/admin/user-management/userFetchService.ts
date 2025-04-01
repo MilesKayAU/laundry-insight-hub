@@ -20,6 +20,7 @@ export const fetchUsers = async (): Promise<User[]> => {
     
     for (const profile of profileData) {
       try {
+        // Correctly call get_user_metadata RPC function
         const { data: userData, error: userError } = await supabase
           .rpc('get_user_metadata', { user_id: profile.id });
         
@@ -30,6 +31,7 @@ export const fetchUsers = async (): Promise<User[]> => {
         // Safely access marketing_consent with proper type checking
         const marketingConsent = userData && 'marketing_consent' in userData ? Boolean(userData.marketing_consent) : false;
         
+        // Correctly call has_role RPC function and handle boolean return type
         const { data: isAdmin, error: adminCheckError } = await supabase
           .rpc('has_role', { role: 'admin' });
           
