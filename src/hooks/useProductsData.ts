@@ -1,9 +1,34 @@
+
 import { useState, useEffect } from "react";
 import { mockProducts } from "@/lib/mockData";
 import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+
+// Function to fetch products from Supabase
+const fetchProductsFromSupabase = async () => {
+  console.log("Fetching products from Supabase...");
+  try {
+    const { data, error } = await supabase
+      .from('product_submissions')
+      .select('*')
+      .eq('approved', true);
+    
+    if (error) {
+      console.error("Error fetching products from Supabase:", error);
+      return [];
+    }
+    
+    console.log(`Fetched ${data?.length || 0} products from Supabase`);
+    return data || [];
+  } catch (error) {
+    console.error("Exception fetching products from Supabase:", error);
+    return [];
+  }
+};
 
 export const useProductsData = (selectedCountry: string) => {
   const [allSubmissions, setAllSubmissions] = useState<ProductSubmission[]>([]);
@@ -11,7 +36,13 @@ export const useProductsData = (selectedCountry: string) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const { toast } = useToast();
 
-  // Fetch product submissions
+  // Fetch product submissions from both local and Supabase
+  const { data: supabaseProducts, refetch } = useQuery({
+    queryKey: ['supabaseProducts', refreshKey],
+    queryFn: fetchProductsFromSupabase,
+    enabled: true, // Always fetch on mount
+  });
+
   useEffect(() => {
     handleRefreshData();
     
@@ -22,11 +53,18 @@ export const useProductsData = (selectedCountry: string) => {
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleRefreshData = () => {
+  const handleRefreshData = async () => {
     setLoading(true);
-    const freshData = getProductSubmissions();
-    console.info(`Refreshed data: Found ${freshData.length} submission(s)`);
-    setAllSubmissions(freshData);
+    
+    // Get local submissions
+    const localData = getProductSubmissions();
+    console.info(`Local data: Found ${localData.length} submission(s)`);
+    
+    // Trigger Supabase refetch
+    await refetch();
+    
+    // Update state
+    setAllSubmissions(localData);
     setLoading(false);
     setRefreshKey(prev => prev + 1);
     
@@ -36,17 +74,29 @@ export const useProductsData = (selectedCountry: string) => {
     });
   };
 
-  // Get all approved submissions
-  const approvedSubmissions = allSubmissions.filter(submission => submission.approved);
-  console.info(`Found ${approvedSubmissions.length} approved submissions`);
+  // Get all approved submissions from local data
+  const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved);
+  console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
-  // Always include mock products if there are no approved submissions
-  // This ensures we always have data for demonstration purposes
+  // Get all approved submissions from Supabase
+  const approvedSupabaseSubmissions = supabaseProducts || [];
+  console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
+  
+  // Always include mock products if needed for demonstration
   const mockProductsToInclude = mockProducts.filter(product => product.approved);
   console.info(`Including ${mockProductsToInclude.length} mock products`);
   
-  // Combine both data sources
-  const combinedApprovedProducts = [...mockProductsToInclude, ...approvedSubmissions].filter(product => {
+  // Combine all data sources
+  const allApprovedProducts = [
+    ...mockProductsToInclude, 
+    ...approvedLocalSubmissions,
+    ...approvedSupabaseSubmissions
+  ];
+  
+  console.info(`Total products before country filtering: ${allApprovedProducts.length}`);
+  
+  // Filter by country
+  const combinedApprovedProducts = allApprovedProducts.filter(product => {
     if (selectedCountry === "Global") return true;
     
     if (!product.country || product.country.trim() === '') {
@@ -66,7 +116,8 @@ export const useProductsData = (selectedCountry: string) => {
     loading,
     refreshKey,
     handleRefreshData,
-    approvedSubmissions,
+    approvedLocalSubmissions,
+    approvedSupabaseSubmissions,
     mockProductsToInclude
   };
 };
