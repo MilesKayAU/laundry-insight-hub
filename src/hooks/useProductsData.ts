@@ -31,7 +31,7 @@ type SupabaseProductSubmission = {
 const fetchProductsFromSupabase = async () => {
   console.log("Fetching products from Supabase...");
   try {
-    // Use more explicit typing for Supabase query
+    // Use explicit typing and handle authentication
     const { data, error } = await supabase
       .from('product_submissions')
       .select('*')
@@ -48,7 +48,6 @@ const fetchProductsFromSupabase = async () => {
     if (!data) return [];
     
     // Transform the Supabase data to match our ProductSubmission type
-    // This handles differences in column naming conventions
     const transformedData = data.map(item => ({
       id: item.id,
       name: item.name,
@@ -66,6 +65,7 @@ const fetchProductsFromSupabase = async () => {
       timestamp: Date.now()
     }));
     
+    console.log("Transformed Supabase data:", transformedData);
     return transformedData || [];
   } catch (error) {
     console.error("Exception fetching products from Supabase:", error);
@@ -83,6 +83,8 @@ export const useProductsData = (selectedCountry: string) => {
   const { data: supabaseProducts, refetch } = useQuery({
     queryKey: ['supabaseProducts', refreshKey],
     queryFn: fetchProductsFromSupabase,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
     enabled: true, // Always fetch on mount
   });
 
@@ -103,20 +105,30 @@ export const useProductsData = (selectedCountry: string) => {
     const localData = getProductSubmissions();
     console.info(`Local data: Found ${localData.length} submission(s)`);
     
-    // Trigger Supabase refetch
-    await refetch();
-    
-    // Update state
-    setAllSubmissions(localData);
-    setLoading(false);
-    setRefreshKey(prev => prev + 1);
-    
-    console.log("Supabase products:", supabaseProducts);
-    
-    toast({
-      title: "Data refreshed",
-      description: "The product database has been refreshed with the latest data.",
-    });
+    try {
+      // Trigger Supabase refetch
+      await refetch();
+      
+      // Update state
+      setAllSubmissions(localData);
+      setLoading(false);
+      setRefreshKey(prev => prev + 1);
+      
+      console.log("Supabase products:", supabaseProducts);
+      
+      toast({
+        title: "Data refreshed",
+        description: "The product database has been refreshed with the latest data.",
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      setLoading(false);
+      toast({
+        title: "Error refreshing data",
+        description: "There was an error refreshing the product database.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Get all approved submissions from local data
