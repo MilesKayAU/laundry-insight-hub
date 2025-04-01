@@ -1,7 +1,6 @@
 
 import { Link } from "react-router-dom";
 import { Mail, Github, Twitter, ShieldCheck } from "lucide-react";
-import { useEffect } from "react";
 
 // Custom link component that scrolls to top on click
 const ScrollTopLink = ({ to, children, className }) => {
@@ -102,13 +101,13 @@ const Footer = () => {
             <h3 className="font-bold text-lg mb-4 text-science-300">Legal</h3>
             <ul className="space-y-2">
               <li>
-                <ScrollTopLink to="/privacy" className="text-gray-300 hover:text-science-300 transition-colors">
-                  Privacy Policy
+                <ScrollTopLink to="/terms" className="text-gray-300 hover:text-science-300 transition-colors">
+                  Terms & Conditions
                 </ScrollTopLink>
               </li>
               <li>
-                <ScrollTopLink to="/terms" className="text-gray-300 hover:text-science-300 transition-colors">
-                  Terms of Service
+                <ScrollTopLink to="/privacy" className="text-gray-300 hover:text-science-300 transition-colors">
+                  Privacy Policy
                 </ScrollTopLink>
               </li>
             </ul>
