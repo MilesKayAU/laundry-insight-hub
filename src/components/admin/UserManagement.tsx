@@ -64,6 +64,13 @@ interface User {
   is_admin?: boolean;
 }
 
+interface UserMetadataResponse {
+  marketing_consent: boolean;
+  email?: string;
+  created_at?: string;
+  [key: string]: any;
+}
+
 const UserManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
@@ -104,7 +111,7 @@ const UserManagement = () => {
         try {
           // Fetch user metadata from auth.users using the admin API
           const { data: userData, error: userError } = await supabase
-            .rpc('get_user_metadata', { user_id: profile.id });
+            .rpc<UserMetadataResponse>('get_user_metadata', { user_id: profile.id });
           
           if (userError) {
             console.error('Error fetching user metadata:', userError);
