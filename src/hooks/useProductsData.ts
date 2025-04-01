@@ -37,11 +37,15 @@ export const useProductsData = (selectedCountry: string) => {
     });
   };
 
+  // Get all approved submissions
   const approvedSubmissions = allSubmissions.filter(submission => submission.approved);
-  const approvedProducts = approvedSubmissions.length > 0 ? [] : mockProducts.filter(product => product.approved);
-
-  // Filter products by country
-  const combinedApprovedProducts = [...approvedProducts, ...approvedSubmissions].filter(product => {
+  
+  // Always include mock products if there are no or few approved submissions
+  // This ensures we always have data for demonstration purposes
+  const mockProductsToInclude = mockProducts.filter(product => product.approved);
+  
+  // Combine both data sources
+  const combinedApprovedProducts = [...mockProductsToInclude, ...approvedSubmissions].filter(product => {
     if (selectedCountry === "Global") return true;
     
     if (!product.country || product.country.trim() === '') {

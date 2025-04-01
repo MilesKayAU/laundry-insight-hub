@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -51,8 +50,9 @@ const DatabasePage = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Custom hooks for data fetching and filtering
   const { combinedApprovedProducts, loading, handleRefreshData, refreshKey } = useProductsData(selectedCountry);
+  
+  console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display`);
   
   const {
     searchTerm,

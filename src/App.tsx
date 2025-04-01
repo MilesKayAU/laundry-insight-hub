@@ -43,9 +43,13 @@ const QueryClientWrapper = ({ children }) => {
   const [queryClient] = useState(() => createQueryClient());
   
   React.useEffect(() => {
-    if (location.pathname === '/database') {
+    // Reset queries for product-related pages
+    const productPages = ['/database', '/pva-free', '/brand', '/']; 
+    const shouldResetQueries = productPages.some(page => location.pathname.startsWith(page));
+    
+    if (shouldResetQueries) {
       queryClient.resetQueries();
-      console.info("Query cache reset for database page");
+      console.info(`Query cache reset for path: ${location.pathname}`);
     }
   }, [location.pathname, queryClient]);
 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Search } from "lucide-react";
@@ -20,6 +21,7 @@ import {
 import { getProductSubmissions } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
 import PvaCertificationBadge from "@/components/PvaCertificationBadge";
+import { mockProducts } from "@/lib/mockData";
 
 const PvaFreePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,22 +30,31 @@ const PvaFreePage = () => {
   const [pvaFreeProducts, setPvaFreeProducts] = useState([]);
   
   useEffect(() => {
-    const products = getProductSubmissions().filter(
+    // Get user submissions that are PVA-free
+    const userSubmissions = getProductSubmissions().filter(
       product => product.approved && (
         product.pvaStatus === 'verified-free' || 
         (product.pvaPercentage !== null && product.pvaPercentage === 0)
       )
     );
     
-    setPvaFreeProducts(products);
+    // Get mock products that are PVA-free
+    const mockPvaFreeProducts = mockProducts.filter(
+      product => product.approved && 
+        (product.pvaPercentage === 0 || product.pvaPercentage === null)
+    );
     
-    if (products.length === 0) {
+    // Combine both sources
+    const allPvaFreeProducts = [...mockPvaFreeProducts, ...userSubmissions];
+    
+    setPvaFreeProducts(allPvaFreeProducts);
+    setLoading(false);
+    
+    if (allPvaFreeProducts.length === 0) {
       toast({
         title: "Data Loading",
         description: "Loading product data from our database...",
       });
-    } else {
-      setLoading(false);
     }
   }, [toast]);
 
