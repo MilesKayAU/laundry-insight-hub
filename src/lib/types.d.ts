@@ -42,16 +42,6 @@ interface Database {
       };
     };
     Functions: {
-      get_user_metadata: {
-        Args: {
-          user_id: string;
-        };
-        Returns: {
-          marketing_consent: boolean;
-          email: string;
-          created_at: string;
-        };
-      };
       has_role: {
         Args: {
           role: string;
