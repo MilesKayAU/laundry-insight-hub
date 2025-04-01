@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -57,7 +56,8 @@ const DatabasePage = () => {
     handleRefreshData, 
     refreshKey, 
     approvedLocalSubmissions, 
-    approvedSupabaseSubmissions 
+    approvedSupabaseSubmissions,
+    mockProductsToInclude 
   } = useProductsData(selectedCountry);
   
   console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedLocalSubmissions?.length || 0} local, ${approvedSupabaseSubmissions?.length || 0} from Supabase)`);
