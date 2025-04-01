@@ -1,5 +1,5 @@
 
-// Add type declarations for our custom RPC function to get user metadata
+// Add type declarations for our custom RPC functions to get user metadata
 interface Database {
   public: {
     Tables: {

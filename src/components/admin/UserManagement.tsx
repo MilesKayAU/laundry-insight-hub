@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -100,7 +101,11 @@ const UserManagement = () => {
       for (const profile of profileData) {
         try {
           const { data: userData, error: userError } = await supabase
-            .rpc('get_user_metadata', { 
+            .rpc<{
+              marketing_consent: boolean;
+              email?: string;
+              created_at?: string;
+            }>('get_user_metadata', { 
               user_id: profile.id 
             });
           
@@ -108,10 +113,10 @@ const UserManagement = () => {
             console.error('Error fetching user metadata:', userError);
           }
           
-          const marketingConsent = userData ? userData.marketing_consent || false : false;
+          const marketingConsent = userData ? userData.marketing_consent : false;
           
           const { data: isAdmin, error: adminCheckError } = await supabase
-            .rpc('has_role', { role: 'admin' });
+            .rpc<boolean>('has_role', { role: 'admin' });
             
           if (adminCheckError) {
             console.log('Error checking admin status for user:', profile.id, adminCheckError);
