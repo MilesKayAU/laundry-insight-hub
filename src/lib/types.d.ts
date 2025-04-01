@@ -46,12 +46,7 @@ interface Database {
         Args: {
           user_id: string;
         };
-        Returns: {
-          marketing_consent: boolean;
-          email?: string;
-          created_at?: string;
-          [key: string]: any;
-        };
+        Returns: Record<string, any>;
       };
       has_role: {
         Args: {
