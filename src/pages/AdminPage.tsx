@@ -47,7 +47,9 @@ const AdminPage = () => {
     websiteUrl: '',
     pvaPercentage: '',
     country: '',
-    ingredients: ''
+    ingredients: '',
+    pvaStatus: '',
+    type: ''
   });
   
   const mockMessages: any[] = [];
@@ -177,7 +179,9 @@ const AdminPage = () => {
       websiteUrl: product.websiteUrl || '',
       pvaPercentage: product.pvaPercentage !== null ? product.pvaPercentage.toString() : '',
       country: product.country || '',
-      ingredients: product.ingredients || ''
+      ingredients: product.ingredients || '',
+      pvaStatus: product.pvaStatus || 'needs-verification',
+      type: product.type || ''
     };
     
     setProductDetails(initialDetails);
@@ -225,7 +229,9 @@ const AdminPage = () => {
         websiteUrl: productDetails.websiteUrl,
         pvaPercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
         country: productDetails.country,
-        ingredients: productDetails.ingredients
+        ingredients: productDetails.ingredients,
+        pvaStatus: productDetails.pvaStatus,
+        type: productDetails.type
       };
       
       if (isPending) {
@@ -248,7 +254,9 @@ const AdminPage = () => {
           imageUrl: productDetails.imageUrl,
           pvaPercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
           country: productDetails.country,
-          ingredients: productDetails.ingredients
+          ingredients: productDetails.ingredients,
+          pvaStatus: productDetails.pvaStatus,
+          type: productDetails.type
         } : p
       );
       localStorage.setItem('products', JSON.stringify(updatedAllProducts));
@@ -263,7 +271,9 @@ const AdminPage = () => {
               videourl: productDetails.videoUrl,
               imageurl: productDetails.imageUrl,
               pvapercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
-              country: productDetails.country
+              country: productDetails.country,
+              type: productDetails.type,
+              pvastatus: productDetails.pvaStatus
             })
             .eq('id', selectedProduct.id);
             

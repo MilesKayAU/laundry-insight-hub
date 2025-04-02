@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Eye, Search } from "lucide-react";
+import { CheckCircle, XCircle, Search, Edit } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,8 +34,8 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   console.log(`PendingProducts component received ${products.length} pending products`);
   const { toast } = useToast();
   
-  const handleViewDetails = (product: ProductSubmission) => {
-    console.log("View details clicked for product:", product.name);
+  const handleEdit = (product: ProductSubmission) => {
+    console.log("Edit clicked for product:", product.name);
     onViewDetails(product);
   };
 
@@ -119,12 +119,14 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleViewDetails(product)}
-                          title="View Details"
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEdit(product)}
+                          title="Edit Product"
+                          className="text-blue-500 hover:text-blue-700 flex items-center gap-1"
                         >
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          <Edit className="h-4 w-4" />
+                          Edit
                         </Button>
                         
                         {product.websiteUrl && (
