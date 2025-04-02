@@ -1,4 +1,3 @@
-
 export const PVA_KEYWORDS_CATEGORIES = {
   commonNames: ["PVA", "PVOH", "Polyvinyl Alcohol", "Polyvinyl alcohol"],
   chemicalSynonyms: ["Ethenol homopolymer", "Vinyl alcohol polymer"],
@@ -6,9 +5,7 @@ export const PVA_KEYWORDS_CATEGORIES = {
   additional: ["Film", "Soluble film", "Dissolving film"]
 };
 
-// Export the getAllPvaPatterns function that's being imported in urlVerification.ts
 export const getAllPvaPatterns = () => {
-  // Combine all PVA keywords from all categories
   const allPatterns = [];
   
   for (const category in PVA_KEYWORDS_CATEGORIES) {
@@ -24,13 +21,12 @@ export function getProductSubmissions(userId = null) {
     if (!productsString) return [];
     const submissions = JSON.parse(productsString) || [];
     
-    // If userId is provided, filter submissions by user
-    const filteredSubmissions = userId 
-      ? submissions.filter(sub => sub.uploadedBy === userId)
-      : submissions;
+    if (userId) {
+      return submissions.filter(sub => sub.uploadedBy === userId);
+    }
     
-    console.log(`Retrieved ${filteredSubmissions.length} product submissions from localStorage`);
-    return filteredSubmissions;
+    console.log(`Retrieved ${submissions.length} product submissions from localStorage`);
+    return submissions;
   } catch (error) {
     console.error("Error retrieving products from localStorage:", error);
     return [];
@@ -46,7 +42,6 @@ export function deleteProductSubmission(productId) {
 
     console.log("Deleting product with ID:", productId);
     
-    // Get all products from both possible storage keys
     const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
     if (!productsString) {
       console.log("No products found in localStorage");
@@ -55,17 +50,14 @@ export function deleteProductSubmission(productId) {
     
     const allProducts = JSON.parse(productsString);
     
-    // Check if product exists
     const productExists = allProducts.some(p => p.id === productId);
     if (!productExists) {
       console.error("Product not found in localStorage:", productId);
       return false;
     }
     
-    // Filter out the product to delete
     const filteredProducts = allProducts.filter(p => p.id !== productId);
     
-    // Save back to localStorage (to both keys to ensure consistency)
     localStorage.setItem('products', JSON.stringify(filteredProducts));
     localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
     
@@ -77,7 +69,6 @@ export function deleteProductSubmission(productId) {
   }
 }
 
-// Add a stub for ProductSubmission type
 export class ProductSubmission {
   id = "";
   name = "";
@@ -85,7 +76,6 @@ export class ProductSubmission {
   // other properties as needed
 }
 
-// Adding the submitProduct function from textExtractor.ts
 export const submitProduct = async (data, userId) => {
   console.info("Product submission:", data);
   
@@ -137,12 +127,10 @@ export const submitProduct = async (data, userId) => {
       newSubmission.timestamp = Date.now();
     }
     
-    // Get existing submissions from both possible storage keys
     const existingSubmissionsString = localStorage.getItem('product_submissions') || localStorage.getItem('products') || '[]';
     const existingSubmissions = JSON.parse(existingSubmissionsString);
     const updatedSubmissions = [...existingSubmissions, newSubmission];
     
-    // Save to both localStorage keys to ensure consistency
     localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
     localStorage.setItem('products', JSON.stringify(updatedSubmissions));
     
@@ -155,7 +143,6 @@ export const submitProduct = async (data, userId) => {
   }
 };
 
-// Implement updateProductSubmission function for editing products
 export const updateProductSubmission = (productId, updatedData) => {
   try {
     if (!productId) {
@@ -165,7 +152,6 @@ export const updateProductSubmission = (productId, updatedData) => {
     
     console.log("Updating product with ID:", productId, "with data:", updatedData);
     
-    // Get all products from localStorage
     const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
     if (!productsString) {
       console.log("No products found in localStorage");
@@ -174,24 +160,20 @@ export const updateProductSubmission = (productId, updatedData) => {
     
     const allProducts = JSON.parse(productsString);
     
-    // Find the product to update
     const productIndex = allProducts.findIndex(p => p.id === productId);
     if (productIndex === -1) {
       console.error("Product not found in localStorage:", productId);
       return false;
     }
     
-    // Update the product with new data while preserving other properties
     const updatedProduct = {
       ...allProducts[productIndex],
       ...updatedData,
-      updated_at: Date.now() // Add updated timestamp
+      updated_at: Date.now()
     };
     
-    // Replace the product in the array
     allProducts[productIndex] = updatedProduct;
     
-    // Save back to localStorage
     localStorage.setItem('products', JSON.stringify(allProducts));
     localStorage.setItem('product_submissions', JSON.stringify(allProducts));
     
@@ -203,7 +185,6 @@ export const updateProductSubmission = (productId, updatedData) => {
   }
 };
 
-// Add other necessary functions from textExtractor.ts that might be needed
 export const analyzePvaContent = (ingredients) => {
   if (!ingredients) {
     return { containsPva: false, detectedTerms: [], isExplicitlyFree: false };

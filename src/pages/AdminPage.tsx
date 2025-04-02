@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ProductSubmission, getProductSubmissions, deleteProductSubmission, PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
 import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
+import { useProductEditing } from '@/hooks/useProductEditing';
 
 type ProductStatus = 'pending' | 'approved' | 'rejected';
 
@@ -33,25 +34,19 @@ const AdminPage = () => {
   const [verifications, setVerifications] = useState<ExtendedProductSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<ExtendedProductSubmission | null>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [messageResponse, setMessageResponse] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
-  const [newKeyword, setNewKeyword] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [productDetails, setProductDetails] = useState({
-    description: '',
-    imageUrl: '',
-    videoUrl: '',
-    websiteUrl: '',
-    pvaPercentage: '',
-    country: '',
-    ingredients: '',
-    pvaStatus: 'needs-verification' as 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive',
-    type: ''
-  });
   
+  const { 
+    isDialogOpen, 
+    setIsDialogOpen, 
+    selectedProduct, 
+    productDetails, 
+    handleViewDetails, 
+    handleDetailsChange, 
+    handleSaveChanges 
+  } = useProductEditing(() => {
+    loadProducts();
+  });
+
   const mockMessages: any[] = [];
   const mockProfiles: any[] = [];
 
@@ -108,88 +103,66 @@ const AdminPage = () => {
     return Array.from(productMap.values());
   };
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        console.log("AdminPage: Loading and deduplicating products...");
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      console.log("AdminPage: Loading and deduplicating products...");
+      
+      const allLocalProducts = getProductSubmissions();
+      console.log(`AdminPage: Loaded ${allLocalProducts.length} products from localStorage before deduplication`);
+      
+      const dedupedLocalProducts = removeDuplicateProducts(allLocalProducts);
+      console.log(`AdminPage: After deduplication, now have ${dedupedLocalProducts.length} products`);
+      
+      if (dedupedLocalProducts.length !== allLocalProducts.length) {
+        localStorage.setItem('products', JSON.stringify(dedupedLocalProducts));
+        console.log(`AdminPage: Removed ${allLocalProducts.length - dedupedLocalProducts.length} duplicate products`);
         
-        const allLocalProducts = getProductSubmissions();
-        console.log(`AdminPage: Loaded ${allLocalProducts.length} products from localStorage before deduplication`);
-        
-        const dedupedLocalProducts = removeDuplicateProducts(allLocalProducts);
-        console.log(`AdminPage: After deduplication, now have ${dedupedLocalProducts.length} products`);
-        
-        if (dedupedLocalProducts.length !== allLocalProducts.length) {
-          localStorage.setItem('products', JSON.stringify(dedupedLocalProducts));
-          console.log(`AdminPage: Removed ${allLocalProducts.length - dedupedLocalProducts.length} duplicate products`);
-          
-          toast({
-            title: "Removed duplicate products",
-            description: `Found and removed ${allLocalProducts.length - dedupedLocalProducts.length} duplicate products`,
-          });
-        }
-        
-        const supabaseProducts = await fetchSupabaseProducts();
-        
-        const allProducts = [
-          ...dedupedLocalProducts.map(p => ({ 
-            ...p, 
-            status: p.approved ? 'approved' as ProductStatus : 'pending' as ProductStatus 
-          })),
-          ...supabaseProducts
-        ];
-        
-        console.log(`AdminPage: Total combined products before final deduplication: ${allProducts.length}`);
-        
-        const finalDedupedProducts = removeDuplicateProducts(allProducts);
-        console.log(`AdminPage: Final deduped product count: ${finalDedupedProducts.length}`);
-        
-        const pending = finalDedupedProducts.filter(p => !p.approved);
-        const approved = finalDedupedProducts.filter(p => p.approved);
-        const brandVerifications = finalDedupedProducts.filter(p => p.brandOwnershipRequested);
-        
-        setPendingProducts(pending);
-        setApprovedProducts(approved);
-        setVerifications(brandVerifications);
-        
-        console.log(`AdminPage: ${pending.length} pending, ${approved.length} approved products`);
-      } catch (error) {
-        console.error("Error loading products:", error);
         toast({
-          title: "Error",
-          description: "Failed to load product submissions",
-          variant: "destructive"
+          title: "Removed duplicate products",
+          description: `Found and removed ${allLocalProducts.length - dedupedLocalProducts.length} duplicate products`,
         });
-      } finally {
-        setLoading(false);
       }
-    };
-    
+      
+      const supabaseProducts = await fetchSupabaseProducts();
+      
+      const allProducts = [
+        ...dedupedLocalProducts.map(p => ({ 
+          ...p, 
+          status: p.approved ? 'approved' as ProductStatus : 'pending' as ProductStatus 
+        })),
+        ...supabaseProducts
+      ];
+      
+      console.log(`AdminPage: Total combined products before final deduplication: ${allProducts.length}`);
+      
+      const finalDedupedProducts = removeDuplicateProducts(allProducts);
+      console.log(`AdminPage: Final deduped product count: ${finalDedupedProducts.length}`);
+      
+      const pending = finalDedupedProducts.filter(p => !p.approved);
+      const approved = finalDedupedProducts.filter(p => p.approved);
+      const brandVerifications = finalDedupedProducts.filter(p => p.brandOwnershipRequested);
+      
+      setPendingProducts(pending);
+      setApprovedProducts(approved);
+      setVerifications(brandVerifications);
+      
+      console.log(`AdminPage: ${pending.length} pending, ${approved.length} approved products`);
+    } catch (error) {
+      console.error("Error loading products:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load product submissions",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProducts();
   }, [toast]);
-
-  const handleViewDetails = (product: ExtendedProductSubmission) => {
-    console.log("Viewing details for product:", product);
-    
-    const initialDetails = {
-      description: product.description || '',
-      imageUrl: product.imageUrl || '',
-      videoUrl: product.videoUrl || '',
-      websiteUrl: product.websiteUrl || '',
-      pvaPercentage: product.pvaPercentage !== null ? product.pvaPercentage.toString() : '',
-      country: product.country || '',
-      ingredients: product.ingredients || '',
-      pvaStatus: product.pvaStatus || 'needs-verification' as 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive',
-      type: product.type || ''
-    };
-    
-    setProductDetails(initialDetails);
-    setSelectedProduct(product);
-    
-    setShowDetailsDialog(true);
-    console.log("Dialog now set to open with product:", product.name);
-  };
 
   const handleVerifyProduct = (product: ProductSubmission) => {
     if (!product.websiteUrl) {
@@ -207,106 +180,6 @@ const AdminPage = () => {
     });
     
     window.open(product.websiteUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleSaveProductDetails = async () => {
-    if (!selectedProduct) {
-      console.error("Cannot save details: no product selected");
-      return;
-    }
-    
-    try {
-      console.log("Saving product details for:", selectedProduct.name);
-      
-      const isPending = pendingProducts.some(p => p.id === selectedProduct.id);
-      const isApproved = approvedProducts.some(p => p.id === selectedProduct.id);
-      
-      const updatedProduct = {
-        ...selectedProduct,
-        description: productDetails.description,
-        imageUrl: productDetails.imageUrl,
-        videoUrl: productDetails.videoUrl,
-        websiteUrl: productDetails.websiteUrl,
-        pvaPercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
-        country: productDetails.country,
-        ingredients: productDetails.ingredients,
-        pvaStatus: productDetails.pvaStatus,
-        type: productDetails.type
-      } as ExtendedProductSubmission;
-      
-      if (isPending) {
-        setPendingProducts(pendingProducts.map(p => 
-          p.id === selectedProduct.id ? updatedProduct : p
-        ));
-        console.log("Updated pending product:", updatedProduct);
-      } else if (isApproved) {
-        setApprovedProducts(approvedProducts.map(p => 
-          p.id === selectedProduct.id ? updatedProduct : p
-        ));
-      }
-      
-      const allProducts = getProductSubmissions();
-      const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
-        p.id === selectedProduct.id ? { 
-          ...p, 
-          description: productDetails.description,
-          websiteUrl: productDetails.websiteUrl,
-          videoUrl: productDetails.videoUrl,
-          imageUrl: productDetails.imageUrl,
-          pvaPercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
-          country: productDetails.country,
-          ingredients: productDetails.ingredients,
-          pvaStatus: productDetails.pvaStatus,
-          type: productDetails.type,
-          timestamp: Date.now()
-        } : p
-      );
-      localStorage.setItem('products', JSON.stringify(updatedAllProducts));
-      
-      if (!selectedProduct.id.startsWith('sub_')) {
-        try {
-          const { error } = await supabase
-            .from('product_submissions')
-            .update({
-              description: productDetails.description,
-              websiteurl: productDetails.websiteUrl,
-              videourl: productDetails.videoUrl,
-              imageurl: productDetails.imageUrl,
-              pvapercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
-              country: productDetails.country,
-              type: productDetails.type,
-              pvastatus: productDetails.pvaStatus
-            })
-            .eq('id', selectedProduct.id);
-            
-          if (error) {
-            console.error("Error updating product in Supabase:", error);
-            toast({
-              title: "Supabase Update Notice",
-              description: "Product was updated locally but there might be an issue with cloud storage.",
-              variant: "warning"
-            });
-          }
-        } catch (error) {
-          console.error("Error in Supabase update:", error);
-        }
-      }
-      
-      setSelectedProduct(updatedProduct);
-      setShowDetailsDialog(false);
-      
-      toast({
-        title: "Success",
-        description: "Product details updated successfully",
-      });
-    } catch (error) {
-      console.error("Error updating product details:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update product details",
-        variant: "destructive"
-      });
-    }
   };
 
   const handleApproveProduct = (productId: string) => {
@@ -329,7 +202,10 @@ const AdminPage = () => {
       
       const allProducts = getProductSubmissions();
       const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
-        p.id === productId ? { ...p, approved: true } : p
+        p.id === productId ? { 
+          ...p, 
+          approved: true 
+        } : p
       );
       localStorage.setItem('products', JSON.stringify(updatedAllProducts));
       
@@ -663,19 +539,12 @@ const AdminPage = () => {
       
       {selectedProduct && (
         <ProductDetailsDialog
-          isOpen={showDetailsDialog}
-          onOpenChange={(open) => {
-            console.log("[AdminPage] Dialog open state changing to:", open);
-            setShowDetailsDialog(open);
-            
-            if (!open && selectedProduct) {
-              console.log("Dialog closed without saving changes");
-            }
-          }}
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
           product={selectedProduct}
           details={productDetails}
-          onDetailsChange={setProductDetails}
-          onSave={handleSaveProductDetails}
+          onDetailsChange={handleDetailsChange}
+          onSave={handleSaveChanges}
         />
       )}
     </div>
