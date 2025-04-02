@@ -29,6 +29,9 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   onReject,
   onVerify 
 }) => {
+  // Log how many pending products we have for debugging
+  console.log(`PendingProducts component received ${products.length} pending products`);
+  
   return (
     <Card>
       <CardHeader>
@@ -80,7 +83,9 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                         new Date(product.submittedAt).toLocaleDateString() : 
                         product.dateSubmitted ? 
                           new Date(product.dateSubmitted).toLocaleDateString() : 
-                          'Unknown date'}
+                          product.timestamp ?
+                            new Date(product.timestamp).toLocaleDateString() :
+                            'Unknown date'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

@@ -20,7 +20,9 @@ export function getProductSubmissions() {
   try {
     const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
     if (!productsString) return [];
-    return JSON.parse(productsString) || [];
+    const submissions = JSON.parse(productsString) || [];
+    console.log(`Retrieved ${submissions.length} product submissions from localStorage`);
+    return submissions;
   } catch (error) {
     console.error("Error retrieving products from localStorage:", error);
     return [];
@@ -135,6 +137,8 @@ export const submitProduct = async (data, userId) => {
     // Save to both localStorage keys to ensure consistency
     localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
     localStorage.setItem('products', JSON.stringify(updatedSubmissions));
+    
+    console.log("Product submitted successfully:", newSubmission.name, "- Pending approval");
     
     return true;
   } catch (error) {

@@ -14,12 +14,15 @@ const ContributePage: React.FC = () => {
 
   const handleFormComplete = () => {
     // Can be used for any post-submission actions if needed
+    console.log("Form submission complete!");
   };
 
   const handleBulkUploadComplete = () => {
+    console.log("Bulk upload complete - products added to pending submissions");
+    
     toast({
       title: "Bulk upload complete",
-      description: "Your products have been submitted for review."
+      description: "Your products have been submitted for review and are now in the pending queue."
     });
   };
 

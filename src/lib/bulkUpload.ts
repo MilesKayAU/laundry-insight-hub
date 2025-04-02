@@ -125,7 +125,7 @@ export const processBulkUpload = (data: BulkProductData[]): {
       }
 
       // Create a new product submission
-      const newProduct: ProductSubmission = {
+      const newProduct = {
         id: `submission_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         brand: item.brand,
         name: item.name,
@@ -136,19 +136,25 @@ export const processBulkUpload = (data: BulkProductData[]): {
         description: item.additionalNotes || item.description || "",
         imageUrl: item.imageUrl || "",
         videoUrl: item.videoUrl || "",
-        websiteUrl: item.productUrl || item.websiteUrl || "", // Use productUrl as websiteUrl if available
+        websiteUrl: item.productUrl || item.websiteUrl || "",
         submittedAt: new Date().toISOString(),
         dateSubmitted: new Date().toISOString(),
-        approved: false,
+        approved: false, // Ensure we're setting approved to false for all bulk uploads
         brandVerified: false,
         brandContactEmail: "",
-        ingredients: item.ingredients || "" // Store ingredients for later reference
+        ingredients: item.ingredients || "",
+        timestamp: Date.now()
       };
 
       // Add to database
       const existingProducts = getProductSubmissions();
       const updatedProducts = [...existingProducts, newProduct];
+      
+      // Make sure we save to both storage keys for consistency
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
       localStorage.setItem('product_submissions', JSON.stringify(updatedProducts));
+      
+      console.log('Product added to pending:', newProduct.brand, newProduct.name);
       
       result.success.push(item);
     } catch (error) {
