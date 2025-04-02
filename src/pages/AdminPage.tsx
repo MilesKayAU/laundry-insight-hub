@@ -48,7 +48,7 @@ const AdminPage = () => {
     pvaPercentage: '',
     country: '',
     ingredients: '',
-    pvaStatus: '',
+    pvaStatus: 'needs-verification' as 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive',
     type: ''
   });
   
@@ -180,7 +180,7 @@ const AdminPage = () => {
       pvaPercentage: product.pvaPercentage !== null ? product.pvaPercentage.toString() : '',
       country: product.country || '',
       ingredients: product.ingredients || '',
-      pvaStatus: product.pvaStatus || 'needs-verification',
+      pvaStatus: product.pvaStatus || 'needs-verification' as 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive',
       type: product.type || ''
     };
     
@@ -232,7 +232,7 @@ const AdminPage = () => {
         ingredients: productDetails.ingredients,
         pvaStatus: productDetails.pvaStatus,
         type: productDetails.type
-      };
+      } as ExtendedProductSubmission;
       
       if (isPending) {
         setPendingProducts(pendingProducts.map(p => 

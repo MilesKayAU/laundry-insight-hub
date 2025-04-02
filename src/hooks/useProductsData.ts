@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -177,7 +176,7 @@ export const useProductsData = (selectedCountry: string) => {
     console.info(`Total products for admin view: ${productsToDisplay.length}`);
   }
 
-  // Update product function
+  // Update product function - now using the correctly imported updateProductSubmission
   const updateProduct = (productId: string, updatedData: Partial<ProductSubmission>) => {
     const success = updateProductSubmission(productId, updatedData);
     if (success) {

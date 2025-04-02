@@ -346,3 +346,51 @@ export const submitProduct = async (data: ProductSubmitData, userId?: string): P
     return false;
   }
 };
+
+// Explicitly export the updateProductSubmission function
+export const updateProductSubmission = (productId: string, updatedData: Partial<ProductSubmission>): boolean => {
+  try {
+    if (!productId) {
+      console.error("No product ID provided for update");
+      return false;
+    }
+    
+    console.log("Updating product with ID:", productId, "with data:", updatedData);
+    
+    // Get all products from localStorage
+    const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
+    if (!productsString) {
+      console.log("No products found in localStorage");
+      return false;
+    }
+    
+    const allProducts = JSON.parse(productsString);
+    
+    // Find the product to update
+    const productIndex = allProducts.findIndex((p: ProductSubmission) => p.id === productId);
+    if (productIndex === -1) {
+      console.error("Product not found in localStorage:", productId);
+      return false;
+    }
+    
+    // Update the product with new data while preserving other properties
+    const updatedProduct = {
+      ...allProducts[productIndex],
+      ...updatedData,
+      updated_at: Date.now() // Add updated timestamp
+    };
+    
+    // Replace the product in the array
+    allProducts[productIndex] = updatedProduct;
+    
+    // Save back to localStorage
+    localStorage.setItem('products', JSON.stringify(allProducts));
+    localStorage.setItem('product_submissions', JSON.stringify(allProducts));
+    
+    console.log("Product updated successfully:", updatedProduct.name);
+    return true;
+  } catch (error) {
+    console.error("Error updating product:", error);
+    return false;
+  }
+};
