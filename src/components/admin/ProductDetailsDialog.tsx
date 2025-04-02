@@ -93,9 +93,9 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     onSave();
   };
 
-  // Don't render anything if no product is provided
-  if (!product) {
-    console.log("[ProductDetailsDialog] No product provided, not rendering dialog");
+  // If no product is provided or dialog is not open, don't render content
+  if (!product || !isOpen) {
+    console.log("[ProductDetailsDialog] No product provided or dialog not open");
     return null;
   }
 

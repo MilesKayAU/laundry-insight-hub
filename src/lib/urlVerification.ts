@@ -1,5 +1,6 @@
 
 import { getAllPvaPatterns } from './textExtractor';
+import { useToast } from "@/hooks/use-toast";
 
 interface VerificationResult {
   success: boolean;
@@ -88,7 +89,7 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
       : null; // Sometimes we don't find ingredients
   }
   
-  // IMPORTANT CHANGE: Always flag as needing manual verification, regardless of whether we find PVA or not
+  // Always flag as needing manual verification
   const needsManualVerification = true;
   
   let message = containsPva 
@@ -113,4 +114,3 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
     needsManualVerification
   };
 };
-

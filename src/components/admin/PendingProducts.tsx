@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, XCircle, Eye, Search } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
+import { useToast } from "@/hooks/use-toast";
 
 interface PendingProductsProps {
   products: ProductSubmission[];
@@ -31,6 +32,34 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
 }) => {
   // Log how many pending products we have for debugging
   console.log(`PendingProducts component received ${products.length} pending products`);
+  const { toast } = useToast();
+  
+  const handleViewDetails = (product: ProductSubmission) => {
+    console.log("View details clicked for product:", product.name);
+    onViewDetails(product);
+  };
+
+  const handleVerify = (product: ProductSubmission) => {
+    if (!product.websiteUrl) {
+      toast({
+        title: "No URL available",
+        description: "This product doesn't have a website URL to verify",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    console.log("Verifying product URL:", product.websiteUrl);
+    if (onVerify) {
+      onVerify(product);
+    } else {
+      toast({
+        title: "URL Verification",
+        description: `Opening ${product.brand} ${product.name} website for verification`,
+      });
+      window.open(product.websiteUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
   
   return (
     <Card>
@@ -92,17 +121,17 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => onViewDetails(product)}
+                          onClick={() => handleViewDetails(product)}
                           title="View Details"
                         >
                           <Eye className="h-4 w-4 text-muted-foreground" />
                         </Button>
                         
-                        {onVerify && product.websiteUrl && (
+                        {product.websiteUrl && (
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => onVerify(product)}
+                            onClick={() => handleVerify(product)}
                             title="Verify Website"
                             className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                           >
