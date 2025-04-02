@@ -133,7 +133,8 @@ export const useProductsData = (selectedCountry: string) => {
   };
 
   // Get all approved submissions from local data with no filtering
-  const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved);
+  // FIXED: Only include approved submissions in the public database view
+  const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved === true);
   console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
   // Get all approved submissions from Supabase - ensure we have data
