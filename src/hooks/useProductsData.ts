@@ -102,27 +102,9 @@ export const useProductsData = (selectedCountry: string) => {
     setLoading(true);
     
     try {
-      // Get all product submissions
+      // Get all product submissions with no filtering
       const allData = getProductSubmissions();
-      
-      // Only filter out very specific mock data entries, keep all genuine user submissions
-      // These are the exact names of mock products that we know are sample data
-      const exactMockProducts = [
-        "Dirt Laundry Sheets", 
-        "That Red House Soapberries",
-        "Method Laundry Detergent", 
-        "Mrs. Meyers Clean Day Detergent",
-        "Simple Truth Laundry Detergent"
-      ];
-      
-      const localData = allData.filter(product => {
-        // Only filter out exact matches of known mock products
-        return !exactMockProducts.includes(`${product.brand} ${product.name}`);
-      });
-      
-      console.info(`Local data: Found ${localData.length} valid submission(s) after filtering out mock data`);
-      console.info(`Filtered out ${allData.length - localData.length} mock products`);
-      setAllSubmissions(localData);
+      setAllSubmissions(allData);
       
       // Trigger Supabase refetch
       await refetch();
@@ -145,16 +127,15 @@ export const useProductsData = (selectedCountry: string) => {
     }
   };
 
-  // Get all approved submissions from local data (already filtered from mock data)
+  // Get all approved submissions from local data
   const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved);
   console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
   // Get all approved submissions from Supabase - ensure we have data
   const approvedSupabaseSubmissions = supabaseProducts || [];
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
-  console.info("Supabase products:", supabaseProducts);
   
-  // Combine data sources with priority: Supabase > Local (no mock data)
+  // Combine data sources with priority: Supabase > Local
   const allApprovedProducts = [
     ...approvedSupabaseSubmissions, 
     ...approvedLocalSubmissions
@@ -177,19 +158,13 @@ export const useProductsData = (selectedCountry: string) => {
   });
 
   console.info(`Total combined products after country filtering: ${combinedApprovedProducts.length}`);
-  console.info("Data source breakdown:", {
-    supabase: approvedSupabaseSubmissions.length,
-    local: approvedLocalSubmissions.length,
-    mock: 0, // Explicitly show 0 mock data
-    combined: combinedApprovedProducts.length
-  });
   
   // Ensure admin users can see all products (including pending ones if no approved products exist)
   let productsToDisplay = combinedApprovedProducts;
-  if (isAuthenticated && combinedApprovedProducts.length === 0) {
-    console.info("No approved products found, but user is authenticated. Adding all submissions.");
-    // Make sure we only show real data (no mock data) to admins
-    productsToDisplay = [...allSubmissions]; 
+  if (isAuthenticated) {
+    console.info("User is authenticated. Showing all submissions including pending ones.");
+    // Make sure admins see everything - both approved and not approved
+    productsToDisplay = [...allSubmissions, ...approvedSupabaseSubmissions]; 
   }
 
   return {

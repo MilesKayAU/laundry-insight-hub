@@ -53,28 +53,12 @@ const AdminPage = () => {
       try {
         setLoading(true);
         
-        // For testing, load from localStorage
+        // Load all products without filtering
         const allProducts = getProductSubmissions();
-        
-        // Only filter out very specific mock data entries, keep all genuine user submissions
-        // These are the exact names of mock products that we know are sample data
-        const exactMockProducts = [
-          "Dirt Laundry Sheets", 
-          "That Red House Soapberries",
-          "Method Laundry Detergent", 
-          "Mrs. Meyers Clean Day Detergent",
-          "Simple Truth Laundry Detergent"
-        ];
-        
-        const realProducts = allProducts.filter(product => {
-          // Only filter out exact matches of known mock products
-          return !exactMockProducts.includes(`${product.brand} ${product.name}`);
-        });
-        
-        console.info(`Loaded ${realProducts.length} real products after filtering out mock data`);
+        console.info(`Loaded ${allProducts.length} products for admin view`);
         
         // Map products to include status property
-        const mappedProducts = realProducts.map((p: ProductSubmission): ExtendedProductSubmission => ({
+        const mappedProducts = allProducts.map((p: ProductSubmission): ExtendedProductSubmission => ({
           ...p,
           status: p.approved ? 'approved' : 'pending'
         }));

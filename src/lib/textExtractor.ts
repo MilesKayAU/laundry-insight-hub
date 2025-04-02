@@ -122,7 +122,7 @@ export const deleteProductSubmission = (productId: string) => {
   return updatedSubmissions;
 };
 
-// Modified function to add fallback data if localStorage is empty
+// Modified function to ensure we get all products
 export const getProductSubmissions = (userId?: string): ProductSubmission[] => {
   try {
     const storedSubmissions = localStorage.getItem('product_submissions');
@@ -133,104 +133,14 @@ export const getProductSubmissions = (userId?: string): ProductSubmission[] => {
       // If a userId is provided, filter submissions to only show those from this user
       if (userId) {
         return submissions.filter(submission => 
-          submission.uploadedBy === userId || 
-          // If no uploadedBy field exists, don't include in user-specific results
-          (submission.uploadedBy === undefined && submission.id.startsWith('default_'))
+          submission.uploadedBy === userId
         );
       }
       
       return submissions;
     } else {
-      console.warn('No product submissions found in localStorage, using fallback data');
-      // Fallback data with pre-populated Australian products
-      const fallbackData: ProductSubmission[] = [
-        {
-          id: 'default_product_1',
-          brand: 'Lil\' Bit Better',
-          name: 'Laundry Detergent Sheets',
-          type: 'Laundry Sheets',
-          country: 'Australia',
-          pvaStatus: 'verified-free',
-          pvaPercentage: 0,
-          description: 'These laundry sheets are PVA-free and environmentally friendly.',
-          imageUrl: 'https://littleecoshop.com.au/cdn/shop/files/LilBitBetter-LaundrySheets-_Front_1200x1200.jpg?v=1694400671',
-          websiteUrl: 'https://littleecoshop.com.au/products/lil-bit-better-laundry-detergent-sheets',
-          submittedAt: new Date().toISOString(),
-          approved: true,
-          dateSubmitted: new Date().toISOString(),
-          brandVerified: true,
-          brandContactEmail: "",
-          ingredients: "Sodium dodecyl sulfate, Sodium carbonate, Sodium silicate, Sodium percarbonate, Sodium carboxymethyl cellulose, Water conditioner, Brightening agent, Fragrance",
-          uploadedBy: 'system'  // Mark as system-added to distinguish from user submissions
-        },
-        {
-          id: 'default_product_2',
-          brand: 'Zero Co',
-          name: 'Laundry Liquid',
-          type: 'Laundry Liquid',
-          country: 'Australia',
-          pvaStatus: 'verified-free',
-          pvaPercentage: 0,
-          description: 'Plant-based laundry liquid that\'s tough on stains but gentle on the planet.',
-          imageUrl: 'https://cdn.shopify.com/s/files/1/0073/9212/7830/products/REFILLABLE-LAUNDRY-LIQUID_720x.jpg?v=1676936205',
-          websiteUrl: 'https://zeroco.com.au/products/laundry-liquid',
-          submittedAt: new Date().toISOString(),
-          approved: true,
-          dateSubmitted: new Date().toISOString(),
-          brandVerified: true,
-          brandContactEmail: "",
-          ingredients: "Water, Decyl Glucoside, Sodium Lauryl Ether Sulfate, Cocamidopropyl Betaine, Sodium Citrate, Glycerin",
-          uploadedBy: 'system'  // Mark as system-added
-        },
-        {
-          id: 'default_product_3',
-          brand: 'Dirt',
-          name: 'Laundry Powder',
-          type: 'Laundry Powder',
-          country: 'Australia',
-          pvaStatus: 'verified-free',
-          pvaPercentage: 0,
-          description: 'Australian-made, plant-based laundry powder that\'s free from PVA.',
-          imageUrl: 'https://www.dirtcompany.com.au/wp-content/uploads/2021/04/LP_OH_Web1000x1000-square.jpg',
-          websiteUrl: 'https://www.dirtcompany.com.au/product/laundry-powder/',
-          submittedAt: new Date().toISOString(),
-          approved: true,
-          dateSubmitted: new Date().toISOString(),
-          brandVerified: true,
-          brandContactEmail: "",
-          ingredients: "Sodium carbonate, Sodium bicarbonate, Sodium percarbonate, Sodium citrate, Plant-derived surfactants",
-          uploadedBy: 'system'  // Mark as system-added
-        },
-        {
-          id: 'default_product_4',
-          brand: 'That Red House',
-          name: 'Soapberries',
-          type: 'Soapberries',
-          country: 'Australia',
-          pvaStatus: 'verified-free',
-          pvaPercentage: 0,
-          description: 'Natural laundry detergent alternative made from dried soapberry shells.',
-          imageUrl: 'https://www.thatredhouse.com.au/wp-content/uploads/2019/05/soap-nuts-bag-organic.jpg',
-          websiteUrl: 'https://www.thatredhouse.com.au/product/organic-soapberries/',
-          submittedAt: new Date().toISOString(),
-          approved: true,
-          dateSubmitted: new Date().toISOString(),
-          brandVerified: true,
-          brandContactEmail: "",
-          ingredients: "100% Sapindus Mukorossi (Soapberry shells)",
-          uploadedBy: 'system'  // Mark as system-added
-        }
-      ];
-      
-      // Store the fallback data in localStorage for future sessions
-      localStorage.setItem('product_submissions', JSON.stringify(fallbackData));
-      
-      // If a userId is provided, return an empty array as these are system defaults
-      if (userId) {
-        return [];
-      }
-      
-      return fallbackData;
+      console.warn('No product submissions found in localStorage');
+      return [];
     }
   } catch (error) {
     console.error('Error retrieving product submissions:', error);
