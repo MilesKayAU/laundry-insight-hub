@@ -25,6 +25,7 @@ interface ProductDetailsProps {
     websiteUrl: string;
     pvaPercentage: string;
     country: string;
+    ingredients: string;
   };
   onDetailsChange: (details: any) => void;
   onSave: () => void;
@@ -75,7 +76,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Product Details</DialogTitle>
           <DialogDescription>
@@ -98,6 +99,20 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
               placeholder="Enter product description"
               className="col-span-3 h-20"
               value={details.description}
+              onChange={handleInputChange}
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="ingredients" className="text-right">
+              Ingredients
+            </Label>
+            <Textarea
+              id="ingredients"
+              name="ingredients"
+              placeholder="Enter product ingredients"
+              className="col-span-3 h-40"
+              value={details.ingredients}
               onChange={handleInputChange}
             />
           </div>
@@ -177,7 +192,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
             Cancel
           </Button>
           <Button onClick={onSave}>

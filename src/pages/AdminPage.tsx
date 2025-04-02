@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
@@ -18,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ProductSubmission, getProductSubmissions, PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
 
 // Define appropriate types for the status property
 type ProductStatus = 'pending' | 'approved' | 'rejected';
@@ -42,6 +44,15 @@ const AdminPage = () => {
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [productDetails, setProductDetails] = useState({
+    description: '',
+    imageUrl: '',
+    videoUrl: '',
+    websiteUrl: '',
+    pvaPercentage: '',
+    country: '',
+    ingredients: ''
+  });
   
   // Mock data for other components
   const mockMessages: any[] = [];
@@ -136,7 +147,110 @@ const AdminPage = () => {
 
   const handleViewDetails = (product: ExtendedProductSubmission) => {
     setSelectedProduct(product);
+    setProductDetails({
+      description: product.description || '',
+      imageUrl: product.imageUrl || '',
+      videoUrl: product.videoUrl || '',
+      websiteUrl: product.websiteUrl || '',
+      pvaPercentage: product.pvaPercentage !== null ? product.pvaPercentage.toString() : '',
+      country: product.country || '',
+      ingredients: product.ingredients || ''
+    });
     setShowDetailsDialog(true);
+  };
+  
+  const handleSaveProductDetails = async () => {
+    if (!selectedProduct) return;
+    
+    try {
+      // Find the product in the appropriate list
+      const isPending = pendingProducts.some(p => p.id === selectedProduct.id);
+      const isApproved = approvedProducts.some(p => p.id === selectedProduct.id);
+      
+      // Update local state
+      const updatedProduct = {
+        ...selectedProduct,
+        description: productDetails.description,
+        imageUrl: productDetails.imageUrl,
+        videoUrl: productDetails.videoUrl,
+        websiteUrl: productDetails.websiteUrl,
+        pvaPercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
+        country: productDetails.country,
+        ingredients: productDetails.ingredients
+      };
+      
+      // Update the appropriate list
+      if (isPending) {
+        setPendingProducts(pendingProducts.map(p => 
+          p.id === selectedProduct.id ? updatedProduct : p
+        ));
+      } else if (isApproved) {
+        setApprovedProducts(approvedProducts.map(p => 
+          p.id === selectedProduct.id ? updatedProduct : p
+        ));
+      }
+      
+      // Update localStorage
+      const allProducts = getProductSubmissions();
+      const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
+        p.id === selectedProduct.id ? { 
+          ...p, 
+          description: productDetails.description,
+          websiteUrl: productDetails.websiteUrl,
+          videoUrl: productDetails.videoUrl,
+          imageUrl: productDetails.imageUrl,
+          pvaPercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
+          country: productDetails.country,
+          ingredients: productDetails.ingredients
+        } : p
+      );
+      localStorage.setItem('products', JSON.stringify(updatedAllProducts));
+      
+      // If it's a Supabase product, update there as well
+      if (selectedProduct.id.startsWith('sub_')) {
+        // This is a local product, so no Supabase update needed
+      } else {
+        // Attempt to update in Supabase
+        try {
+          const { error } = await supabase
+            .from('product_submissions')
+            .update({
+              description: productDetails.description,
+              websiteurl: productDetails.websiteUrl,
+              videourl: productDetails.videoUrl,
+              imageurl: productDetails.imageUrl,
+              pvapercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
+              country: productDetails.country
+            })
+            .eq('id', selectedProduct.id);
+            
+          if (error) {
+            console.error("Error updating product in Supabase:", error);
+            toast({
+              title: "Supabase Update Failed",
+              description: "Product was updated locally but failed to update in Supabase.",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error("Error in Supabase update:", error);
+        }
+      }
+      
+      setSelectedProduct(updatedProduct);
+      
+      toast({
+        title: "Success",
+        description: "Product details updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating product details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update product details",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleApproveProduct = (productId: string) => {
@@ -415,51 +529,15 @@ const AdminPage = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Product details dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-3xl">
-          {selectedProduct && (
-            <div>
-              <h2 className="text-2xl font-bold">{selectedProduct.name}</h2>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div>
-                  <p><strong>Brand:</strong> {selectedProduct.brand}</p>
-                  <p><strong>Type:</strong> {selectedProduct.type}</p>
-                  <p><strong>PVA Status:</strong> {selectedProduct.pvaStatus}</p>
-                  <p><strong>PVA %:</strong> {selectedProduct.pvaPercentage ?? 'N/A'}</p>
-                </div>
-                <div>
-                  <p><strong>Submitted At:</strong> {selectedProduct.submittedAt ? new Date(selectedProduct.submittedAt).toLocaleString() : 'Unknown'}</p>
-                  <p><strong>Status:</strong> {selectedProduct.status}</p>
-                </div>
-              </div>
-              
-              {selectedProduct.ingredients && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-semibold">Ingredients</h3>
-                  <p>{selectedProduct.ingredients}</p>
-                </div>
-              )}
-              
-              {selectedProduct.description && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-semibold">Description</h3>
-                  <p>{selectedProduct.description}</p>
-                </div>
-              )}
-              
-              {selectedProduct.websiteUrl && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-semibold">Website</h3>
-                  <a href={selectedProduct.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                    {selectedProduct.websiteUrl}
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Product details dialog with editing capabilities */}
+      <ProductDetailsDialog
+        isOpen={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
+        product={selectedProduct}
+        details={productDetails}
+        onDetailsChange={setProductDetails}
+        onSave={handleSaveProductDetails}
+      />
     </div>
   );
 };
