@@ -18,11 +18,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ProductSubmission, getProductSubmissions, PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
 import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
+import { deleteProductSubmission } from "@/lib/textExtractor";
 
-// Define appropriate types for the status property
 type ProductStatus = 'pending' | 'approved' | 'rejected';
 
-// Extend the ProductSubmission type with the missing properties
 interface ExtendedProductSubmission extends ProductSubmission {
   status: ProductStatus;
 }
@@ -52,11 +51,9 @@ const AdminPage = () => {
     ingredients: ''
   });
   
-  // Mock data for other components
   const mockMessages: any[] = [];
   const mockProfiles: any[] = [];
 
-  // Function to fetch Supabase products
   const fetchSupabaseProducts = async () => {
     try {
       const { data, error } = await supabase
@@ -70,7 +67,6 @@ const AdminPage = () => {
       
       console.log(`AdminPage: Fetched ${data?.length || 0} products from Supabase`);
       
-      // Transform the data for our component
       return (data || []).map(item => ({
         id: item.id,
         name: item.name,
@@ -95,21 +91,39 @@ const AdminPage = () => {
   };
 
   useEffect(() => {
-    // Load products from localStorage and Supabase
     const loadProducts = async () => {
       try {
         setLoading(true);
         
-        // Load all products from localStorage without filtering
         const allLocalProducts = getProductSubmissions();
         console.info(`AdminPage: Loaded ${allLocalProducts.length} products from localStorage`);
         
-        // Load all products from Supabase
+        const productMap = new Map();
+        const uniqueProducts = [];
+        
+        for (const product of allLocalProducts) {
+          const key = `${product.brand.toLowerCase()}_${product.name.toLowerCase()}`;
+          
+          if (productMap.has(key) && !productMap.get(key).approved) {
+            if (productMap.get(key).timestamp < (product.timestamp || 0)) {
+              productMap.set(key, product);
+            }
+          } else {
+            productMap.set(key, product);
+          }
+        }
+        
+        const dedupedLocalProducts = Array.from(productMap.values());
+        
+        if (dedupedLocalProducts.length !== allLocalProducts.length) {
+          localStorage.setItem('products', JSON.stringify(dedupedLocalProducts));
+          console.info(`AdminPage: Removed ${allLocalProducts.length - dedupedLocalProducts.length} duplicate products`);
+        }
+        
         const supabaseProducts = await fetchSupabaseProducts();
         
-        // Combine all products
         const allProducts = [
-          ...allLocalProducts.map(p => ({ 
+          ...dedupedLocalProducts.map(p => ({ 
             ...p, 
             status: p.approved ? 'approved' as ProductStatus : 'pending' as ProductStatus 
           })),
@@ -118,7 +132,6 @@ const AdminPage = () => {
         
         console.info(`AdminPage: Total combined products: ${allProducts.length}`);
         
-        // Split into pending and approved based on status property
         const pending = allProducts.filter(p => !p.approved);
         const approved = allProducts.filter(p => p.approved);
         const brandVerifications = allProducts.filter(p => p.brandOwnershipRequested);
@@ -156,20 +169,19 @@ const AdminPage = () => {
       ingredients: product.ingredients || ''
     });
     
-    // Force the dialog to open by setting state to true
-    setShowDetailsDialog(true);
-    console.log("Dialog state set to:", true); // Debug log
+    setTimeout(() => {
+      setShowDetailsDialog(true);
+      console.log("Dialog state set to true");
+    }, 50);
   };
   
   const handleSaveProductDetails = async () => {
     if (!selectedProduct) return;
     
     try {
-      // Find the product in the appropriate list
       const isPending = pendingProducts.some(p => p.id === selectedProduct.id);
       const isApproved = approvedProducts.some(p => p.id === selectedProduct.id);
       
-      // Update local state
       const updatedProduct = {
         ...selectedProduct,
         description: productDetails.description,
@@ -181,7 +193,6 @@ const AdminPage = () => {
         ingredients: productDetails.ingredients
       };
       
-      // Update the appropriate list
       if (isPending) {
         setPendingProducts(pendingProducts.map(p => 
           p.id === selectedProduct.id ? updatedProduct : p
@@ -192,7 +203,6 @@ const AdminPage = () => {
         ));
       }
       
-      // Update localStorage
       const allProducts = getProductSubmissions();
       const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
         p.id === selectedProduct.id ? { 
@@ -208,11 +218,8 @@ const AdminPage = () => {
       );
       localStorage.setItem('products', JSON.stringify(updatedAllProducts));
       
-      // If it's a Supabase product, update there as well
       if (selectedProduct.id.startsWith('sub_')) {
-        // This is a local product, so no Supabase update needed
       } else {
-        // Attempt to update in Supabase
         try {
           const { error } = await supabase
             .from('product_submissions')
@@ -240,6 +247,7 @@ const AdminPage = () => {
       }
       
       setSelectedProduct(updatedProduct);
+      setShowDetailsDialog(false);
       
       toast({
         title: "Success",
@@ -257,20 +265,16 @@ const AdminPage = () => {
   
   const handleApproveProduct = (productId: string) => {
     try {
-      // Find the product
       const productIndex = pendingProducts.findIndex(p => p.id === productId);
       if (productIndex === -1) return;
       
-      // Update the product approved status
       const updatedProducts = [...pendingProducts];
       updatedProducts[productIndex].approved = true;
       updatedProducts[productIndex].status = 'approved';
       
-      // Move to approved products
       setApprovedProducts([...approvedProducts, updatedProducts[productIndex]]);
       setPendingProducts(updatedProducts.filter(p => p.id !== productId));
       
-      // Update localStorage
       const allProducts = getProductSubmissions();
       const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
         p.id === productId ? { ...p, approved: true } : p
@@ -293,28 +297,16 @@ const AdminPage = () => {
   
   const handleRejectProduct = (productId: string) => {
     try {
-      // Find the product
-      const productIndex = pendingProducts.findIndex(p => p.id === productId);
-      if (productIndex === -1) return;
+      const productToDelete = pendingProducts.find(p => p.id === productId);
+      if (!productToDelete) return;
       
-      // Update the product rejected status
-      const updatedProducts = [...pendingProducts];
-      updatedProducts[productIndex].approved = false;
-      updatedProducts[productIndex].status = 'rejected';
+      setPendingProducts(pendingProducts.filter(p => p.id !== productId));
       
-      // Remove from pending products
-      setPendingProducts(updatedProducts.filter(p => p.id !== productId));
-      
-      // Update localStorage
-      const allProducts = getProductSubmissions();
-      const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
-        p.id === productId ? { ...p, approved: false } : p
-      );
-      localStorage.setItem('products', JSON.stringify(updatedAllProducts));
+      deleteProductSubmission(productId);
       
       toast({
         title: "Success",
-        description: "Product rejected successfully",
+        description: "Product rejected and deleted successfully",
       });
     } catch (error) {
       console.error("Error rejecting product:", error);
@@ -327,7 +319,6 @@ const AdminPage = () => {
   };
   
   const handleApproveVerification = (productId: string) => {
-    // Handle brand verification approval
     toast({
       title: "Verification Approved",
       description: "Brand verification has been approved",
@@ -335,7 +326,6 @@ const AdminPage = () => {
   };
   
   const handleRejectVerification = (productId: string) => {
-    // Handle brand verification rejection
     toast({
       title: "Verification Rejected",
       description: "Brand verification has been rejected",
@@ -344,11 +334,9 @@ const AdminPage = () => {
 
   const handleDeleteProduct = (productId: string) => {
     try {
-      // Remove the product from approvedProducts state
       const updatedProducts = approvedProducts.filter(p => p.id !== productId);
       setApprovedProducts(updatedProducts);
       
-      // Update localStorage
       const allProducts = getProductSubmissions();
       const updatedAllProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
       localStorage.setItem('products', JSON.stringify(updatedAllProducts));
@@ -368,16 +356,59 @@ const AdminPage = () => {
   };
 
   const handleCleanDuplicates = () => {
-    // Handle cleaning duplicates
-    setShowCleanupDialog(false);
-    toast({
-      title: "Duplicates Cleaned",
-      description: "Duplicate products have been successfully removed",
-    });
+    try {
+      const allProducts = getProductSubmissions();
+      const productMap = new Map();
+      
+      for (const product of allProducts) {
+        const key = `${product.brand.toLowerCase()}_${product.name.toLowerCase()}`;
+        
+        if (productMap.has(key)) {
+          const existingTimestamp = productMap.get(key).timestamp || 0;
+          const newTimestamp = product.timestamp || 0;
+          
+          if (newTimestamp > existingTimestamp) {
+            productMap.set(key, product);
+          }
+        } else {
+          productMap.set(key, product);
+        }
+      }
+      
+      const dedupedProducts = Array.from(productMap.values());
+      
+      if (dedupedProducts.length !== allProducts.length) {
+        localStorage.setItem('products', JSON.stringify(dedupedProducts));
+        
+        const pending = dedupedProducts.filter(p => !p.approved);
+        const approved = dedupedProducts.filter(p => p.approved);
+        
+        setPendingProducts(pending.map(p => ({ ...p, status: 'pending' as ProductStatus })));
+        setApprovedProducts(approved.map(p => ({ ...p, status: 'approved' as ProductStatus })));
+        
+        toast({
+          title: "Duplicates Cleaned",
+          description: `Removed ${allProducts.length - dedupedProducts.length} duplicate products`,
+        });
+      } else {
+        toast({
+          title: "No Duplicates Found",
+          description: "No duplicate products were found",
+        });
+      }
+      
+      setShowCleanupDialog(false);
+    } catch (error) {
+      console.error("Error cleaning duplicates:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clean duplicate products",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleBulkUpload = () => {
-    // Handle bulk upload
     toast({
       title: "Bulk Upload",
       description: "Bulk upload functionality triggered",
@@ -385,7 +416,6 @@ const AdminPage = () => {
   };
 
   const handleMessageSelect = (message: any) => {
-    // Handle message selection
     setDialogOpen(true);
   };
 
@@ -531,7 +561,6 @@ const AdminPage = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Product details dialog with editing capabilities */}
       {selectedProduct && (
         <ProductDetailsDialog
           isOpen={showDetailsDialog}

@@ -117,6 +117,7 @@ export const updateProductApproval = (productId: string, approved: boolean) => {
 export const deleteProductSubmission = (productId: string) => {
   const submissions = getProductSubmissions();
   const updatedSubmissions = submissions.filter(submission => submission.id !== productId);
+  localStorage.setItem('products', JSON.stringify(updatedSubmissions));
   localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
   return updatedSubmissions;
 };
@@ -124,7 +125,7 @@ export const deleteProductSubmission = (productId: string) => {
 // Modified function to ensure we get all products with improved error handling
 export const getProductSubmissions = (userId?: string): ProductSubmission[] => {
   try {
-    const storedSubmissions = localStorage.getItem('product_submissions');
+    const storedSubmissions = localStorage.getItem('product_submissions') || localStorage.getItem('products');
     
     if (storedSubmissions) {
       const submissions = JSON.parse(storedSubmissions);

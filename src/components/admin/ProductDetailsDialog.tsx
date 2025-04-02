@@ -50,7 +50,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     }
   }, [details.pvaPercentage]);
   
-  // Debug log to track dialog open state
+  // Debug log to track dialog open state and product
   useEffect(() => {
     console.log("ProductDetailsDialog: isOpen =", isOpen, "product =", product?.name);
   }, [isOpen, product]);
