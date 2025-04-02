@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -103,18 +102,26 @@ export const useProductsData = (selectedCountry: string) => {
     setLoading(true);
     
     try {
-      // Get real product submissions (not mock data)
+      // Get all product submissions
       const allData = getProductSubmissions();
       
-      // Filter out mock/dummy data by checking for specific patterns or names
+      // Only filter out very specific mock data entries, keep all genuine user submissions
+      // These are the exact names of mock products that we know are sample data
+      const exactMockProducts = [
+        "Dirt Laundry Sheets", 
+        "That Red House Soapberries",
+        "Method Laundry Detergent", 
+        "Mrs. Meyers Clean Day Detergent",
+        "Simple Truth Laundry Detergent"
+      ];
+      
       const localData = allData.filter(product => {
-        const mockBrands = ["That Red House", "Dirt", "Mrs. Meyers", "Method", "Simple Truth"];
-        return !mockBrands.some(mockBrand => 
-          product.brand.toLowerCase().includes(mockBrand.toLowerCase())
-        );
+        // Only filter out exact matches of known mock products
+        return !exactMockProducts.includes(`${product.brand} ${product.name}`);
       });
       
       console.info(`Local data: Found ${localData.length} valid submission(s) after filtering out mock data`);
+      console.info(`Filtered out ${allData.length - localData.length} mock products`);
       setAllSubmissions(localData);
       
       // Trigger Supabase refetch

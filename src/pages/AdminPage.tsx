@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
@@ -57,12 +56,19 @@ const AdminPage = () => {
         // For testing, load from localStorage
         const allProducts = getProductSubmissions();
         
-        // Filter out mock data
-        const mockBrands = ["That Red House", "Dirt", "Mrs. Meyers", "Method", "Simple Truth"];
+        // Only filter out very specific mock data entries, keep all genuine user submissions
+        // These are the exact names of mock products that we know are sample data
+        const exactMockProducts = [
+          "Dirt Laundry Sheets", 
+          "That Red House Soapberries",
+          "Method Laundry Detergent", 
+          "Mrs. Meyers Clean Day Detergent",
+          "Simple Truth Laundry Detergent"
+        ];
+        
         const realProducts = allProducts.filter(product => {
-          return !mockBrands.some(mockBrand => 
-            product.brand.toLowerCase().includes(mockBrand.toLowerCase())
-          );
+          // Only filter out exact matches of known mock products
+          return !exactMockProducts.includes(`${product.brand} ${product.name}`);
         });
         
         console.info(`Loaded ${realProducts.length} real products after filtering out mock data`);
