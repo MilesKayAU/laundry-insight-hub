@@ -13,6 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ProductSubmission } from "@/lib/textExtractor";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ProductDetailsProps {
   isOpen: boolean;
@@ -26,6 +29,8 @@ interface ProductDetailsProps {
     pvaPercentage: string;
     country: string;
     ingredients: string;
+    pvaStatus: string;
+    type: string;
   };
   onDetailsChange: (details: any) => void;
   onSave: () => void;
@@ -40,6 +45,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
   onSave,
 }) => {
   const [pvaPercentageNumber, setPvaPercentageNumber] = useState<number | null>(null);
+  const [urlIsValid, setUrlIsValid] = useState<boolean>(true);
   
   // Debug logging for component render and props
   console.log("[ProductDetailsDialog] Rendering with props:", { 
@@ -56,7 +62,17 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     } else {
       setPvaPercentageNumber(null);
     }
-  }, [details.pvaPercentage]);
+    
+    // Validate URL if it exists
+    if (details.websiteUrl) {
+      try {
+        new URL(details.websiteUrl);
+        setUrlIsValid(true);
+      } catch (e) {
+        setUrlIsValid(false);
+      }
+    }
+  }, [details.pvaPercentage, details.websiteUrl]);
   
   // Debug log to track dialog open state and product
   useEffect(() => {
@@ -88,9 +104,24 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     }
   };
 
+  const handleSelectChange = (name: string, value: string) => {
+    console.log(`[ProductDetailsDialog] Select changed: ${name} = ${value}`);
+    onDetailsChange({ ...details, [name]: value });
+  };
+
   const handleSaveClick = () => {
     console.log("[ProductDetailsDialog] Save button clicked");
     onSave();
+  };
+
+  const validateUrl = (url: string): boolean => {
+    if (!url) return true;
+    try {
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
 
   // If no product is provided or dialog is not open, don't render content
@@ -147,6 +178,28 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="type" className="text-right">
+              Product Type
+            </Label>
+            <Select
+              value={details.type || product.type}
+              onValueChange={(value) => handleSelectChange('type', value)}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select product type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Detergent">Detergent</SelectItem>
+                <SelectItem value="Dishwasher Tablet">Dishwasher Tablet</SelectItem>
+                <SelectItem value="Dishwasher Pod">Dishwasher Pod</SelectItem>
+                <SelectItem value="Laundry Pod">Laundry Pod</SelectItem>
+                <SelectItem value="Soap">Soap</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="imageUrl" className="text-right">
               Image URL
             </Label>
@@ -178,14 +231,39 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
             <Label htmlFor="websiteUrl" className="text-right">
               Website URL
             </Label>
-            <Input
-              id="websiteUrl"
-              name="websiteUrl"
-              placeholder="https://example.com/product"
-              className="col-span-3"
-              value={details.websiteUrl || ''}
-              onChange={handleInputChange}
-            />
+            <div className="col-span-3">
+              <Input
+                id="websiteUrl"
+                name="websiteUrl"
+                placeholder="https://example.com/product"
+                className={`${!validateUrl(details.websiteUrl || '') ? "border-red-500" : ""}`}
+                value={details.websiteUrl || ''}
+                onChange={handleInputChange}
+              />
+              {!validateUrl(details.websiteUrl || '') && (
+                <p className="text-xs text-red-500 mt-1">Please enter a valid URL (include https://)</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="pvaStatus" className="text-right">
+              PVA Status
+            </Label>
+            <Select
+              value={details.pvaStatus || product.pvaStatus}
+              onValueChange={(value) => handleSelectChange('pvaStatus', value)}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select PVA status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="contains">Contains PVA</SelectItem>
+                <SelectItem value="verified-free">Verified Free</SelectItem>
+                <SelectItem value="needs-verification">Needs Verification</SelectItem>
+                <SelectItem value="inconclusive">Inconclusive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
@@ -219,12 +297,25 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
             />
           </div>
         </div>
+
+        {!validateUrl(details.websiteUrl || '') && details.websiteUrl && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Invalid URL</AlertTitle>
+            <AlertDescription>
+              Please enter a valid website URL including the protocol (https://)
+            </AlertDescription>
+          </Alert>
+        )}
         
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
             Cancel
           </Button>
-          <Button onClick={handleSaveClick}>
+          <Button 
+            onClick={handleSaveClick}
+            disabled={details.websiteUrl && !validateUrl(details.websiteUrl)}
+          >
             Save Changes
           </Button>
         </DialogFooter>

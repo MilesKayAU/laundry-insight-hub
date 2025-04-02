@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from "react";
-import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
+import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -132,8 +132,7 @@ export const useProductsData = (selectedCountry: string) => {
     }
   };
 
-  // Get all approved submissions from local data with no filtering
-  // FIXED: Only include approved submissions in the public database view
+  // Get all approved submissions from local data
   const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved === true);
   console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
@@ -141,15 +140,15 @@ export const useProductsData = (selectedCountry: string) => {
   const approvedSupabaseSubmissions = supabaseProducts || [];
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
   
-  // Combine all products without any filtering
+  // Combine all products that are approved only
   const allApprovedProducts = [
     ...approvedSupabaseSubmissions, 
     ...approvedLocalSubmissions
   ];
   
-  console.info(`Total products before country filtering: ${allApprovedProducts.length}`);
+  console.info(`Total approved products before country filtering: ${allApprovedProducts.length}`);
   
-  // Filter by country only
+  // Filter by country only if a country is selected
   const combinedApprovedProducts = allApprovedProducts.filter(product => {
     if (selectedCountry === "Global") return true;
     
@@ -165,6 +164,10 @@ export const useProductsData = (selectedCountry: string) => {
 
   console.info(`Total combined products after country filtering: ${combinedApprovedProducts.length}`);
   
+  // Get pending products (not approved)
+  const pendingProducts = allSubmissions.filter(submission => submission.approved !== true);
+  console.info(`Found ${pendingProducts.length} pending local submissions`);
+  
   // Ensure admin users can see all products, with no filtering on mock data
   let productsToDisplay = combinedApprovedProducts;
   if (isAuthenticated) {
@@ -174,13 +177,34 @@ export const useProductsData = (selectedCountry: string) => {
     console.info(`Total products for admin view: ${productsToDisplay.length}`);
   }
 
+  // Update product function
+  const updateProduct = (productId: string, updatedData: Partial<ProductSubmission>) => {
+    const success = updateProductSubmission(productId, updatedData);
+    if (success) {
+      handleRefreshData();
+      toast({
+        title: "Product Updated",
+        description: "The product has been updated successfully.",
+      });
+    } else {
+      toast({
+        title: "Error Updating Product",
+        description: "There was an error updating the product.",
+        variant: "destructive"
+      });
+    }
+    return success;
+  };
+
   return {
     combinedApprovedProducts: productsToDisplay,
+    pendingProducts,
     loading,
     refreshKey,
     handleRefreshData,
     approvedLocalSubmissions,
-    approvedSupabaseSubmissions
+    approvedSupabaseSubmissions,
+    updateProduct
   };
 };
 

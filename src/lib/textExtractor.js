@@ -1,3 +1,4 @@
+
 export const PVA_KEYWORDS_CATEGORIES = {
   commonNames: ["PVA", "PVOH", "Polyvinyl Alcohol", "Polyvinyl alcohol"],
   chemicalSynonyms: ["Ethenol homopolymer", "Vinyl alcohol polymer"],
@@ -17,13 +18,19 @@ export const getAllPvaPatterns = () => {
   return allPatterns;
 };
 
-export function getProductSubmissions() {
+export function getProductSubmissions(userId = null) {
   try {
     const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
     if (!productsString) return [];
     const submissions = JSON.parse(productsString) || [];
-    console.log(`Retrieved ${submissions.length} product submissions from localStorage`);
-    return submissions;
+    
+    // If userId is provided, filter submissions by user
+    const filteredSubmissions = userId 
+      ? submissions.filter(sub => sub.uploadedBy === userId)
+      : submissions;
+    
+    console.log(`Retrieved ${filteredSubmissions.length} product submissions from localStorage`);
+    return filteredSubmissions;
   } catch (error) {
     console.error("Error retrieving products from localStorage:", error);
     return [];
@@ -144,6 +151,54 @@ export const submitProduct = async (data, userId) => {
     return true;
   } catch (error) {
     console.error("Error submitting product:", error);
+    return false;
+  }
+};
+
+// Implement updateProductSubmission function for editing products
+export const updateProductSubmission = (productId, updatedData) => {
+  try {
+    if (!productId) {
+      console.error("No product ID provided for update");
+      return false;
+    }
+    
+    console.log("Updating product with ID:", productId, "with data:", updatedData);
+    
+    // Get all products from localStorage
+    const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
+    if (!productsString) {
+      console.log("No products found in localStorage");
+      return false;
+    }
+    
+    const allProducts = JSON.parse(productsString);
+    
+    // Find the product to update
+    const productIndex = allProducts.findIndex(p => p.id === productId);
+    if (productIndex === -1) {
+      console.error("Product not found in localStorage:", productId);
+      return false;
+    }
+    
+    // Update the product with new data while preserving other properties
+    const updatedProduct = {
+      ...allProducts[productIndex],
+      ...updatedData,
+      updated_at: Date.now() // Add updated timestamp
+    };
+    
+    // Replace the product in the array
+    allProducts[productIndex] = updatedProduct;
+    
+    // Save back to localStorage
+    localStorage.setItem('products', JSON.stringify(allProducts));
+    localStorage.setItem('product_submissions', JSON.stringify(allProducts));
+    
+    console.log("Product updated successfully:", updatedProduct.name);
+    return true;
+  } catch (error) {
+    console.error("Error updating product:", error);
     return false;
   }
 };
