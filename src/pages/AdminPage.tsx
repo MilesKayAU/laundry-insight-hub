@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
@@ -156,6 +155,7 @@ const AdminPage = () => {
       country: product.country || '',
       ingredients: product.ingredients || ''
     });
+    // This is the critical line that wasn't working properly
     setShowDetailsDialog(true);
   };
   
