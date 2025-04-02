@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -62,6 +61,7 @@ const DatabasePage = () => {
   
   console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedLocalSubmissions?.length || 0} local, ${approvedSupabaseSubmissions?.length || 0} from Supabase)`);
   console.info("Authentication status:", isAuthenticated ? "Authenticated" : "Not authenticated");
+  console.info("Products in database:", combinedApprovedProducts);
   
   const {
     searchTerm,
@@ -205,6 +205,15 @@ const DatabasePage = () => {
                   <Map className="h-4 w-4 mr-2" />
                   Change Region
                 </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleRefreshData}
+                  className="mr-2"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Data
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -212,7 +221,8 @@ const DatabasePage = () => {
             <div className="text-center py-12 bg-muted/50 rounded-lg mb-20">
               <h3 className="text-lg font-medium mb-2">No products found in the database</h3>
               <p className="text-muted-foreground mb-4">
-                We don't have any products in our database yet.
+                We don't have any approved products in our database for this region yet.
+                {isAuthenticated && " You're logged in as an admin, so you can add products."}
               </p>
               <Button variant="outline" asChild>
                 <Link to="/contribute">

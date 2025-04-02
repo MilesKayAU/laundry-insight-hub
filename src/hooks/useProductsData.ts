@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -101,20 +102,17 @@ export const useProductsData = (selectedCountry: string) => {
   const handleRefreshData = async () => {
     setLoading(true);
     
-    // Get local submissions
-    const localData = getProductSubmissions();
-    console.info(`Local data: Found ${localData.length} submission(s)`);
-    
     try {
+      // Get local submissions
+      const localData = getProductSubmissions();
+      console.info(`Local data: Found ${localData.length} submission(s)`);
+      setAllSubmissions(localData);
+      
       // Trigger Supabase refetch
       await refetch();
       
-      // Update state
-      setAllSubmissions(localData);
       setLoading(false);
       setRefreshKey(prev => prev + 1);
-      
-      console.log("Supabase products:", supabaseProducts);
       
       toast({
         title: "Data refreshed",
@@ -138,9 +136,7 @@ export const useProductsData = (selectedCountry: string) => {
   // Get all approved submissions from Supabase - ensure we have data
   const approvedSupabaseSubmissions = supabaseProducts || [];
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
-  
-  // Completely remove mock data
-  console.info("No mock data will be displayed - mock products are completely disabled");
+  console.info("Supabase products:", supabaseProducts);
   
   // Combine data sources with priority: Supabase > Local (no mock data)
   const allApprovedProducts = [
@@ -171,9 +167,16 @@ export const useProductsData = (selectedCountry: string) => {
     mock: 0, // Explicitly show 0 mock data
     combined: combinedApprovedProducts.length
   });
+  
+  // If we have no data at all after filtering, let's ensure admin users can see pending products too
+  let productsToDisplay = combinedApprovedProducts;
+  if (isAuthenticated && combinedApprovedProducts.length === 0) {
+    console.info("No approved products found, but user is authenticated. Adding pending submissions.");
+    productsToDisplay = [...allSubmissions]; // Show all submissions for admin users when no approved products
+  }
 
   return {
-    combinedApprovedProducts,
+    combinedApprovedProducts: productsToDisplay,
     loading,
     refreshKey,
     handleRefreshData,
