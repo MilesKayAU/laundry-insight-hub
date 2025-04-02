@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Sector } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,7 +19,7 @@ const STATUS_COLORS = {
   'inconclusive': '#6b7280'
 };
 
-// Predefined product types with proper categorization
+// Expanded product types with different variations to improve matching
 const PRODUCT_TYPES = [
   'Laundry Sheet',
   'Laundry Pod',
@@ -32,6 +32,34 @@ const PRODUCT_TYPES = [
   'Other'
 ];
 
+// Mapping of common variant names to our standardized categories
+const PRODUCT_TYPE_MAPPINGS = {
+  'laundry detergent sheets': 'Laundry Sheet',
+  'laundry detergent sheet': 'Laundry Sheet',
+  'detergent sheet': 'Laundry Sheet',
+  'detergent sheets': 'Laundry Sheet',
+  'laundry sheets': 'Laundry Sheet',
+  'laundry sheet': 'Laundry Sheet',
+  'laundry pods': 'Laundry Pod',
+  'laundry pod': 'Laundry Pod',
+  'detergent pod': 'Laundry Pod',
+  'detergent pods': 'Laundry Pod',
+  'laundry capsule': 'Laundry Pod',
+  'laundry capsules': 'Laundry Pod',
+  'dishwasher sheets': 'Dishwasher Sheet',
+  'dishwasher sheet': 'Dishwasher Sheet',
+  'dishwasher pods': 'Dishwasher Pod',
+  'dishwasher pod': 'Dishwasher Pod',
+  'dish soap': 'Liquid',
+  'liquid detergent': 'Liquid',
+  'powder detergent': 'Powder',
+  'laundry detergent powder': 'Powder',
+  'laundry tablet': 'Tablet',
+  'laundry tablets': 'Tablet',
+  'cleaning tablet': 'Tablet',
+  'cleaning tablets': 'Tablet'
+};
+
 // Improved product type normalization for better categorization
 const normalizeProductType = (type: string | undefined): string => {
   if (!type) return 'Other';
@@ -39,18 +67,26 @@ const normalizeProductType = (type: string | undefined): string => {
   // Convert to lowercase for comparison
   const typeLower = type.toLowerCase().trim();
   
-  // Map various product types to their normalized categories
-  if (typeLower.includes('laundry') && typeLower.includes('sheet')) {
+  // First check direct mappings
+  if (PRODUCT_TYPE_MAPPINGS[typeLower as keyof typeof PRODUCT_TYPE_MAPPINGS]) {
+    console.log(`Direct mapping found for "${type}" -> "${PRODUCT_TYPE_MAPPINGS[typeLower as keyof typeof PRODUCT_TYPE_MAPPINGS]}"`);
+    return PRODUCT_TYPE_MAPPINGS[typeLower as keyof typeof PRODUCT_TYPE_MAPPINGS];
+  }
+  
+  // Next, check if it contains specific keywords
+  if (typeLower.includes('laundry') && (typeLower.includes('sheet') || typeLower.includes('sheets'))) {
+    console.log(`Keyword match for "${type}" -> "Laundry Sheet"`);
     return 'Laundry Sheet';
-  } else if (typeLower.includes('laundry') && (typeLower.includes('pod') || typeLower.includes('capsule'))) {
+  } else if (typeLower.includes('laundry') && (typeLower.includes('pod') || typeLower.includes('pods') || typeLower.includes('capsule'))) {
+    console.log(`Keyword match for "${type}" -> "Laundry Pod"`);
     return 'Laundry Pod';
-  } else if (typeLower.includes('dishwasher') && (typeLower.includes('pod') || typeLower.includes('capsule'))) {
-    return 'Dishwasher Pod';
-  } else if (typeLower.includes('dishwasher') && typeLower.includes('sheet')) {
+  } else if (typeLower.includes('dishwasher') && (typeLower.includes('sheet') || typeLower.includes('sheets'))) {
     return 'Dishwasher Sheet';
-  } else if (typeLower.includes('tablet')) {
+  } else if (typeLower.includes('dishwasher') && (typeLower.includes('pod') || typeLower.includes('pods') || typeLower.includes('capsule'))) {
+    return 'Dishwasher Pod';
+  } else if (typeLower.includes('tablet') || typeLower.includes('tablets')) {
     return 'Tablet';
-  } else if (typeLower.includes('liquid') || typeLower.includes('solution')) {
+  } else if (typeLower.includes('liquid') || typeLower.includes('solution') || typeLower.includes('dish soap')) {
     return 'Liquid';
   } else if (typeLower.includes('powder')) {
     return 'Powder';
@@ -66,6 +102,7 @@ const normalizeProductType = (type: string | undefined): string => {
   }
   
   // Return "Other" for any unrecognized types
+  console.log(`No match found for "${type}" - categorizing as "Other"`);
   return 'Other';
 };
 
@@ -124,14 +161,25 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const [activePieIndex, setActivePieIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("type"); // Set default to "type" for product types view
 
-  // Log the original product types for debugging
-  console.log("Original product types:", products.map(p => p.type));
-  
-  // Log the normalized product types to verify categorization
-  console.log("Normalized product types:", products.map(p => ({
-    original: p.type,
-    normalized: normalizeProductType(p.type)
-  })));
+  useEffect(() => {
+    // Log raw product types for debugging
+    console.log("Raw product types:", products.map(p => p.type));
+    
+    // Log normalized product types to verify categorization
+    const normalizedTypes = products.map(p => ({
+      original: p.type,
+      normalized: normalizeProductType(p.type)
+    }));
+    console.log("Normalized product types:", normalizedTypes);
+    
+    // Log type count distribution
+    const typeCounts: {[key: string]: number} = {};
+    normalizedTypes.forEach(item => {
+      const type = item.normalized;
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    console.log("Product type distribution:", typeCounts);
+  }, [products]);
 
   // Create data for status chart - use verified-free for all non-contains status for now
   const statusData = [
@@ -172,22 +220,28 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const brandData = sortedBrands.map(([name, value]) => ({ name, value }));
 
   // Create data for status by type with normalized types
-  const statusByTypeData = PRODUCT_TYPES.map(type => {
-    const typeProducts = products.filter(p => normalizeProductType(p.type) === type);
-    
-    return {
-      name: type,
-      'Contains PVA': typeProducts.filter(p => p.pvaStatus === 'contains').length,
-      'Verified Free': typeProducts.filter(p => p.pvaStatus === 'verified-free' || (p.approved && p.pvaStatus !== 'contains')).length,
-      'Needs Verification': typeProducts.filter(p => p.pvaStatus === 'needs-verification' && !p.approved).length,
-      'Inconclusive': typeProducts.filter(p => p.pvaStatus === 'inconclusive' && !p.approved).length
-    };
-  }).filter(item => 
-    item['Contains PVA'] > 0 || 
-    item['Verified Free'] > 0 || 
-    item['Needs Verification'] > 0 || 
-    item['Inconclusive'] > 0
-  );
+  const statusByTypeData = PRODUCT_TYPES
+    .filter(type => {
+      // Only include types that actually have products
+      const typeProducts = products.filter(p => normalizeProductType(p.type) === type);
+      return typeProducts.length > 0;
+    })
+    .map(type => {
+      const typeProducts = products.filter(p => normalizeProductType(p.type) === type);
+      
+      return {
+        name: type,
+        'Contains PVA': typeProducts.filter(p => p.pvaStatus === 'contains').length,
+        'Verified Free': typeProducts.filter(p => p.pvaStatus === 'verified-free' || (p.approved && p.pvaStatus !== 'contains')).length,
+        'Needs Verification': typeProducts.filter(p => p.pvaStatus === 'needs-verification' && !p.approved).length,
+        'Inconclusive': typeProducts.filter(p => p.pvaStatus === 'inconclusive' && !p.approved).length
+      };
+    }).filter(item => 
+      item['Contains PVA'] > 0 || 
+      item['Verified Free'] > 0 || 
+      item['Needs Verification'] > 0 || 
+      item['Inconclusive'] > 0
+    );
 
   // Create data for product types bar chart - simplified view
   const productTypesBars = typeData.map(item => ({
@@ -202,6 +256,21 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const handlePieClick = () => {
     console.log('Pie segment clicked');
   };
+
+  // Display message if no products available
+  if (products.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>Data Overview</CardTitle>
+          <CardDescription>No products available to display</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px] flex items-center justify-center text-muted-foreground">
+          No product data available for analysis
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
