@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
@@ -17,7 +16,7 @@ import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmission
 import ResearchManagement from "@/components/admin/ResearchManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProductSubmission, getProductSubmissions } from "@/lib/textExtractor";
+import { ProductSubmission, getProductSubmissions, PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 // Define appropriate types for the status property
