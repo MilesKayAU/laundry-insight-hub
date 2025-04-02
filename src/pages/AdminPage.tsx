@@ -18,7 +18,6 @@ import ResearchManagement from "@/components/admin/ResearchManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ProductSubmission, getProductSubmissions, PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
 
 // Define appropriate types for the status property
@@ -146,6 +145,7 @@ const AdminPage = () => {
   }, [toast]);
 
   const handleViewDetails = (product: ExtendedProductSubmission) => {
+    console.log("Viewing details for product:", product);
     setSelectedProduct(product);
     setProductDetails({
       description: product.description || '',
