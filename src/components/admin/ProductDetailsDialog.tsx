@@ -49,6 +49,11 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
       setPvaPercentageNumber(null);
     }
   }, [details.pvaPercentage]);
+  
+  // Debug log to track dialog open state
+  useEffect(() => {
+    console.log("ProductDetailsDialog: isOpen =", isOpen, "product =", product?.name);
+  }, [isOpen, product]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -74,17 +79,18 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     }
   };
 
+  if (!product) {
+    console.log("ProductDetailsDialog: No product provided");
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Product Details</DialogTitle>
           <DialogDescription>
-            {product && (
-              <>
-                Edit details for {product.brand} {product.name}
-              </>
-            )}
+            Edit details for {product.brand} {product.name}
           </DialogDescription>
         </DialogHeader>
         

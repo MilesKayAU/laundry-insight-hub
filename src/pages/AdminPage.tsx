@@ -155,8 +155,10 @@ const AdminPage = () => {
       country: product.country || '',
       ingredients: product.ingredients || ''
     });
-    // This is the critical line that wasn't working properly
+    
+    // Force the dialog to open by setting state to true
     setShowDetailsDialog(true);
+    console.log("Dialog state set to:", true); // Debug log
   };
   
   const handleSaveProductDetails = async () => {
@@ -530,14 +532,19 @@ const AdminPage = () => {
       </Tabs>
       
       {/* Product details dialog with editing capabilities */}
-      <ProductDetailsDialog
-        isOpen={showDetailsDialog}
-        onOpenChange={setShowDetailsDialog}
-        product={selectedProduct}
-        details={productDetails}
-        onDetailsChange={setProductDetails}
-        onSave={handleSaveProductDetails}
-      />
+      {selectedProduct && (
+        <ProductDetailsDialog
+          isOpen={showDetailsDialog}
+          onOpenChange={(open) => {
+            console.log("Dialog open state changed to:", open);
+            setShowDetailsDialog(open);
+          }}
+          product={selectedProduct}
+          details={productDetails}
+          onDetailsChange={setProductDetails}
+          onSave={handleSaveProductDetails}
+        />
+      )}
     </div>
   );
 };
