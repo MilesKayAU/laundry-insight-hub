@@ -41,6 +41,13 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
 }) => {
   const [pvaPercentageNumber, setPvaPercentageNumber] = useState<number | null>(null);
   
+  // Debug logging for component render and props
+  console.log("[ProductDetailsDialog] Rendering with props:", { 
+    isOpen, 
+    productName: product?.name, 
+    productBrand: product?.brand 
+  });
+  
   // Update local state when details change
   useEffect(() => {
     if (details.pvaPercentage) {
@@ -52,7 +59,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
   
   // Debug log to track dialog open state and product
   useEffect(() => {
-    console.log("ProductDetailsDialog: isOpen =", isOpen, "product =", product?.name);
+    console.log("[ProductDetailsDialog] State changed: isOpen =", isOpen, "product =", product?.name);
   }, [isOpen, product]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -79,13 +86,19 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     }
   };
 
+  // Don't render anything if no product is provided
   if (!product) {
-    console.log("ProductDetailsDialog: No product provided");
+    console.log("[ProductDetailsDialog] No product provided, not rendering dialog");
     return null;
   }
 
+  console.log("[ProductDetailsDialog] Dialog rendering with open state:", isOpen);
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      console.log("[ProductDetailsDialog] Dialog open state changing to:", open);
+      onOpenChange(open);
+    }}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Product Details</DialogTitle>
@@ -104,7 +117,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
               name="description"
               placeholder="Enter product description"
               className="col-span-3 h-20"
-              value={details.description}
+              value={details.description || ''}
               onChange={handleInputChange}
             />
           </div>
@@ -118,7 +131,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
               name="ingredients"
               placeholder="Enter product ingredients"
               className="col-span-3 h-40"
-              value={details.ingredients}
+              value={details.ingredients || ''}
               onChange={handleInputChange}
             />
           </div>
@@ -132,7 +145,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
               name="imageUrl"
               placeholder="https://example.com/image.jpg"
               className="col-span-3"
-              value={details.imageUrl}
+              value={details.imageUrl || ''}
               onChange={handleInputChange}
             />
           </div>
@@ -146,7 +159,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
               name="videoUrl"
               placeholder="https://youtube.com/watch?v=xyz"
               className="col-span-3"
-              value={details.videoUrl}
+              value={details.videoUrl || ''}
               onChange={handleInputChange}
             />
           </div>
@@ -160,7 +173,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
               name="websiteUrl"
               placeholder="https://example.com/product"
               className="col-span-3"
-              value={details.websiteUrl}
+              value={details.websiteUrl || ''}
               onChange={handleInputChange}
             />
           </div>
@@ -177,7 +190,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
               max="100"
               placeholder="25"
               className="col-span-3"
-              value={details.pvaPercentage}
+              value={details.pvaPercentage || ''}
               onChange={handleInputChange}
             />
           </div>
@@ -191,7 +204,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
               name="country"
               placeholder="United States"
               className="col-span-3"
-              value={details.country}
+              value={details.country || ''}
               onChange={handleInputChange}
             />
           </div>

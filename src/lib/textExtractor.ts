@@ -114,12 +114,38 @@ export const updateProductApproval = (productId: string, approved: boolean) => {
 };
 
 // Delete a product submission
-export const deleteProductSubmission = (productId: string) => {
-  const submissions = getProductSubmissions();
-  const updatedSubmissions = submissions.filter(submission => submission.id !== productId);
-  localStorage.setItem('products', JSON.stringify(updatedSubmissions));
-  localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
-  return updatedSubmissions;
+export const deleteProductSubmission = (productId: string): boolean => {
+  try {
+    console.log("Attempting to delete product with ID:", productId);
+    
+    // Get all products from localStorage
+    const storedProducts = localStorage.getItem('products');
+    if (!storedProducts) {
+      console.log("No products found in localStorage");
+      return false;
+    }
+    
+    // Parse products
+    let products: ProductSubmission[] = JSON.parse(storedProducts);
+    const initialCount = products.length;
+    
+    // Filter out the product to delete
+    const filteredProducts = products.filter(p => p.id !== productId);
+    
+    if (filteredProducts.length === initialCount) {
+      console.log("Product not found in storage, nothing was deleted");
+      return false;
+    }
+    
+    // Save filtered products back to localStorage
+    localStorage.setItem('products', JSON.stringify(filteredProducts));
+    console.log(`Product deleted successfully. Products count: ${initialCount} → ${filteredProducts.length}`);
+    
+    return true;
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    return false;
+  }
 };
 
 // Modified function to ensure we get all products with improved error handling
