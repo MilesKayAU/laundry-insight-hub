@@ -46,6 +46,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
 }) => {
   const [pvaPercentageNumber, setPvaPercentageNumber] = useState<number | null>(null);
   const [urlIsValid, setUrlIsValid] = useState<boolean>(true);
+  const [formModified, setFormModified] = useState<boolean>(false);
   
   // Debug logging for component render and props
   console.log("[ProductDetailsDialog] Rendering with props:", { 
@@ -72,7 +73,10 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
         setUrlIsValid(false);
       }
     }
-  }, [details.pvaPercentage, details.websiteUrl]);
+
+    // Reset form modified state when dialog opens with new details
+    setFormModified(false);
+  }, [details, isOpen]);
   
   // Debug log to track dialog open state and product
   useEffect(() => {
@@ -82,6 +86,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     console.log(`[ProductDetailsDialog] Input changed: ${name} = ${value}`);
+    setFormModified(true);
     
     // If changing PVA percentage, validate and update the local state
     if (name === 'pvaPercentage') {
@@ -106,12 +111,14 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
 
   const handleSelectChange = (name: string, value: string) => {
     console.log(`[ProductDetailsDialog] Select changed: ${name} = ${value}`);
+    setFormModified(true);
     onDetailsChange({ ...details, [name]: value });
   };
 
   const handleSaveClick = () => {
-    console.log("[ProductDetailsDialog] Save button clicked");
+    console.log("[ProductDetailsDialog] Save button clicked with modified =", formModified);
     onSave();
+    setFormModified(false);
   };
 
   const validateUrl = (url: string): boolean => {
@@ -193,6 +200,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
                 <SelectItem value="Dishwasher Tablet">Dishwasher Tablet</SelectItem>
                 <SelectItem value="Dishwasher Pod">Dishwasher Pod</SelectItem>
                 <SelectItem value="Laundry Pod">Laundry Pod</SelectItem>
+                <SelectItem value="Laundry Detergent Sheets">Laundry Detergent Sheets</SelectItem>
                 <SelectItem value="Soap">Soap</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
@@ -314,7 +322,8 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
           </Button>
           <Button 
             onClick={handleSaveClick}
-            disabled={details.websiteUrl && !validateUrl(details.websiteUrl)}
+            disabled={!formModified || (details.websiteUrl && !validateUrl(details.websiteUrl))}
+            className={formModified ? "bg-blue-600 hover:bg-blue-700" : ""}
           >
             Save Changes
           </Button>

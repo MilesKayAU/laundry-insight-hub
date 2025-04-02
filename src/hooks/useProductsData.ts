@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
+import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 import { useToast } from "@/hooks/use-toast";
@@ -181,27 +182,35 @@ export const useProductsData = (selectedCountry: string) => {
     try {
       console.log("Updating product:", productId, updatedData);
       
-      // Get current products from state
-      const updatedSubmissions = allSubmissions.map(product => 
-        product.id === productId ? { ...product, ...updatedData } : product
-      );
+      // Update product in the database/localStorage
+      const success = updateProductSubmission(productId, updatedData);
       
-      // Update local state
-      setAllSubmissions(updatedSubmissions);
-      
-      // Save to localStorage
-      localStorage.setItem('products', JSON.stringify(updatedSubmissions));
-      
-      // Show success message
-      toast({
-        title: "Product Updated",
-        description: "The product has been updated successfully.",
-      });
-      
-      // Force data refresh
-      setRefreshKey(prev => prev + 1);
-      
-      return true;
+      if (success) {
+        // Update local state to reflect changes immediately
+        const updatedSubmissions = allSubmissions.map(product => 
+          product.id === productId ? { ...product, ...updatedData } : product
+        );
+        
+        setAllSubmissions(updatedSubmissions);
+        
+        // Show success message
+        toast({
+          title: "Product Updated",
+          description: "The product has been updated successfully.",
+        });
+        
+        // Force data refresh
+        setRefreshKey(prev => prev + 1);
+        
+        return true;
+      } else {
+        toast({
+          title: "Error Updating Product",
+          description: "There was an error updating the product in storage.",
+          variant: "destructive"
+        });
+        return false;
+      }
     } catch (error) {
       console.error("Error updating product:", error);
       

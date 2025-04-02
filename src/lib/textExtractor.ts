@@ -196,7 +196,7 @@ export const createProductSubmission = (submission: Partial<ProductSubmission>):
   };
 };
 
-// Analyze ingredients for PVA content
+// Function to analyze ingredients for PVA content
 export const analyzePvaContent = (ingredients: string): { 
   containsPva: boolean; 
   detectedTerms: string[];
@@ -357,7 +357,7 @@ export const updateProductSubmission = (productId: string, updatedData: Partial<
     
     console.log("Updating product with ID:", productId, "with data:", updatedData);
     
-    // Get all products from localStorage
+    // Get all products from localStorage - trying both possible keys
     const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
     if (!productsString) {
       console.log("No products found in localStorage");
@@ -380,10 +380,13 @@ export const updateProductSubmission = (productId: string, updatedData: Partial<
       updated_at: Date.now() // Add updated timestamp
     };
     
+    console.log("Product before update:", allProducts[productIndex]);
+    console.log("Product after update:", updatedProduct);
+    
     // Replace the product in the array
     allProducts[productIndex] = updatedProduct;
     
-    // Save back to localStorage
+    // Save back to localStorage - save to both locations to ensure compatibility
     localStorage.setItem('products', JSON.stringify(allProducts));
     localStorage.setItem('product_submissions', JSON.stringify(allProducts));
     

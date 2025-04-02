@@ -39,7 +39,19 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   const handleEdit = (product: ProductSubmission) => {
     console.log("Edit button clicked for product:", product.name);
     setEditingProductId(product.id);
-    onViewDetails(product);
+    
+    // Ensure product is properly defined before passing to parent component
+    if (product && product.id) {
+      console.log("Calling onViewDetails with product:", product);
+      onViewDetails(product);
+    } else {
+      console.error("Invalid product data:", product);
+      toast({
+        title: "Error",
+        description: "Failed to edit product due to missing data",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleVerify = (product: ProductSubmission) => {
@@ -153,6 +165,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                         >
                           <CheckCircle className="h-4 w-4" />
                         </Button>
+                        
                         <Button 
                           variant="ghost" 
                           size="icon"
