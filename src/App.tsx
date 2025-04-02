@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { Helmet } from "react-helmet";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -63,6 +64,11 @@ const QueryClientWrapper = ({ children }) => {
 const App: React.FC = () => {
   return (
     <React.StrictMode>
+      <Helmet>
+        <meta name="keywords" content="PVA, polyvinyl alcohol, laundry sheets, eco detergent, PVA free, microplastic, plastic free cleaning, laundry pods, detergent sheets, PVA in detergent, safe laundry sheets, PVA-free laundry" />
+        <meta name="author" content="PVAFree.com" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </Helmet>
       <BrowserRouter>
         <QueryClientWrapper>
           <TooltipProvider>
