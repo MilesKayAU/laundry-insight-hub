@@ -34,6 +34,11 @@ const AdminPage = () => {
   const [verifications, setVerifications] = useState<ExtendedProductSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [messageResponse, setMessageResponse] = useState("");
+  const [newKeyword, setNewKeyword] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("commonNames");
   
   const { 
     isDialogOpen, 
