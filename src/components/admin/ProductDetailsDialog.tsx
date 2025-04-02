@@ -72,6 +72,8 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
       } catch (e) {
         setUrlIsValid(false);
       }
+    } else {
+      setUrlIsValid(true); // Empty URL is considered valid
     }
 
     // Reset form modified state when dialog opens with new details
@@ -138,6 +140,9 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
   }
 
   console.log("[ProductDetailsDialog] Dialog rendering with open state:", isOpen);
+  
+  // Check if the URL is valid (only if it's not empty)
+  const hasInvalidUrl = details.websiteUrl && !validateUrl(details.websiteUrl);
   
   return (
     <Dialog 
@@ -306,7 +311,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
           </div>
         </div>
 
-        {!validateUrl(details.websiteUrl || '') && details.websiteUrl && (
+        {hasInvalidUrl && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Invalid URL</AlertTitle>
@@ -322,7 +327,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
           </Button>
           <Button 
             onClick={handleSaveClick}
-            disabled={!formModified || (details.websiteUrl && !validateUrl(details.websiteUrl))}
+            disabled={!formModified || hasInvalidUrl}
             className={formModified ? "bg-blue-600 hover:bg-blue-700" : ""}
           >
             Save Changes
