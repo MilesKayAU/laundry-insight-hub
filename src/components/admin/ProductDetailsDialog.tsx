@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -47,17 +46,25 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
   const [pvaPercentageNumber, setPvaPercentageNumber] = useState<number | null>(null);
   const [urlIsValid, setUrlIsValid] = useState<boolean>(true);
   const [formModified, setFormModified] = useState<boolean>(false);
+  const [originalDetails, setOriginalDetails] = useState({ ...details });
   
   // Debug logging for component render and props
   console.log("[ProductDetailsDialog] Rendering with props:", { 
     isOpen, 
     productName: product?.name, 
     productBrand: product?.brand,
-    details
+    details,
+    formModified
   });
   
-  // Update local state when details change
+  // Update local state when details change or dialog opens
   useEffect(() => {
+    if (isOpen) {
+      console.log("[ProductDetailsDialog] Dialog opened, setting original details");
+      // Store original details when dialog opens
+      setOriginalDetails({ ...details });
+    }
+
     if (details.pvaPercentage) {
       setPvaPercentageNumber(Number(details.pvaPercentage));
     } else {
@@ -75,20 +82,39 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     } else {
       setUrlIsValid(true); // Empty URL is considered valid
     }
-
-    // Reset form modified state when dialog opens with new details
-    setFormModified(false);
   }, [details, isOpen]);
+
+  // Set form modification state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setFormModified(false);
+    }
+  }, [isOpen]);
   
   // Debug log to track dialog open state and product
   useEffect(() => {
     console.log("[ProductDetailsDialog] State changed: isOpen =", isOpen, "product =", product?.name);
   }, [isOpen, product]);
 
+  // Check for any differences between current and original details
+  useEffect(() => {
+    if (isOpen && originalDetails) {
+      const hasChanged = Object.keys(details).some(key => {
+        return details[key as keyof typeof details] !== originalDetails[key as keyof typeof originalDetails];
+      });
+      
+      console.log("[ProductDetailsDialog] Form modified check:", hasChanged, {
+        current: details,
+        original: originalDetails
+      });
+      
+      setFormModified(hasChanged);
+    }
+  }, [details, originalDetails, isOpen]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     console.log(`[ProductDetailsDialog] Input changed: ${name} = ${value}`);
-    setFormModified(true);
     
     // If changing PVA percentage, validate and update the local state
     if (name === 'pvaPercentage') {
@@ -113,7 +139,6 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
 
   const handleSelectChange = (name: string, value: string) => {
     console.log(`[ProductDetailsDialog] Select changed: ${name} = ${value}`);
-    setFormModified(true);
     onDetailsChange({ ...details, [name]: value });
   };
 
