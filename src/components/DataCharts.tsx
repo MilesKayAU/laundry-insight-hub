@@ -4,9 +4,14 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProductSubmission } from '@/lib/textExtractor';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 // Define custom colors
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7', '#ec4899'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7', '#ec4899', '#06b6d4', '#10b981', '#f97316', '#8b5cf6'];
 const STATUS_COLORS = {
   'contains': '#ef4444',
   'verified-free': '#22c55e',
@@ -14,32 +19,53 @@ const STATUS_COLORS = {
   'inconclusive': '#6b7280'
 };
 
+// Predefined product types with proper categorization
 const PRODUCT_TYPES = [
   'Laundry Sheet',
   'Laundry Pod',
   'Dishwasher Pod',
   'Dishwasher Sheet',
+  'Detergent',
   'Tablet',
+  'Liquid',
+  'Powder',
   'Other'
 ];
 
-// Case-insensitive product type normalization
+// Improved product type normalization for better categorization
 const normalizeProductType = (type: string | undefined): string => {
   if (!type) return 'Other';
   
-  // Normalize to lowercase for comparison
+  // Convert to lowercase for comparison
   const typeLower = type.toLowerCase().trim();
   
-  // Check if it matches any known type (case-insensitive)
+  // Map various product types to their normalized categories
+  if (typeLower.includes('laundry') && typeLower.includes('sheet')) {
+    return 'Laundry Sheet';
+  } else if (typeLower.includes('laundry') && (typeLower.includes('pod') || typeLower.includes('capsule'))) {
+    return 'Laundry Pod';
+  } else if (typeLower.includes('dishwasher') && (typeLower.includes('pod') || typeLower.includes('capsule'))) {
+    return 'Dishwasher Pod';
+  } else if (typeLower.includes('dishwasher') && typeLower.includes('sheet')) {
+    return 'Dishwasher Sheet';
+  } else if (typeLower.includes('tablet')) {
+    return 'Tablet';
+  } else if (typeLower.includes('liquid') || typeLower.includes('solution')) {
+    return 'Liquid';
+  } else if (typeLower.includes('powder')) {
+    return 'Powder';
+  } else if (typeLower.includes('detergent') && !typeLower.includes('sheet') && !typeLower.includes('pod')) {
+    return 'Detergent';
+  }
+  
+  // Check if it exactly matches any of our predefined types
   for (const knownType of PRODUCT_TYPES) {
-    if (typeLower === knownType.toLowerCase() || 
-        // Handle variations like "laundry sheets" vs "laundry sheet"
-        (typeLower.includes('laundry') && typeLower.includes('sheet')) ||
-        (typeLower === 'laundry sheets')) {
+    if (typeLower === knownType.toLowerCase()) {
       return knownType;
     }
   }
   
+  // Return "Other" for any unrecognized types
   return 'Other';
 };
 
@@ -96,14 +122,15 @@ const renderActiveShape = (props: any) => {
 
 const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
   const [activePieIndex, setActivePieIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState("combined"); // Changed default to "combined" for bar chart view
+  const [activeTab, setActiveTab] = useState("type"); // Set default to "type" for product types view
 
-  // Log product data to debug
-  console.log("Charting products:", products.map(p => ({
-    name: p.name,
-    type: p.type,
-    normalizedType: normalizeProductType(p.type),
-    pvaStatus: p.pvaStatus
+  // Log the original product types for debugging
+  console.log("Original product types:", products.map(p => p.type));
+  
+  // Log the normalized product types to verify categorization
+  console.log("Normalized product types:", products.map(p => ({
+    original: p.type,
+    normalized: normalizeProductType(p.type)
   })));
 
   // Create data for status chart - use verified-free for all non-contains status for now
@@ -111,18 +138,25 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
     { name: 'Contains PVA', value: products.filter(p => p.pvaStatus === 'contains').length },
     { 
       name: 'Verified Free', 
-      // Count approved products as verified free unless explicitly marked as containing PVA
       value: products.filter(p => p.pvaStatus === 'verified-free' || (p.approved && p.pvaStatus !== 'contains')).length 
     },
     { name: 'Needs Verification', value: products.filter(p => p.pvaStatus === 'needs-verification' && !p.approved).length },
     { name: 'Inconclusive', value: products.filter(p => p.pvaStatus === 'inconclusive' && !p.approved).length }
   ].filter(item => item.value > 0);
 
-  // Create data for product type chart - using normalized types
-  const typeData = PRODUCT_TYPES.map(type => ({
-    name: type,
-    value: products.filter(p => normalizeProductType(p.type) === type).length
-  })).filter(item => item.value > 0);
+  // Create improved data for product type chart with normalized types
+  const productTypesMap = new Map<string, number>();
+  
+  // First count the occurrences of each normalized product type
+  products.forEach(product => {
+    const normalizedType = normalizeProductType(product.type);
+    productTypesMap.set(normalizedType, (productTypesMap.get(normalizedType) || 0) + 1);
+  });
+  
+  // Convert to the format needed for charts
+  const typeData = Array.from(productTypesMap.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
 
   // Create data for brand distribution
   const brandCounts: { [key: string]: number } = {};
@@ -154,6 +188,12 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
     item['Needs Verification'] > 0 || 
     item['Inconclusive'] > 0
   );
+
+  // Create data for product types bar chart - simplified view
+  const productTypesBars = typeData.map(item => ({
+    name: item.name,
+    value: item.value
+  }));
 
   const onPieEnter = (_: any, index: number) => {
     setActivePieIndex(index);
@@ -212,29 +252,61 @@ const DataCharts: React.FC<DataChartsProps> = ({ products }) => {
           
           <TabsContent value="type" className="py-4">
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    activeIndex={activePieIndex}
-                    activeShape={renderActiveShape}
-                    data={typeData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    onMouseEnter={onPieEnter}
-                    onClick={handlePieClick}
-                  >
-                    {typeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {/* Display both Pie Chart and Bar Chart for product types */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+                <div className="h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        activeIndex={activePieIndex}
+                        activeShape={renderActiveShape}
+                        data={typeData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        onMouseEnter={onPieEnter}
+                        onClick={handlePieClick}
+                      >
+                        {typeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={productTypesBars}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        tick={{ fontSize: 12 }} 
+                        width={80} 
+                      />
+                      <Tooltip />
+                      <Legend />
+                      <Bar 
+                        dataKey="value" 
+                        name="Products" 
+                        fill="#0088FE" 
+                        radius={[0, 4, 4, 0]} 
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           </TabsContent>
           
