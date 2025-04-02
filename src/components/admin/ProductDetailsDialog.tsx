@@ -45,7 +45,8 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
   console.log("[ProductDetailsDialog] Rendering with props:", { 
     isOpen, 
     productName: product?.name, 
-    productBrand: product?.brand 
+    productBrand: product?.brand,
+    details
   });
   
   // Update local state when details change
@@ -64,6 +65,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    console.log(`[ProductDetailsDialog] Input changed: ${name} = ${value}`);
     
     // If changing PVA percentage, validate and update the local state
     if (name === 'pvaPercentage') {
@@ -86,6 +88,11 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     }
   };
 
+  const handleSaveClick = () => {
+    console.log("[ProductDetailsDialog] Save button clicked");
+    onSave();
+  };
+
   // Don't render anything if no product is provided
   if (!product) {
     console.log("[ProductDetailsDialog] No product provided, not rendering dialog");
@@ -95,10 +102,13 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
   console.log("[ProductDetailsDialog] Dialog rendering with open state:", isOpen);
   
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      console.log("[ProductDetailsDialog] Dialog open state changing to:", open);
-      onOpenChange(open);
-    }}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        console.log("[ProductDetailsDialog] onOpenChange called with:", open);
+        onOpenChange(open);
+      }}
+    >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Product Details</DialogTitle>
@@ -214,7 +224,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
             Cancel
           </Button>
-          <Button onClick={onSave}>
+          <Button onClick={handleSaveClick}>
             Save Changes
           </Button>
         </DialogFooter>

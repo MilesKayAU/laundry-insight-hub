@@ -178,13 +178,11 @@ const AdminPage = () => {
     loadProducts();
   }, [toast]);
 
+  // Fixed handleViewDetails to properly initialize and set state
   const handleViewDetails = (product: ExtendedProductSubmission) => {
     console.log("Viewing details for product:", product);
     
-    // First clear previous product and set the new one
-    setSelectedProduct(null);
-    
-    // Initialize product details
+    // Initialize product details first
     const initialDetails = {
       description: product.description || '',
       imageUrl: product.imageUrl || '',
@@ -196,24 +194,22 @@ const AdminPage = () => {
     };
     
     setProductDetails(initialDetails);
+    setSelectedProduct(product);
     
-    // Set the selected product after a short delay
-    setTimeout(() => {
-      setSelectedProduct(product);
-      console.log("Selected product set to:", product.name);
-      
-      // Open dialog after product is set
-      setTimeout(() => {
-        setShowDetailsDialog(true);
-        console.log("Dialog state set to true");
-      }, 50);
-    }, 50);
+    // Open the dialog directly - no need for setTimeout
+    setShowDetailsDialog(true);
+    console.log("Dialog now set to open with product:", product.name);
   };
   
   const handleSaveProductDetails = async () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct) {
+      console.error("Cannot save details: no product selected");
+      return;
+    }
     
     try {
+      console.log("Saving product details for:", selectedProduct.name);
+      
       const isPending = pendingProducts.some(p => p.id === selectedProduct.id);
       const isApproved = approvedProducts.some(p => p.id === selectedProduct.id);
       
@@ -350,25 +346,35 @@ const AdminPage = () => {
         return;
       }
       
-      // Update state first
+      // Update state first - remove from pending products
       setPendingProducts(pendingProducts.filter(p => p.id !== productId));
       
-      // Delete from localStorage using dedicated function
-      const result = deleteProductSubmission(productId);
+      // Remove from localStorage using the text extractor function
+      const success = deleteProductSubmission(productId);
       
-      if (result) {
-        console.log("Product rejected and deleted successfully:", productId);
+      if (success) {
+        console.log("Product rejected and deleted successfully from localStorage:", productId);
         toast({
           title: "Success",
           description: "Product rejected and deleted successfully",
         });
       } else {
         console.error("Failed to delete product from localStorage:", productId);
-        toast({
-          title: "Error",
-          description: "Failed to delete product properly",
-          variant: "destructive"
-        });
+        
+        // Fallback direct deletion if the helper function failed
+        try {
+          const allProducts = getProductSubmissions();
+          const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
+          localStorage.setItem('products', JSON.stringify(filteredProducts));
+          console.log("Product deleted through fallback method");
+        } catch (fallbackError) {
+          console.error("Even fallback deletion failed:", fallbackError);
+          toast({
+            title: "Error",
+            description: "Failed to delete product properly, please try again",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
       console.error("Error rejecting product:", error);
@@ -403,25 +409,40 @@ const AdminPage = () => {
         return;
       }
       
-      // Update state
+      // Update state - remove from approved products
       setApprovedProducts(approvedProducts.filter(p => p.id !== productId));
       
-      // Delete from localStorage
-      const result = deleteProductSubmission(productId);
+      // Delete from localStorage using the dedicated function
+      const success = deleteProductSubmission(productId);
       
-      if (result) {
-        console.log("Product deleted successfully:", productId);
+      if (success) {
+        console.log("Product deleted successfully from localStorage:", productId);
         toast({
           title: "Product Deleted",
           description: "The product has been successfully deleted",
         });
       } else {
         console.error("Failed to delete product from localStorage:", productId);
-        toast({
-          title: "Error",
-          description: "Failed to delete product completely",
-          variant: "destructive"
-        });
+        
+        // Fallback direct deletion
+        try {
+          const allProducts = getProductSubmissions();
+          const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
+          localStorage.setItem('products', JSON.stringify(filteredProducts));
+          console.log("Product deleted through fallback method");
+          
+          toast({
+            title: "Product Deleted",
+            description: "The product has been deleted (fallback method)",
+          });
+        } catch (fallbackError) {
+          console.error("Even fallback deletion failed:", fallbackError);
+          toast({
+            title: "Error",
+            description: "Failed to delete product completely, please refresh and try again",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
       console.error("Error deleting product:", error);
