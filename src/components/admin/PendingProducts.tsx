@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -30,12 +30,15 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   onReject,
   onVerify 
 }) => {
+  const { toast } = useToast();
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  
   // Log how many pending products we have for debugging
   console.log(`PendingProducts component received ${products.length} pending products`);
-  const { toast } = useToast();
   
   const handleEdit = (product: ProductSubmission) => {
-    console.log("Edit clicked for product:", product.name);
+    console.log("Edit button clicked for product:", product.name);
+    setEditingProductId(product.id);
     onViewDetails(product);
   };
 
@@ -123,7 +126,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           size="sm"
                           onClick={() => handleEdit(product)}
                           title="Edit Product"
-                          className="text-blue-500 hover:text-blue-700 flex items-center gap-1"
+                          className={`text-blue-500 hover:text-blue-700 flex items-center gap-1 ${editingProductId === product.id ? 'bg-blue-100' : ''}`}
                         >
                           <Edit className="h-4 w-4" />
                           Edit

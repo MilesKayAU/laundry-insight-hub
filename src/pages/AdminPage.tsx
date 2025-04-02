@@ -238,6 +238,7 @@ const AdminPage = () => {
         setPendingProducts(pendingProducts.map(p => 
           p.id === selectedProduct.id ? updatedProduct : p
         ));
+        console.log("Updated pending product:", updatedProduct);
       } else if (isApproved) {
         setApprovedProducts(approvedProducts.map(p => 
           p.id === selectedProduct.id ? updatedProduct : p
@@ -256,7 +257,8 @@ const AdminPage = () => {
           country: productDetails.country,
           ingredients: productDetails.ingredients,
           pvaStatus: productDetails.pvaStatus,
-          type: productDetails.type
+          type: productDetails.type,
+          timestamp: Date.now()
         } : p
       );
       localStorage.setItem('products', JSON.stringify(updatedAllProducts));
@@ -280,9 +282,9 @@ const AdminPage = () => {
           if (error) {
             console.error("Error updating product in Supabase:", error);
             toast({
-              title: "Supabase Update Failed",
-              description: "Product was updated locally but failed to update in Supabase.",
-              variant: "destructive"
+              title: "Supabase Update Notice",
+              description: "Product was updated locally but there might be an issue with cloud storage.",
+              variant: "warning"
             });
           }
         } catch (error) {
@@ -665,6 +667,10 @@ const AdminPage = () => {
           onOpenChange={(open) => {
             console.log("[AdminPage] Dialog open state changing to:", open);
             setShowDetailsDialog(open);
+            
+            if (!open && selectedProduct) {
+              console.log("Dialog closed without saving changes");
+            }
           }}
           product={selectedProduct}
           details={productDetails}

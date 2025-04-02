@@ -142,9 +142,9 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
     >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Product Details</DialogTitle>
+          <DialogTitle>Edit Product Details</DialogTitle>
           <DialogDescription>
-            Edit details for {product.brand} {product.name}
+            Modify details for {product.brand} {product.name}
           </DialogDescription>
         </DialogHeader>
         

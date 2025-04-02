@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
+import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 import { useToast } from "@/hooks/use-toast";
@@ -176,23 +176,43 @@ export const useProductsData = (selectedCountry: string) => {
     console.info(`Total products for admin view: ${productsToDisplay.length}`);
   }
 
-  // Update product function - now using the correctly imported updateProductSubmission
+  // Update product function
   const updateProduct = (productId: string, updatedData: Partial<ProductSubmission>) => {
-    const success = updateProductSubmission(productId, updatedData);
-    if (success) {
-      handleRefreshData();
+    try {
+      console.log("Updating product:", productId, updatedData);
+      
+      // Get current products from state
+      const updatedSubmissions = allSubmissions.map(product => 
+        product.id === productId ? { ...product, ...updatedData } : product
+      );
+      
+      // Update local state
+      setAllSubmissions(updatedSubmissions);
+      
+      // Save to localStorage
+      localStorage.setItem('products', JSON.stringify(updatedSubmissions));
+      
+      // Show success message
       toast({
         title: "Product Updated",
         description: "The product has been updated successfully.",
       });
-    } else {
+      
+      // Force data refresh
+      setRefreshKey(prev => prev + 1);
+      
+      return true;
+    } catch (error) {
+      console.error("Error updating product:", error);
+      
       toast({
         title: "Error Updating Product",
         description: "There was an error updating the product.",
         variant: "destructive"
       });
+      
+      return false;
     }
-    return success;
   };
 
   return {
