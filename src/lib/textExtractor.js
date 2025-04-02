@@ -7,7 +7,7 @@ export const PVA_KEYWORDS_CATEGORIES = {
 
 export function getProductSubmissions() {
   try {
-    const productsString = localStorage.getItem('products');
+    const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
     if (!productsString) return [];
     return JSON.parse(productsString) || [];
   } catch (error) {
@@ -25,8 +25,14 @@ export function deleteProductSubmission(productId) {
 
     console.log("Deleting product with ID:", productId);
     
-    // Get all products
-    const allProducts = getProductSubmissions();
+    // Get all products from both possible storage keys
+    const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
+    if (!productsString) {
+      console.log("No products found in localStorage");
+      return false;
+    }
+    
+    const allProducts = JSON.parse(productsString);
     
     // Check if product exists
     const productExists = allProducts.some(p => p.id === productId);
@@ -38,8 +44,9 @@ export function deleteProductSubmission(productId) {
     // Filter out the product to delete
     const filteredProducts = allProducts.filter(p => p.id !== productId);
     
-    // Save back to localStorage
+    // Save back to localStorage (to both keys to ensure consistency)
     localStorage.setItem('products', JSON.stringify(filteredProducts));
+    localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
     
     console.log("Product deleted, remaining products:", filteredProducts.length);
     return true;
@@ -49,10 +56,162 @@ export function deleteProductSubmission(productId) {
   }
 }
 
-// Add a stub for ProductSubmission type if needed
+// Add a stub for ProductSubmission type
 export class ProductSubmission {
   id = "";
   name = "";
   brand = "";
   // other properties as needed
 }
+
+// Adding the submitProduct function from textExtractor.ts
+export const submitProduct = async (data, userId) => {
+  console.info("Product submission:", data);
+  
+  try {
+    const newSubmission = {
+      id: `sub_${Date.now()}`,
+      name: data.name,
+      brand: data.brand,
+      type: data.type,
+      ingredients: data.ingredients,
+      country: data.countries?.length ? data.countries.join(', ') : data.country,
+      websiteUrl: data.websiteUrl,
+      comments: data.comments,
+      approved: false,
+      pvaStatus: 'needs-verification',
+      pvaPercentage: data.pvaPercentage !== undefined ? data.pvaPercentage : null,
+      brandVerified: false,
+      brandOwnershipRequested: false,
+      timestamp: Date.now(),
+      uploadedBy: userId
+    };
+    
+    if (data.ingredients) {
+      const ingredientsLower = data.ingredients.toLowerCase();
+      if (ingredientsLower.includes('polyvinyl alcohol') || 
+          ingredientsLower.includes('pva') || 
+          ingredientsLower.includes('poly(vinyl alcohol)')) {
+        newSubmission.pvaStatus = 'contains';
+        
+        if (data.pvaPercentage !== undefined) {
+          newSubmission.pvaPercentage = data.pvaPercentage;
+        } else {
+          const percentMatch = ingredientsLower.match(/pva[^\d]*(\d+(?:\.\d+)?)%/);
+          if (percentMatch) {
+            newSubmission.pvaPercentage = parseFloat(percentMatch[1]);
+          } else {
+            newSubmission.pvaPercentage = 25;
+          }
+        }
+      }
+    }
+    
+    if (newSubmission.pvaStatus === 'contains' && newSubmission.pvaPercentage === null) {
+      newSubmission.pvaPercentage = 25;
+    }
+    
+    if (data.media && data.media.length > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      newSubmission.timestamp = Date.now();
+    }
+    
+    // Get existing submissions from both possible storage keys
+    const existingSubmissionsString = localStorage.getItem('product_submissions') || localStorage.getItem('products') || '[]';
+    const existingSubmissions = JSON.parse(existingSubmissionsString);
+    const updatedSubmissions = [...existingSubmissions, newSubmission];
+    
+    // Save to both localStorage keys to ensure consistency
+    localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));
+    localStorage.setItem('products', JSON.stringify(updatedSubmissions));
+    
+    return true;
+  } catch (error) {
+    console.error("Error submitting product:", error);
+    return false;
+  }
+};
+
+// Add other necessary functions from textExtractor.ts that might be needed
+export const analyzePvaContent = (ingredients) => {
+  if (!ingredients) {
+    return { containsPva: false, detectedTerms: [], isExplicitlyFree: false };
+  }
+  
+  const ingredientsLower = ingredients.toLowerCase();
+  const allPatterns = [
+    "pva", "pvoh", "polyvinyl alcohol", "poly vinyl alcohol", "poly(vinyl alcohol)",
+    "ethenol homopolymer", "vinyl alcohol polymer", "polyethenol", "pvac", "polyvinyl acetate",
+    "alcohol, polyvinyl", "polyvinyl alcohol, partially hydrolyzed",
+    "poval", "vinnapas"
+  ];
+  const detectedTerms = [];
+  
+  for (const pattern of allPatterns) {
+    const regex = new RegExp(`\\b${pattern}\\b`, 'i');
+    
+    if (regex.test(ingredientsLower)) {
+      detectedTerms.push(pattern);
+    }
+  }
+  
+  for (const pattern of allPatterns) {
+    if (ingredientsLower.includes(pattern) && !detectedTerms.includes(pattern)) {
+      detectedTerms.push(pattern);
+    }
+  }
+  
+  const freePatterns = [
+    'pva-free', 
+    'pva free', 
+    'free from pva', 
+    'does not contain pva',
+    'without pva',
+    'no pva',
+    'pva: none',
+    'pva: 0%',
+    'free of polyvinyl alcohol'
+  ];
+  
+  const isExplicitlyFree = freePatterns.some(pattern => 
+    ingredientsLower.includes(pattern)
+  );
+  
+  return { 
+    containsPva: detectedTerms.length > 0, 
+    detectedTerms,
+    isExplicitlyFree
+  };
+};
+
+export const analyzePastedIngredients = (ingredients) => {
+  if (!ingredients || ingredients.trim() === '') {
+    return {
+      pvaStatus: 'needs-verification',
+      detectedTerms: [],
+      confidence: 'low'
+    };
+  }
+
+  const analysis = analyzePvaContent(ingredients);
+  
+  if (analysis.containsPva) {
+    return {
+      pvaStatus: 'contains',
+      detectedTerms: analysis.detectedTerms,
+      confidence: analysis.detectedTerms.length > 1 ? 'high' : 'medium'
+    };
+  } else if (analysis.isExplicitlyFree) {
+    return {
+      pvaStatus: 'verified-free',
+      detectedTerms: [],
+      confidence: 'high'
+    };
+  } else {
+    return {
+      pvaStatus: 'needs-verification',
+      detectedTerms: [],
+      confidence: 'low'
+    };
+  }
+};
