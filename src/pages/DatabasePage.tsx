@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -171,6 +170,59 @@ const DatabasePage = () => {
           onCountrySelect={handleCountrySelect}
           onSubmit={handleViewProducts}
         />
+      </div>
+    );
+  }
+
+  if (combinedApprovedProducts.length === 0) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold">Product Database</h1>
+          <p className="text-muted-foreground mt-2">
+            Explore our database of laundry products and their PVA content
+          </p>
+        </div>
+        
+        <Card className="mb-10">
+          <CardHeader>
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  {selectedCountry === "Global" ? "Global Product Database" : `Products in ${selectedCountry}`}
+                </CardTitle>
+                <CardDescription>
+                  Search, filter and explore products to find PVA content information
+                </CardDescription>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={resetCountryFilter}
+                  className="mr-2"
+                >
+                  <Map className="h-4 w-4 mr-2" />
+                  Change Region
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-12 bg-muted/50 rounded-lg mb-20">
+              <h3 className="text-lg font-medium mb-2">No products found in the database</h3>
+              <p className="text-muted-foreground mb-4">
+                We don't have any products in our database yet.
+              </p>
+              <Button variant="outline" asChild>
+                <Link to="/contribute">
+                  Contribute a product
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

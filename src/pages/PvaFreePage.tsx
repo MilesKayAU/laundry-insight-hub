@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Search } from "lucide-react";
@@ -25,7 +24,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 
-// Function to fetch PVA-free products directly from Supabase
 const fetchPvaFreeProducts = async () => {
   try {
     const { data: supabaseProducts, error } = await supabase
@@ -41,7 +39,6 @@ const fetchPvaFreeProducts = async () => {
     
     console.info(`PvaFreePage: Fetched ${supabaseProducts?.length || 0} PVA-free products from Supabase`);
     
-    // Transform Supabase data to match our expected format
     const transformedProducts = (supabaseProducts || []).map(item => ({
       id: item.id,
       name: item.name,
@@ -59,7 +56,6 @@ const fetchPvaFreeProducts = async () => {
       timestamp: Date.now()
     }));
     
-    // Also get local products that are approved and PVA-free
     const localProducts = getProductSubmissions().filter(
       product => product.approved && (
         product.pvaStatus === 'verified-free' || 
@@ -69,7 +65,6 @@ const fetchPvaFreeProducts = async () => {
     
     console.info(`PvaFreePage: Found ${localProducts.length} PVA-free submissions from local storage`);
     
-    // Combine both sources with priority to Supabase
     return [...transformedProducts, ...localProducts];
   } catch (error) {
     console.error("Exception fetching PVA-free products:", error);
@@ -82,12 +77,11 @@ const PvaFreePage = () => {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   
-  // Use React Query to fetch and cache the data
   const { data: pvaFreeProducts = [], isLoading } = useQuery({
     queryKey: ['pvaFreeProducts'],
     queryFn: fetchPvaFreeProducts,
-    staleTime: 1 * 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const filteredProducts = pvaFreeProducts.filter(product => 
@@ -108,6 +102,42 @@ const PvaFreePage = () => {
       <div className="container mx-auto py-10 px-4">
         <div className="text-center">
           <p className="text-muted-foreground">Loading product data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoading && pvaFreeProducts.length === 0) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="text-center mb-10">
+          <div className="inline-block bg-green-50 rounded-full px-4 py-2 mb-4">
+            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+              0% PVA Products
+            </Badge>
+          </div>
+          <h1 className="text-4xl font-bold mb-4">Verified PVA-Free Products</h1>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            These products have been verified to contain zero polyvinyl alcohol (PVA).
+            Our verification process includes ingredient analysis and manufacturer confirmation.
+          </p>
+          <div className="mt-4">
+            <Link to="/certification" className="text-science-600 hover:text-science-700 underline">
+              Learn about our certification program →
+            </Link>
+          </div>
+        </div>
+        
+        <div className="text-center py-12 bg-muted/50 rounded-lg mb-20">
+          <h3 className="text-lg font-medium mb-2">No PVA-free products found</h3>
+          <p className="text-muted-foreground mb-4">
+            We don't have any verified PVA-free products in our database yet.
+          </p>
+          <Button variant="outline" asChild>
+            <Link to="/contribute">
+              Contribute a product
+            </Link>
+          </Button>
         </div>
       </div>
     );

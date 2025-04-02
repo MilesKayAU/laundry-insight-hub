@@ -140,20 +140,14 @@ export const useProductsData = (selectedCountry: string) => {
   const approvedSupabaseSubmissions = supabaseProducts || [];
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
   
-  // Only include mock products if:
-  // 1. We have no Supabase data AND 
-  // 2. We have no local data
-  // This ensures that mock data is only a fallback when no real data is available
-  const shouldShowMockData = (approvedSupabaseSubmissions.length === 0 && approvedLocalSubmissions.length === 0);
-  const mockProductsToInclude = shouldShowMockData ? mockProducts.filter(product => product.approved) : [];
+  // REMOVED: Mock data is no longer used
+  const mockProductsToInclude = []; // Empty array - no mock data
+  console.info("Mock data completely disabled - not showing any mock products");
   
-  console.info(`Including ${mockProductsToInclude.length} mock products (shouldShowMockData: ${shouldShowMockData})`);
-  
-  // Combine all data sources with priority: Supabase > Local > Mock
+  // Combine data sources with priority: Supabase > Local (no mock data)
   const allApprovedProducts = [
     ...approvedSupabaseSubmissions, 
-    ...approvedLocalSubmissions,
-    ...mockProductsToInclude
+    ...approvedLocalSubmissions
   ];
   
   console.info(`Total products before country filtering: ${allApprovedProducts.length}`);
@@ -176,7 +170,7 @@ export const useProductsData = (selectedCountry: string) => {
   console.info("Data source breakdown:", {
     supabase: approvedSupabaseSubmissions.length,
     local: approvedLocalSubmissions.length,
-    mock: mockProductsToInclude.length,
+    mock: 0, // Mock data is disabled
     combined: combinedApprovedProducts.length
   });
 
