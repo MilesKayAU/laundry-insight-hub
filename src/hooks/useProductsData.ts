@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -132,7 +131,7 @@ export const useProductsData = (selectedCountry: string) => {
     }
   };
 
-  // Get all approved submissions from local data
+  // Get all approved submissions from local data - explicitly check for approved===true
   const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved === true);
   console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
@@ -168,13 +167,21 @@ export const useProductsData = (selectedCountry: string) => {
   const pendingProducts = allSubmissions.filter(submission => submission.approved !== true);
   console.info(`Found ${pendingProducts.length} pending local submissions`);
   
-  // Ensure admin users can see all products, with no filtering on mock data
+  // Ensure admin users can see all products in admin views, but public views still only show approved products
   let productsToDisplay = combinedApprovedProducts;
   if (isAuthenticated) {
-    console.info("User is authenticated. Showing all submissions.");
-    // Make sure admins see everything - both approved and not approved
-    productsToDisplay = [...allSubmissions, ...approvedSupabaseSubmissions]; 
-    console.info(`Total products for admin view: ${productsToDisplay.length}`);
+    console.info("User is authenticated. Showing all submissions for admin views.");
+    // Only for admin routes or when working with admin-specific components
+    const isAdminView = window.location.pathname.includes('/admin');
+    
+    if (isAdminView) {
+      // For admin views, show everything - both approved and not approved
+      productsToDisplay = [...allSubmissions, ...approvedSupabaseSubmissions];
+      console.info(`Total products for admin view: ${productsToDisplay.length}`);
+    } else {
+      // For non-admin views, even authenticated users should only see approved products
+      console.info("Non-admin view - showing only approved products");
+    }
   }
 
   // Update product function

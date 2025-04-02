@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -66,7 +65,7 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
       setOriginalDetails({...details});
       setFormModified(false);
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, details]);
 
   // Handle PVA percentage and URL validation separately from the comparison logic
   useEffect(() => {
@@ -97,7 +96,11 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
   // Check for any differences between current and original details
   useEffect(() => {
     // Only run comparison if dialog is open and we have original details
-    if (isOpen && originalDetails) {
+    if (isOpen && product) {
+      console.log("[ProductDetailsDialog] Checking for form modifications");
+      console.log("Original details:", originalDetails);
+      console.log("Current details:", details);
+      
       const hasChanged = Object.keys(details).some(key => {
         const detailKey = key as keyof typeof details;
         const origValue = originalDetails[detailKey];
@@ -111,10 +114,10 @@ const ProductDetailsDialog: React.FC<ProductDetailsProps> = ({
         return isDifferent;
       });
       
-      console.log("[ProductDetailsDialog] Form modified check:", hasChanged);
+      console.log("[ProductDetailsDialog] Form modified check result:", hasChanged);
       setFormModified(hasChanged);
     }
-  }, [details, originalDetails, isOpen]);
+  }, [details, originalDetails, isOpen, product]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

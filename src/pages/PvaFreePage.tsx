@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Search } from "lucide-react";
@@ -56,8 +57,9 @@ const fetchPvaFreeProducts = async () => {
       timestamp: Date.now()
     }));
     
+    // Make sure we only get approved products from local storage
     const localProducts = getProductSubmissions().filter(
-      product => product.approved && (
+      product => product.approved === true && (
         product.pvaStatus === 'verified-free' || 
         (product.pvaPercentage !== null && product.pvaPercentage === 0)
       )
