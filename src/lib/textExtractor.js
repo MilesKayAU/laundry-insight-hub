@@ -1,8 +1,19 @@
+
 export const PVA_KEYWORDS_CATEGORIES = {
   commonNames: ["PVA", "PVOH", "Polyvinyl Alcohol", "Polyvinyl alcohol"],
   chemicalSynonyms: ["Ethenol homopolymer", "Vinyl alcohol polymer"],
   inciTerms: ["Polyvinyl Alcohol"],
   additional: ["Film", "Soluble film", "Dissolving film"]
+};
+
+// Add the getAllPvaPatterns function that was missing
+export const getAllPvaPatterns = () => {
+  return [
+    ...PVA_KEYWORDS_CATEGORIES.commonNames,
+    ...PVA_KEYWORDS_CATEGORIES.chemicalSynonyms,
+    ...PVA_KEYWORDS_CATEGORIES.inciTerms,
+    ...PVA_KEYWORDS_CATEGORIES.additional
+  ].map(pattern => pattern.toLowerCase());
 };
 
 export function getProductSubmissions() {
