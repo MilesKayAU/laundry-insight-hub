@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { mockProducts } from "@/lib/mockData";
 import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
@@ -85,8 +84,8 @@ export const useProductsData = (selectedCountry: string) => {
   const { data: supabaseProducts, refetch } = useQuery({
     queryKey: ['supabaseProducts', refreshKey],
     queryFn: fetchProductsFromSupabase,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
     enabled: true, // Always fetch on mount
   });
 
@@ -140,16 +139,15 @@ export const useProductsData = (selectedCountry: string) => {
   // Get all approved submissions from Supabase - ensure we have data
   const approvedSupabaseSubmissions = supabaseProducts || [];
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
-  console.info("Supabase submissions details:", JSON.stringify(approvedSupabaseSubmissions));
   
-  // Get mock products based on user's authentication status
-  // Always include mock products for demonstration if not authenticated
-  // For authenticated users, limit mock data to avoid confusion
-  const mockProductsToInclude = isAuthenticated 
-    ? [] // No mock products for authenticated users
-    : mockProducts.filter(product => product.approved);
+  // Only include mock products if:
+  // 1. We have no Supabase data AND 
+  // 2. We have no local data
+  // This ensures that mock data is only a fallback when no real data is available
+  const shouldShowMockData = (approvedSupabaseSubmissions.length === 0 && approvedLocalSubmissions.length === 0);
+  const mockProductsToInclude = shouldShowMockData ? mockProducts.filter(product => product.approved) : [];
   
-  console.info(`Including ${mockProductsToInclude.length} mock products (isAuthenticated: ${isAuthenticated})`);
+  console.info(`Including ${mockProductsToInclude.length} mock products (shouldShowMockData: ${shouldShowMockData})`);
   
   // Combine all data sources with priority: Supabase > Local > Mock
   const allApprovedProducts = [
