@@ -54,7 +54,6 @@ export interface ProductSubmission {
   brandVerified: boolean;
   brandOwnershipRequested?: boolean;
   timestamp?: number;
-  // Additional fields used throughout the codebase
   description?: string;
   imageUrl?: string;
   videoUrl?: string;
@@ -63,7 +62,7 @@ export interface ProductSubmission {
   brandContactEmail?: string;
   brandOwnershipRequestDate?: string;
   brandVerificationDate?: string;
-  uploadedBy?: string; // Add user ID who submitted the product
+  uploadedBy?: string;
 }
 
 // Now let's define the ProductSubmitData interface that's referenced elsewhere
@@ -73,11 +72,11 @@ export interface ProductSubmitData {
   type: string;
   ingredients?: string;
   country?: string;
-  countries?: string[]; // Added countries array for multi-select functionality
+  countries?: string[];
   websiteUrl?: string;
   comments?: string;
   media?: File[];
-  pvaPercentage?: number; // Add pvaPercentage to the interface
+  pvaPercentage?: number;
 }
 
 // Extract text from image using Tesseract OCR
@@ -87,9 +86,9 @@ export const extractTextFromImage = async (file: File): Promise<{ text: string }
     
     const result = await Tesseract.recognize(
       imageUrl,
-      'eng', // Language: English
+      'eng',
       { 
-        logger: m => console.log(m) // Optional: log progress to console
+        logger: m => console.log(m)
       }
     );
     
@@ -122,28 +121,32 @@ export const deleteProductSubmission = (productId: string) => {
   return updatedSubmissions;
 };
 
-// Modified function to ensure we get all products
+// Modified function to ensure we get all products with improved error handling
 export const getProductSubmissions = (userId?: string): ProductSubmission[] => {
   try {
     const storedSubmissions = localStorage.getItem('product_submissions');
     
     if (storedSubmissions) {
       const submissions = JSON.parse(storedSubmissions);
+      console.log(`Retrieved ${submissions.length} product submissions from localStorage`);
       
-      // If a userId is provided, filter submissions to only show those from this user
       if (userId) {
-        return submissions.filter(submission => 
+        const userSubmissions = submissions.filter(submission => 
           submission.uploadedBy === userId
         );
+        console.log(`Filtered to ${userSubmissions.length} submissions for user ${userId}`);
+        return userSubmissions;
       }
       
       return submissions;
     } else {
-      console.warn('No product submissions found in localStorage');
+      console.warn('No product submissions found in localStorage, creating empty array');
+      localStorage.setItem('product_submissions', JSON.stringify([]));
       return [];
     }
   } catch (error) {
     console.error('Error retrieving product submissions:', error);
+    localStorage.setItem('product_submissions', JSON.stringify([]));
     return [];
   }
 };
@@ -155,7 +158,7 @@ export const createProductSubmission = (submission: Partial<ProductSubmission>):
     name: submission.name || '',
     brand: submission.brand || '',
     type: submission.type || '',
-    country: submission.country || 'Global', // Default country to Global
+    country: submission.country || 'Global',
     pvaStatus: submission.pvaStatus || 'needs-verification',
     pvaPercentage: submission.pvaPercentage || null,
     ingredients: submission.ingredients || '',
@@ -233,7 +236,6 @@ export const analyzePastedIngredients = (ingredients: string): {
 
   const analysis = analyzePvaContent(ingredients);
   
-  // Determine status and confidence level
   if (analysis.containsPva) {
     return {
       pvaStatus: 'contains',
@@ -247,7 +249,6 @@ export const analyzePastedIngredients = (ingredients: string): {
       confidence: 'high'
     };
   } else {
-    // No explicit mention found either way
     return {
       pvaStatus: 'needs-verification',
       detectedTerms: [],
@@ -258,13 +259,9 @@ export const analyzePastedIngredients = (ingredients: string): {
 
 // Simulate product submission
 export const submitProduct = async (data: ProductSubmitData, userId?: string): Promise<boolean> => {
-  // Simulated product submission
   console.info("Product submission:", data);
   
   try {
-    // In a real application, this would send the data to the server
-    // For now, we'll add it to local storage
-    
     const newSubmission: ProductSubmission = {
       id: `sub_${Date.now()}`,
       name: data.name,
@@ -280,10 +277,9 @@ export const submitProduct = async (data: ProductSubmitData, userId?: string): P
       brandVerified: false,
       brandOwnershipRequested: false,
       timestamp: Date.now(),
-      uploadedBy: userId // Store the user ID who submitted this product
+      uploadedBy: userId
     };
     
-    // Simulate PVA detection from ingredients if available
     if (data.ingredients) {
       const ingredientsLower = data.ingredients.toLowerCase();
       if (ingredientsLower.includes('polyvinyl alcohol') || 
@@ -291,36 +287,28 @@ export const submitProduct = async (data: ProductSubmitData, userId?: string): P
           ingredientsLower.includes('poly(vinyl alcohol)')) {
         newSubmission.pvaStatus = 'contains';
         
-        // If a percentage was manually entered, use that
         if (data.pvaPercentage !== undefined) {
           newSubmission.pvaPercentage = data.pvaPercentage;
         } else {
-          // Simulate finding a percentage from the text
           const percentMatch = ingredientsLower.match(/pva[^\d]*(\d+(?:\.\d+)?)%/);
           if (percentMatch) {
             newSubmission.pvaPercentage = parseFloat(percentMatch[1]);
           } else {
-            newSubmission.pvaPercentage = 25; // Default to 25% if PVA is mentioned but no percentage
+            newSubmission.pvaPercentage = 25;
           }
         }
       }
     }
     
-    // If PVA status is 'contains' but no percentage is set, default to 25%
     if (newSubmission.pvaStatus === 'contains' && newSubmission.pvaPercentage === null) {
       newSubmission.pvaPercentage = 25;
     }
     
-    // Simulate image analysis (would be server-side in production)
     if (data.media && data.media.length > 0) {
-      // Simulate delay for "processing" images
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Set a timestamp to make it feel like we did something with the images
       newSubmission.timestamp = Date.now();
     }
     
-    // Store submission in local storage
     const existingSubmissions = getProductSubmissions();
     const updatedSubmissions = [...existingSubmissions, newSubmission];
     localStorage.setItem('product_submissions', JSON.stringify(updatedSubmissions));

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
@@ -16,7 +17,7 @@ import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmission
 import ResearchManagement from "@/components/admin/ResearchManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProductSubmission, PVA_KEYWORDS_CATEGORIES, getProductSubmissions } from "@/lib/textExtractor";
+import { ProductSubmission, getProductSubmissions } from "@/lib/textExtractor";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 // Define appropriate types for the status property
@@ -47,30 +48,78 @@ const AdminPage = () => {
   const mockMessages: any[] = [];
   const mockProfiles: any[] = [];
 
+  // Function to fetch Supabase products
+  const fetchSupabaseProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('product_submissions')
+        .select('*');
+      
+      if (error) {
+        console.error("Error fetching Supabase products:", error);
+        return [];
+      }
+      
+      console.log(`AdminPage: Fetched ${data?.length || 0} products from Supabase`);
+      
+      // Transform the data for our component
+      return (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        brand: item.brand,
+        type: item.type,
+        description: item.description || '',
+        pvaStatus: item.pvastatus || 'needs-verification',
+        pvaPercentage: item.pvapercentage || null,
+        approved: item.approved || false,
+        country: item.country || 'Global',
+        websiteUrl: item.websiteurl || '',
+        videoUrl: item.videourl || '',
+        imageUrl: item.imageurl || '',
+        status: item.approved ? 'approved' : 'pending',
+        brandVerified: false,
+        timestamp: Date.now()
+      })) as ExtendedProductSubmission[];
+    } catch (error) {
+      console.error("Error in fetchSupabaseProducts:", error);
+      return [];
+    }
+  };
+
   useEffect(() => {
-    // Load products from localStorage or database
+    // Load products from localStorage and Supabase
     const loadProducts = async () => {
       try {
         setLoading(true);
         
-        // Load all products without filtering
-        const allProducts = getProductSubmissions();
-        console.info(`Loaded ${allProducts.length} products for admin view`);
+        // Load all products from localStorage without filtering
+        const allLocalProducts = getProductSubmissions();
+        console.info(`AdminPage: Loaded ${allLocalProducts.length} products from localStorage`);
         
-        // Map products to include status property
-        const mappedProducts = allProducts.map((p: ProductSubmission): ExtendedProductSubmission => ({
-          ...p,
-          status: p.approved ? 'approved' : 'pending'
-        }));
+        // Load all products from Supabase
+        const supabaseProducts = await fetchSupabaseProducts();
+        
+        // Combine all products
+        const allProducts = [
+          ...allLocalProducts.map(p => ({ 
+            ...p, 
+            status: p.approved ? 'approved' as ProductStatus : 'pending' as ProductStatus 
+          })),
+          ...supabaseProducts
+        ];
+        
+        console.info(`AdminPage: Total combined products: ${allProducts.length}`);
         
         // Split into pending and approved based on status property
-        const pending = mappedProducts.filter(p => p.status === 'pending');
-        const approved = mappedProducts.filter(p => p.status === 'approved');
-        const brandVerifications = mappedProducts.filter(p => p.brandOwnershipRequested);
+        const pending = allProducts.filter(p => !p.approved);
+        const approved = allProducts.filter(p => p.approved);
+        const brandVerifications = allProducts.filter(p => p.brandOwnershipRequested);
         
         setPendingProducts(pending);
         setApprovedProducts(approved);
         setVerifications(brandVerifications);
+        
+        console.info(`AdminPage: ${pending.length} pending, ${approved.length} approved products`);
       } catch (error) {
         console.error("Error loading products:", error);
         toast({

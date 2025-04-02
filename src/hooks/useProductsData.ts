@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -104,6 +105,10 @@ export const useProductsData = (selectedCountry: string) => {
     try {
       // Get all product submissions with no filtering
       const allData = getProductSubmissions();
+      
+      // Log the data for debugging
+      console.log("Retrieved local product submissions:", allData.length);
+      
       setAllSubmissions(allData);
       
       // Trigger Supabase refetch
@@ -127,7 +132,7 @@ export const useProductsData = (selectedCountry: string) => {
     }
   };
 
-  // Get all approved submissions from local data
+  // Get all approved submissions from local data with no filtering
   const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved);
   console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
@@ -135,7 +140,7 @@ export const useProductsData = (selectedCountry: string) => {
   const approvedSupabaseSubmissions = supabaseProducts || [];
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
   
-  // Combine data sources with priority: Supabase > Local
+  // Combine all products without any filtering
   const allApprovedProducts = [
     ...approvedSupabaseSubmissions, 
     ...approvedLocalSubmissions
@@ -143,7 +148,7 @@ export const useProductsData = (selectedCountry: string) => {
   
   console.info(`Total products before country filtering: ${allApprovedProducts.length}`);
   
-  // Filter by country
+  // Filter by country only
   const combinedApprovedProducts = allApprovedProducts.filter(product => {
     if (selectedCountry === "Global") return true;
     
@@ -159,12 +164,13 @@ export const useProductsData = (selectedCountry: string) => {
 
   console.info(`Total combined products after country filtering: ${combinedApprovedProducts.length}`);
   
-  // Ensure admin users can see all products (including pending ones if no approved products exist)
+  // Ensure admin users can see all products, with no filtering on mock data
   let productsToDisplay = combinedApprovedProducts;
   if (isAuthenticated) {
-    console.info("User is authenticated. Showing all submissions including pending ones.");
+    console.info("User is authenticated. Showing all submissions.");
     // Make sure admins see everything - both approved and not approved
     productsToDisplay = [...allSubmissions, ...approvedSupabaseSubmissions]; 
+    console.info(`Total products for admin view: ${productsToDisplay.length}`);
   }
 
   return {
