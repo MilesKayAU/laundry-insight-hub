@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { mockProducts } from "@/lib/mockData";
 import { getProductSubmissions, ProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
@@ -140,9 +139,8 @@ export const useProductsData = (selectedCountry: string) => {
   const approvedSupabaseSubmissions = supabaseProducts || [];
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
   
-  // REMOVED: Mock data is no longer used
-  const mockProductsToInclude = []; // Empty array - no mock data
-  console.info("Mock data completely disabled - not showing any mock products");
+  // Completely remove mock data
+  console.info("No mock data will be displayed - mock products are completely disabled");
   
   // Combine data sources with priority: Supabase > Local (no mock data)
   const allApprovedProducts = [
@@ -170,7 +168,7 @@ export const useProductsData = (selectedCountry: string) => {
   console.info("Data source breakdown:", {
     supabase: approvedSupabaseSubmissions.length,
     local: approvedLocalSubmissions.length,
-    mock: 0, // Mock data is disabled
+    mock: 0, // Explicitly show 0 mock data
     combined: combinedApprovedProducts.length
   });
 
@@ -180,8 +178,7 @@ export const useProductsData = (selectedCountry: string) => {
     refreshKey,
     handleRefreshData,
     approvedLocalSubmissions,
-    approvedSupabaseSubmissions,
-    mockProductsToInclude
+    approvedSupabaseSubmissions
   };
 };
 

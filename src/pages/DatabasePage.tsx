@@ -57,13 +57,11 @@ const DatabasePage = () => {
     handleRefreshData, 
     refreshKey, 
     approvedLocalSubmissions, 
-    approvedSupabaseSubmissions,
-    mockProductsToInclude 
+    approvedSupabaseSubmissions
   } = useProductsData(selectedCountry);
   
-  console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedLocalSubmissions?.length || 0} local, ${approvedSupabaseSubmissions?.length || 0} from Supabase, ${mockProductsToInclude?.length || 0} mock)`);
+  console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedLocalSubmissions?.length || 0} local, ${approvedSupabaseSubmissions?.length || 0} from Supabase)`);
   console.info("Authentication status:", isAuthenticated ? "Authenticated" : "Not authenticated");
-  console.info("Products data:", combinedApprovedProducts);
   
   const {
     searchTerm,
