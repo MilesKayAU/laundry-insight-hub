@@ -103,9 +103,18 @@ export const useProductsData = (selectedCountry: string) => {
     setLoading(true);
     
     try {
-      // Get local submissions
-      const localData = getProductSubmissions();
-      console.info(`Local data: Found ${localData.length} submission(s)`);
+      // Get real product submissions (not mock data)
+      const allData = getProductSubmissions();
+      
+      // Filter out mock/dummy data by checking for specific patterns or names
+      const localData = allData.filter(product => {
+        const mockBrands = ["That Red House", "Dirt", "Mrs. Meyers", "Method", "Simple Truth"];
+        return !mockBrands.some(mockBrand => 
+          product.brand.toLowerCase().includes(mockBrand.toLowerCase())
+        );
+      });
+      
+      console.info(`Local data: Found ${localData.length} valid submission(s) after filtering out mock data`);
       setAllSubmissions(localData);
       
       // Trigger Supabase refetch
@@ -129,7 +138,7 @@ export const useProductsData = (selectedCountry: string) => {
     }
   };
 
-  // Get all approved submissions from local data
+  // Get all approved submissions from local data (already filtered from mock data)
   const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved);
   console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
@@ -168,11 +177,12 @@ export const useProductsData = (selectedCountry: string) => {
     combined: combinedApprovedProducts.length
   });
   
-  // If we have no data at all after filtering, let's ensure admin users can see pending products too
+  // Ensure admin users can see all products (including pending ones if no approved products exist)
   let productsToDisplay = combinedApprovedProducts;
   if (isAuthenticated && combinedApprovedProducts.length === 0) {
-    console.info("No approved products found, but user is authenticated. Adding pending submissions.");
-    productsToDisplay = [...allSubmissions]; // Show all submissions for admin users when no approved products
+    console.info("No approved products found, but user is authenticated. Adding all submissions.");
+    // Make sure we only show real data (no mock data) to admins
+    productsToDisplay = [...allSubmissions]; 
   }
 
   return {

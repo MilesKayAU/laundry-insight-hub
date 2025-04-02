@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
@@ -54,10 +55,20 @@ const AdminPage = () => {
         setLoading(true);
         
         // For testing, load from localStorage
-        const products = getProductSubmissions();
+        const allProducts = getProductSubmissions();
+        
+        // Filter out mock data
+        const mockBrands = ["That Red House", "Dirt", "Mrs. Meyers", "Method", "Simple Truth"];
+        const realProducts = allProducts.filter(product => {
+          return !mockBrands.some(mockBrand => 
+            product.brand.toLowerCase().includes(mockBrand.toLowerCase())
+          );
+        });
+        
+        console.info(`Loaded ${realProducts.length} real products after filtering out mock data`);
         
         // Map products to include status property
-        const mappedProducts = products.map((p: ProductSubmission): ExtendedProductSubmission => ({
+        const mappedProducts = realProducts.map((p: ProductSubmission): ExtendedProductSubmission => ({
           ...p,
           status: p.approved ? 'approved' : 'pending'
         }));
