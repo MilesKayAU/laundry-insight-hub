@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
@@ -11,10 +10,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Search, Edit, RefreshCw, Trash2, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Search, Edit, RefreshCw, Trash, Loader2 } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
 import { forceProductRefresh } from "@/utils/supabaseUtils";
+import { Spinner } from "@/components/ui/spinner";
 
 interface PendingProductsProps {
   products: ProductSubmission[];
@@ -125,10 +125,8 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   const handleApprove = (productId: string) => {
     onApprove(productId);
     
-    // Update local state immediately for better UX
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
-    // Schedule a refresh to sync with backend
     setTimeout(() => {
       handleForceRefresh();
     }, 500);
@@ -137,28 +135,25 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   const handleReject = (productId: string) => {
     onReject(productId);
     
-    // Update local state immediately for better UX
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
-    // Schedule a refresh to sync with backend
     setTimeout(() => {
       handleForceRefresh();
     }, 500);
   };
 
   const handleDelete = (productId: string) => {
-    if (onDelete) {
-      // Call the parent component's delete handler
-      onDelete(productId);
-      
-      // No need to update local state here as it will be handled by the parent
-      // and passed down via props
-    } else {
+    if (deletingProductId !== null) {
       toast({
-        title: "Action unavailable",
-        description: "Delete functionality is not available",
-        variant: "destructive"
+        title: "Delete in Progress",
+        description: "Please wait for the current delete operation to complete.",
+        variant: "warning"
       });
+      return;
+    }
+    
+    if (onDelete) {
+      onDelete(productId);
     }
   };
   
@@ -287,9 +282,9 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           disabled={deletingProductId === product.id}
                         >
                           {deletingProductId === product.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Spinner size="sm" color="danger" />
                           ) : (
-                            <Trash2 className="h-4 w-4" />
+                            <Trash className="h-4 w-4" />
                           )}
                         </Button>
                       </div>

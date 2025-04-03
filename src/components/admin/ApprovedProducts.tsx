@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Table, 
@@ -32,6 +31,7 @@ import { ProductSubmission } from "@/lib/textExtractor";
 import { verifyProductUrl } from "@/lib/urlVerification";
 import { useToast } from "@/hooks/use-toast";
 import DataCharts from "@/components/DataCharts";
+import { Spinner } from "@/components/ui/spinner";
 
 interface ApprovedProductsProps {
   products: ProductSubmission[];
@@ -181,19 +181,18 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
     setVerificationUrl(null);
   };
   
-  // Improved delete handler to prevent UI freezing issues
   const handleDelete = (productId: string) => {
-    // Only allow deletion if there isn't already a delete in progress
-    if (onDelete && deletingProductId === null) {
-      // Call the parent's delete handler
-      onDelete(productId);
-    } else if (deletingProductId !== null) {
-      // Let the user know a deletion is already in progress
+    if (deletingProductId !== null) {
       toast({
         title: "Delete in Progress",
         description: "Please wait for the current delete operation to complete.",
         variant: "warning"
       });
+      return;
+    }
+    
+    if (onDelete) {
+      onDelete(productId);
     }
   };
 
@@ -376,7 +375,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                               title="Delete"
                             >
                               {deletingProductId === product.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Spinner size="sm" color="danger" />
                               ) : (
                                 <Trash className="h-4 w-4" />
                               )}

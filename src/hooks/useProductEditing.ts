@@ -186,9 +186,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
     }
   };
 
-  // Completely rewritten product deletion functionality
+  // Improved product deletion functionality with better error handling and recovery
   const handleDeleteProduct = async (productId: string) => {
     console.log("Starting deletion process for product ID:", productId);
+    
     try {
       // First delete from Supabase to ensure database consistency
       let supabaseSuccess = false;
@@ -229,15 +230,15 @@ export const useProductEditing = (onSuccess?: () => void) => {
         description: "Product was successfully deleted",
       });
 
-      // Trigger a single refresh after successful deletion
+      // Trigger a single refresh after successful deletion with delays to prevent race conditions
       if (typeof onSuccess === 'function') {
         invalidateProductCache();
-        
-        // Add a small delay to prevent race conditions
         setTimeout(() => {
           forceProductRefresh();
-          onSuccess();
-        }, 400);
+          setTimeout(() => {
+            onSuccess();
+          }, 200);
+        }, 200);
       }
 
       return true;

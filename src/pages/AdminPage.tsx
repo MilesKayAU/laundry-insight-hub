@@ -381,10 +381,9 @@ const AdminPage = () => {
         return;
       }
       
-      // Optimistic UI update - remove from local state immediately for better UX
+      const previousProducts = [...approvedProducts];
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
-      // Perform actual deletion
       const deleteSuccess = await hookDeleteProduct(productId);
       
       if (deleteSuccess) {
@@ -394,13 +393,13 @@ const AdminPage = () => {
           description: "The product has been successfully deleted",
         });
         
-        // Wait briefly for the database operations to complete
-        // then refresh the data with a single operation
         setTimeout(() => {
           invalidateProductCache(); 
-          forceProductRefresh();
-          loadProducts();
-        }, 500);
+          setTimeout(() => {
+            forceProductRefresh();
+            loadProducts();
+          }, 300);
+        }, 300);
       } else {
         console.error("Failed to delete product:", productId);
         toast({
@@ -409,8 +408,7 @@ const AdminPage = () => {
           variant: "destructive"
         });
         
-        // Restore the product in the UI if deletion fails
-        loadProducts();
+        setApprovedProducts(previousProducts);
       }
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -419,11 +417,7 @@ const AdminPage = () => {
         description: "Failed to delete product",
         variant: "destructive"
       });
-      
-      // Ensure UI is refreshed if error occurs
-      loadProducts();
     } finally {
-      // Always ensure deletingProductId is reset, even if errors occur
       setTimeout(() => setDeletingProductId(null), 200);
     }
   };
@@ -438,7 +432,8 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting pending product with ID:", productId);
       
-      // Optimistic UI update
+      const previousProducts = [...pendingProducts];
+      
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
       const deleteSuccess = await hookDeleteProduct(productId);
@@ -450,13 +445,15 @@ const AdminPage = () => {
           description: "The pending product has been successfully deleted",
         });
         
-        // Wait briefly for the database operations to complete
-        // then refresh the data with a single operation
         setTimeout(() => {
           invalidateProductCache();
-          forceProductRefresh();
-          loadProducts();
-        }, 500);
+          setTimeout(() => {
+            forceProductRefresh();
+            setTimeout(() => {
+              loadProducts();
+            }, 100);
+          }, 100);
+        }, 100);
       } else {
         console.error("Failed to delete pending product:", productId);
         toast({
@@ -465,8 +462,7 @@ const AdminPage = () => {
           variant: "destructive"
         });
         
-        // Restore UI state if deletion fails
-        loadProducts();
+        setPendingProducts(previousProducts);
       }
     } catch (error) {
       console.error("Error in handleDeletePendingProduct:", error);
@@ -475,11 +471,7 @@ const AdminPage = () => {
         description: "Failed to delete pending product completely",
         variant: "destructive"
       });
-      
-      // Ensure UI is refreshed if error occurs
-      loadProducts();
     } finally {
-      // Always ensure deletingProductId is reset, even if errors occur
       setTimeout(() => setDeletingProductId(null), 200);
     }
   };
