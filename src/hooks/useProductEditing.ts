@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission, deleteProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
@@ -210,11 +211,13 @@ export const useProductEditing = (onSuccess?: () => void) => {
             return true;
           });
         
+        // Fix for TS2322: Type 'unknown' is not assignable to type 'boolean'
+        // Use type assertion for the Promise.race result
         supabaseSuccess = await Promise.race([deletePromise, timeoutPromise])
           .catch(error => {
             console.error("Supabase delete failed or timed out:", error);
             return false;
-          });
+          }) as boolean;
           
         if (supabaseSuccess) {
           invalidateProductCache();
@@ -233,7 +236,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
         if (!localSuccess) {
           // Fallback deletion method
           try {
-            const allProducts = getProductSubmissions();
+            // Fix for TS2552: Cannot find name 'getProductSubmissions'
+            // Import the function through the existing products from localStorage
+            const productsString = localStorage.getItem('product_submissions') || localStorage.getItem('products') || '[]';
+            const allProducts = JSON.parse(productsString);
             const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
             localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
             console.log("Product deleted through fallback method");
