@@ -9,22 +9,25 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { ProductSubmission } from "@/lib/textExtractor";
 import { Loader2 } from "lucide-react";
 
+// Define product details interface separately to avoid circular references
+interface ProductDetails {
+  description: string;
+  imageUrl: string;
+  videoUrl: string;
+  websiteUrl: string;
+  pvaPercentage: string;
+  country: string;
+  ingredients: string;
+  pvaStatus: string;
+  type: string;
+}
+
 interface ProductDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   product: ProductSubmission | null;
-  details: {
-    description: string;
-    imageUrl: string;
-    videoUrl: string;
-    websiteUrl: string;
-    pvaPercentage: string;
-    country: string;
-    ingredients: string;
-    pvaStatus: string;
-    type: string;
-  };
-  onDetailsChange: (details: Partial<typeof details>) => void;
+  details: ProductDetails;
+  onDetailsChange: (details: Partial<ProductDetails>) => void;
   onSave: () => void;
   isSaving?: boolean;
 }

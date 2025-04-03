@@ -4,6 +4,7 @@ import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor'
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define the ProductDetails interface to match the one in ProductDetailsDialog
 interface ProductDetails {
   description: string;
   imageUrl: string;
