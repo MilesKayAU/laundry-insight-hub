@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor';
+import { ProductSubmission, updateProductSubmission, deleteProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeCountry } from '@/utils/countryUtils';
@@ -199,6 +199,65 @@ export const useProductEditing = (onSuccess?: () => void) => {
     }
   };
 
+  // Add product deletion functionality
+  const handleDeleteProduct = async (productId: string) => {
+    console.log("Deleting product with ID:", productId);
+    try {
+      setIsSaving(true);
+
+      // First delete from Supabase
+      const { error } = await supabase
+        .from('product_submissions')
+        .delete()
+        .eq('id', productId);
+
+      if (error) {
+        console.error("Error deleting product from Supabase:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete product from database",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // Then delete from local storage
+      const localSuccess = deleteProductSubmission(productId);
+      
+      if (!localSuccess) {
+        console.warn("Local deletion may have failed, but Supabase deletion succeeded");
+      }
+
+      console.log("Successfully deleted product:", productId);
+      toast({
+        title: "Product Deleted",
+        description: "Product was successfully deleted",
+      });
+
+      // Force refresh to update UI
+      forceProductRefresh();
+      window.dispatchEvent(new Event('reload-products'));
+      
+      // Extra refreshes for redundancy
+      setTimeout(() => {
+        forceProductRefresh();
+        window.dispatchEvent(new Event('reload-products'));
+      }, 500);
+
+      return true;
+    } catch (error) {
+      console.error("Error in handleDeleteProduct:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting the product",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return {
     isDialogOpen,
     setIsDialogOpen,
@@ -207,6 +266,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
     isSaving,
     handleViewDetails,
     handleDetailsChange,
-    handleSaveChanges
+    handleSaveChanges,
+    handleDeleteProduct
   };
 };

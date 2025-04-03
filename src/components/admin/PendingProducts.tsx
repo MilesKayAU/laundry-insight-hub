@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
@@ -11,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Search, Edit, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, Search, Edit, RefreshCw, Trash2 } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
 import { forceProductRefresh } from "@/utils/supabaseUtils";
@@ -22,6 +21,7 @@ interface PendingProductsProps {
   onApprove: (productId: string) => void;
   onReject: (productId: string) => void;
   onVerify?: (product: ProductSubmission) => void;
+  onDelete?: (productId: string) => void;
 }
 
 const PendingProducts: React.FC<PendingProductsProps> = ({ 
@@ -29,20 +29,19 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   onViewDetails, 
   onApprove, 
   onReject,
-  onVerify 
+  onVerify,
+  onDelete
 }) => {
   const { toast } = useToast();
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [localProducts, setLocalProducts] = useState<ProductSubmission[]>([]);
   
-  // Update local products when parent products change
   useEffect(() => {
     console.log(`PendingProducts: Received ${products.length} products from parent`);
     setLocalProducts(products);
   }, [products]);
   
-  // Add event listener for product cache invalidation
   useEffect(() => {
     const handleInvalidateCache = () => {
       console.log("PendingProducts: Cache invalidation event received");
@@ -57,11 +56,10 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     window.addEventListener('invalidate-product-cache', handleInvalidateCache);
     window.addEventListener('reload-products', handleReloadProducts);
     
-    // Auto-refresh on a timer - every 30 seconds for more frequent updates
     const refreshInterval = setInterval(() => {
       console.log("PendingProducts: Auto-refresh triggered");
       handleForceRefresh();
-    }, 30 * 1000);
+    }, 15 * 1000);
     
     return () => {
       window.removeEventListener('invalidate-product-cache', handleInvalidateCache);
@@ -89,7 +87,6 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     console.log("Edit button clicked for product:", product);
     setEditingProductId(product.id);
     
-    // Ensure required fields have defaults
     const enhancedProduct = {
       ...product,
       type: product.type || 'Detergent',
@@ -126,7 +123,6 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     onApprove(productId);
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
-    // Force a refresh to ensure UI consistency
     setTimeout(() => {
       handleForceRefresh();
     }, 500);
@@ -136,10 +132,26 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     onReject(productId);
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
-    // Force a refresh to ensure UI consistency
     setTimeout(() => {
       handleForceRefresh();
     }, 500);
+  };
+
+  const handleDelete = (productId: string) => {
+    if (onDelete) {
+      onDelete(productId);
+      setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+      
+      setTimeout(() => {
+        handleForceRefresh();
+      }, 500);
+    } else {
+      toast({
+        title: "Action unavailable",
+        description: "Delete functionality is not available",
+        variant: "destructive"
+      });
+    }
   };
   
   return (
@@ -252,6 +264,16 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           title="Reject"
                         >
                           <XCircle className="h-4 w-4" />
+                        </Button>
+
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleDelete(product.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>

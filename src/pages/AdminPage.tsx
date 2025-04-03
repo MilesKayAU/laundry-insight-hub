@@ -50,7 +50,8 @@ const AdminPage = () => {
     productDetails, 
     handleViewDetails, 
     handleDetailsChange, 
-    handleSaveChanges 
+    handleSaveChanges,
+    handleDeleteProduct 
   } = useProductEditing(() => {
     console.log("Product edit success callback triggered");
     loadProducts();
@@ -373,7 +374,7 @@ const AdminPage = () => {
     });
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (productId: string) => {
     try {
       console.log("Deleting approved product with ID:", productId);
       const productToDelete = approvedProducts.find(p => p.id === productId);
@@ -419,6 +420,31 @@ const AdminPage = () => {
       toast({
         title: "Error",
         description: "Failed to delete product",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeletePendingProduct = async (productId: string) => {
+    try {
+      console.log("Deleting pending product with ID:", productId);
+      
+      // Use the hook's delete function which handles both Supabase and local state
+      await handleDeleteProduct(productId);
+      
+      // Update local state
+      setPendingProducts(pendingProducts.filter(p => p.id !== productId));
+      
+      // Refresh data to ensure the UI is in sync with the database
+      setTimeout(() => {
+        loadProducts();
+        window.dispatchEvent(new Event('reload-products'));
+      }, 500);
+    } catch (error) {
+      console.error("Error in handleDeletePendingProduct:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete pending product completely",
         variant: "destructive"
       });
     }
@@ -563,6 +589,7 @@ const AdminPage = () => {
             onApprove={handleApproveProduct}
             onReject={handleRejectProduct}
             onVerify={handleVerifyProduct}
+            onDelete={handleDeletePendingProduct}
           />
         </TabsContent>
         
