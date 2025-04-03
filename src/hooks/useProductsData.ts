@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -32,17 +31,11 @@ type SupabaseProductSubmission = {
 const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
   console.log("Fetching products from Supabase...");
   try {
-    // Determine if we're in an admin view
-    const isAdminView = isAuthenticated && window.location.pathname.includes('/admin');
-    console.log("Is admin view:", isAdminView);
-    
-    // Build the query based on user role and current view
-    const query = supabase.from('product_submissions').select('*');
-    
-    // Only filter for approved products if NOT in admin view
-    const { data, error } = isAdminView 
-      ? await query 
-      : await query.eq('approved', true);
+    // Always fetch all products from Supabase, without any filter
+    // We'll filter them later in the component based on admin view or not
+    const { data, error } = await supabase
+      .from('product_submissions')
+      .select('*');
     
     if (error) {
       console.error("Error fetching products from Supabase:", error);
@@ -50,6 +43,7 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
     }
     
     console.log(`Fetched ${data?.length || 0} products from Supabase`);
+    console.log("Raw Supabase data:", data);
     
     // Handle the case when data is null
     if (!data) {
@@ -180,9 +174,19 @@ export const useProductsData = (selectedCountry: string) => {
     }
   };
 
-  // Get approved submissions from Supabase - ensure we have data
-  const approvedSupabaseSubmissions = supabaseProducts;
-  console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
+  // Determine which products to show based on authentication, admin view, and filters
+  const isAdminView = isAuthenticated && window.location.pathname.includes('/admin');
+  console.log("Is authenticated:", isAuthenticated);
+  console.log("Is admin view:", isAdminView);
+  console.log("Live data only:", liveDataOnly);
+  console.log("All Supabase products (before filtering):", supabaseProducts);
+  
+  // Filter Supabase products based on admin view or public view
+  const approvedSupabaseSubmissions = isAdminView 
+    ? supabaseProducts  // In admin view, show ALL products from Supabase
+    : supabaseProducts.filter(product => product.approved === true);  // In public view, show only approved
+    
+  console.info(`Found ${approvedSupabaseSubmissions.length} Supabase submissions for current view`);
   
   // Get all approved submissions from local data - only if not in live-only mode
   const approvedLocalSubmissions = liveDataOnly ? [] : allSubmissions.filter(submission => submission.approved === true);
@@ -190,7 +194,8 @@ export const useProductsData = (selectedCountry: string) => {
     ? "Live data only mode - not using local submissions" 
     : `Found ${approvedLocalSubmissions.length} approved local submissions`);
   
-  // Combine all products that are approved only
+  // Combine all products that are approved only for public views
+  // For admin views, we include unapproved products too
   const allApprovedProducts = [
     ...approvedSupabaseSubmissions, 
     ...approvedLocalSubmissions
@@ -220,27 +225,24 @@ export const useProductsData = (selectedCountry: string) => {
     ? "Live data only mode - not using pending local submissions"
     : `Found ${pendingProducts.length} pending local submissions`);
   
-  // Ensure admin users can see all products in admin views, but public views still only show approved products
+  // Start with the filtered products as the baseline for display
   let productsToDisplay = combinedApprovedProducts;
-  if (isAuthenticated && !liveDataOnly) {
-    console.info("User is authenticated. Showing all submissions for admin views.");
-    // Only for admin routes or when working with admin-specific components
-    const isAdminView = window.location.pathname.includes('/admin');
+  
+  // Special handling for admin views
+  if (isAuthenticated) {
+    console.info("User is authenticated. Checking if we should show additional products for admin views.");
     
+    // Only for admin routes or when working with admin-specific components
     if (isAdminView) {
-      // For admin views, show everything - both approved and not approved
-      productsToDisplay = [...allSubmissions, ...supabaseProducts];
-      console.info(`Total products for admin view: ${productsToDisplay.length}`);
-    } else {
-      // For non-admin views, even authenticated users should only see approved products
-      console.info("Non-admin view - showing only approved products");
-    }
-  } else if (isAuthenticated && liveDataOnly) {
-    // In live data only mode, but for admin views, we need to show all Supabase products
-    const isAdminView = window.location.pathname.includes('/admin');
-    if (isAdminView) {
-      productsToDisplay = [...supabaseProducts];
-      console.info(`Total products for admin view in live data mode: ${productsToDisplay.length}`);
+      if (liveDataOnly) {
+        // In live data mode with admin view - show ALL products from Supabase, including unapproved
+        productsToDisplay = [...supabaseProducts];
+        console.info(`Total products for admin view in live data mode: ${productsToDisplay.length}`);
+      } else {
+        // Standard mode with admin view - show everything from both sources
+        productsToDisplay = [...allSubmissions, ...supabaseProducts];
+        console.info(`Total products for admin view: ${productsToDisplay.length}`);
+      }
     }
   }
 
