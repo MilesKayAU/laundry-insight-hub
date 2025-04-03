@@ -29,14 +29,20 @@ type SupabaseProductSubmission = {
 };
 
 // Function to fetch products from Supabase
-const fetchProductsFromSupabase = async () => {
+const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
   console.log("Fetching products from Supabase...");
   try {
-    // Use explicit typing and handle authentication
-    const { data, error } = await supabase
-      .from('product_submissions')
-      .select('*')
-      .eq('approved', true);
+    // Determine if we're in an admin view
+    const isAdminView = isAuthenticated && window.location.pathname.includes('/admin');
+    console.log("Is admin view:", isAdminView);
+    
+    // Build the query based on user role and current view
+    const query = supabase.from('product_submissions').select('*');
+    
+    // Only filter for approved products if NOT in admin view
+    const { data, error } = isAdminView 
+      ? await query 
+      : await query.eq('approved', true);
     
     if (error) {
       console.error("Error fetching products from Supabase:", error);
@@ -87,8 +93,8 @@ export const useProductsData = (selectedCountry: string) => {
 
   // Fetch product submissions from both local and Supabase
   const { data: supabaseProducts = [], isError, error, refetch } = useQuery({
-    queryKey: ['supabaseProducts', refreshKey],
-    queryFn: fetchProductsFromSupabase,
+    queryKey: ['supabaseProducts', refreshKey, isAuthenticated],
+    queryFn: () => fetchProductsFromSupabase(isAuthenticated),
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
@@ -223,11 +229,18 @@ export const useProductsData = (selectedCountry: string) => {
     
     if (isAdminView) {
       // For admin views, show everything - both approved and not approved
-      productsToDisplay = [...allSubmissions, ...approvedSupabaseSubmissions];
+      productsToDisplay = [...allSubmissions, ...supabaseProducts];
       console.info(`Total products for admin view: ${productsToDisplay.length}`);
     } else {
       // For non-admin views, even authenticated users should only see approved products
       console.info("Non-admin view - showing only approved products");
+    }
+  } else if (isAuthenticated && liveDataOnly) {
+    // In live data only mode, but for admin views, we need to show all Supabase products
+    const isAdminView = window.location.pathname.includes('/admin');
+    if (isAdminView) {
+      productsToDisplay = [...supabaseProducts];
+      console.info(`Total products for admin view in live data mode: ${productsToDisplay.length}`);
     }
   }
 
