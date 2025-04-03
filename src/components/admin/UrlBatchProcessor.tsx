@@ -62,7 +62,9 @@ const UrlBatchProcessor: React.FC = () => {
     setResults([]);
     
     try {
-      // Call the Supabase Edge Function
+      console.log("Calling scan-product-urls edge function with URLs:", urls);
+      
+      // Call the Supabase Edge Function with better error handling
       const { data, error } = await supabase.functions.invoke('scan-product-urls', {
         body: { urls }
       });
@@ -71,7 +73,18 @@ const UrlBatchProcessor: React.FC = () => {
         console.error("Error invoking scan-product-urls function:", error);
         toast({
           title: "Processing Failed",
-          description: "Failed to connect to the product scanning service. Please try again.",
+          description: "Failed to connect to the product scanning service. Please check your network connection and try again.",
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (!data) {
+        console.error("No data returned from scan-product-urls function");
+        toast({
+          title: "Processing Failed",
+          description: "The server returned an empty response. Please try again later.",
           variant: "destructive"
         });
         setIsProcessing(false);
@@ -79,6 +92,7 @@ const UrlBatchProcessor: React.FC = () => {
       }
       
       if (!data.success) {
+        console.error("Processing failed:", data.error);
         toast({
           title: "Processing Failed",
           description: data.error || "Failed to process URLs. Please try again.",
@@ -88,6 +102,7 @@ const UrlBatchProcessor: React.FC = () => {
         return;
       }
       
+      console.log("Processing results:", data.results);
       setResults(data.results);
       
       const successCount = data.results.filter((r: ScanResult) => r.success).length;
@@ -95,7 +110,7 @@ const UrlBatchProcessor: React.FC = () => {
       
       toast({
         title: "Processing Complete",
-        description: `Successfully processed ${successCount} out of ${urls.length} URLs. ${reviewCount} products need manual PVA verification.`,
+        description: `Successfully processed ${successCount} out of ${urls.length} URLs. ${reviewCount} products need manual verification.`,
         variant: "default"
       });
     } catch (error) {
@@ -170,6 +185,7 @@ const UrlBatchProcessor: React.FC = () => {
               {results.map((result, index) => (
                 <Alert 
                   key={index} 
+                  variant={result.success ? "default" : "destructive"}
                   className={result.success 
                     ? (result.requiresReview ? "bg-yellow-50 border-yellow-200" : "bg-green-50 border-green-200")
                     : "bg-red-50 border-red-200"
@@ -190,7 +206,7 @@ const UrlBatchProcessor: React.FC = () => {
                       <span>
                         Added {result.productInfo?.brand} {result.productInfo?.name}
                         {result.requiresReview 
-                          ? " (Needs manual PVA verification)" 
+                          ? " (Needs manual verification)" 
                           : result.productInfo?.pvaPercentage !== null 
                             ? ` with ${result.productInfo?.pvaPercentage}% PVA` 
                             : " (No PVA percentage available)"

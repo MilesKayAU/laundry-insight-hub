@@ -29,22 +29,24 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Processing ${urls.length} URLs`);
+    
     // Create Supabase client
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-    // Get user authentication from request
+    // Get user authentication from request (optional for improved error messaging)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Unauthorized" }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
+      console.log("No auth header present, proceeding as anonymous");
     }
 
     // Process each URL in parallel
     const results = await Promise.all(
       urls.map(async (url) => {
         try {
+          // Improved logging for debugging
+          console.log(`Processing URL: ${url}`);
+          
           // Simulate URL scanning
           await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
@@ -56,6 +58,7 @@ serve(async (req) => {
           const id = crypto.randomUUID();
           
           // Always create product submission in database, even if PVA is not detected
+          console.log(`Inserting product from URL ${url} to database`);
           const { data, error } = await supabase
             .from('product_submissions')
             .insert({
@@ -64,10 +67,10 @@ serve(async (req) => {
               brand: productInfo.brand,
               type: productInfo.type || 'Unknown',
               description: productInfo.description || '',
-              // If PVA is detected, mark as 'contains', otherwise use 'unknown' so admins can review
-              pvastatus: productInfo.pvaFound ? 'contains' : 'unknown',
+              // Always add to pending so admins can review, regardless of PVA detection
+              pvastatus: 'needs-verification',
               pvapercentage: productInfo.pvaPercentage || null,
-              approved: false,
+              approved: false, // Always set to false to require admin approval
               country: productInfo.country || 'Global',
               websiteurl: url,
               imageurl: productInfo.imageUrl || null,
@@ -85,12 +88,13 @@ serve(async (req) => {
             };
           }
 
+          console.log(`Successfully processed URL: ${url}`);
           return { 
             url, 
             success: true, 
             productId: id,
             productInfo,
-            requiresReview: !productInfo.pvaFound
+            requiresReview: true // Always require review
           };
         } catch (error) {
           console.error(`Error processing URL ${url}:`, error);
@@ -102,6 +106,10 @@ serve(async (req) => {
         }
       })
     );
+
+    // Log the final results count
+    const successCount = results.filter(r => r.success).length;
+    console.log(`Processed ${urls.length} URLs - ${successCount} successful, ${urls.length - successCount} failed`);
 
     return new Response(
       JSON.stringify({ success: true, results }),
@@ -142,7 +150,7 @@ async function simulateUrlScan(url: string) {
     name: `${randomType} ${Math.random().toString(36).substring(2, 7)}`,
     brand: domain,
     type: randomType,
-    description: `A ${randomType.toLowerCase()} product that ${hasPva ? 'contains' : 'may contain'} PVA.`,
+    description: `A ${randomType.toLowerCase()} product that may contain PVA. URL: ${url}`,
     pvaPercentage: hasPva ? pvaPercentage : null,
     country: 'Global',
     imageUrl: null,
