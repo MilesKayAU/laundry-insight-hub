@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 
-// Image preview component
 const ImagePreview = ({ url }: { url: string }) => {
   if (!url) return null;
   
@@ -20,7 +18,6 @@ const ImagePreview = ({ url }: { url: string }) => {
         alt="Product" 
         className="h-auto w-full object-contain max-h-[200px]"
         onError={(e) => {
-          // If image fails to load, show placeholder
           (e.target as HTMLImageElement).src = "https://placehold.co/300x200?text=Image+Not+Available";
         }}
       />
@@ -28,7 +25,6 @@ const ImagePreview = ({ url }: { url: string }) => {
   );
 };
 
-// Define the ProductDetails interface separately to avoid self-reference
 interface ProductDetailsType {
   brand: string;
   name: string;
@@ -66,7 +62,6 @@ const ProductDetailsDialog = ({
     setIsSaving(true);
     try {
       await onSave();
-      // If no error is thrown from onSave, we assume it succeeded
     } catch (error) {
       console.error("Error saving product:", error);
     } finally {
@@ -85,7 +80,6 @@ const ProductDetailsDialog = ({
         </DialogHeader>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-          {/* Left column */}
           <div className="space-y-4">
             <div>
               <Label htmlFor="brand">Brand</Label>
@@ -173,7 +167,6 @@ const ProductDetailsDialog = ({
             </div>
           </div>
           
-          {/* Right column */}
           <div className="space-y-4">
             <div>
               <Label htmlFor="description">Description</Label>
@@ -242,7 +235,7 @@ const ProductDetailsDialog = ({
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving ? <><Spinner className="mr-2" /> Saving...</> : "Save Changes"}
+            {isSaving ? <><Spinner size="sm" className="mr-2" color="default" /> Saving...</> : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>
