@@ -58,7 +58,7 @@ export const usePvaForm = ({
           console.log("Found product to update:", productId);
           
           // Update the product's PVA percentage
-          const { data, error: updateError } = await supabase
+          const { error: updateError } = await supabase
             .from('product_submissions')
             .update({
               pvapercentage: parseFloat(values.pvaPercentage),
@@ -77,7 +77,7 @@ export const usePvaForm = ({
             throw updateError;
           }
           
-          console.log("Successfully updated PVA percentage in database, response:", data);
+          console.log("Successfully updated PVA percentage in database");
           
           // Trigger a global refresh event
           window.dispatchEvent(new Event('reload-products'));
