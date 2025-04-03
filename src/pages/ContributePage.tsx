@@ -43,7 +43,8 @@ const ContributePage: React.FC = () => {
     
     toast({
       title: "Bulk upload complete",
-      description: "Your products have been submitted for review and are now in the pending queue."
+      description: "Your products have been submitted for review and are now in the pending queue.",
+      variant: "default" // Fixing the type error by using a valid variant
     });
   };
 

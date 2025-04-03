@@ -254,7 +254,11 @@ const BrandProfilePage = () => {
         <div className="flex gap-2">
           {brandProfile.website && (
             <Button variant="outline" asChild size="sm">
-              <a href={brandProfile.website} target="_blank" rel="noopener noreferrer">
+              <a 
+                href={brandProfile.website} 
+                target="_blank" 
+                rel="nofollow noopener noreferrer"
+              >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Website
               </a>

@@ -10,7 +10,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Book, ExternalLink, RefreshCw } from "lucide-react";
+import { Book, ExternalLink as ExternalLinkIcon, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -218,10 +218,10 @@ const ResearchPage = () => {
                       <a 
                         href={research.url} 
                         target="_blank" 
-                        rel="noopener noreferrer"
+                        rel="nofollow noopener noreferrer"
                         className="flex items-center"
                       >
-                        <ExternalLink className="h-4 w-4 mr-2" />
+                        <ExternalLinkIcon className="h-4 w-4 mr-2" />
                         View Research
                       </a>
                     </Button>

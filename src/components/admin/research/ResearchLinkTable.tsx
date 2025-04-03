@@ -91,7 +91,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
                   <a 
                     href={link.url} 
                     target="_blank" 
-                    rel="noopener noreferrer"
+                    rel="nofollow noopener noreferrer"
                     className="flex items-center text-blue-600 hover:underline"
                   >
                     <ExternalLink className="h-3 w-3 mr-1" />

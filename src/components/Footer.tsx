@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Mail, Github, Twitter, ShieldCheck } from "lucide-react";
 
@@ -15,6 +14,20 @@ const ScrollTopLink = ({ to, children, className }) => {
     <Link to={to} className={className} onClick={handleClick}>
       {children}
     </Link>
+  );
+};
+
+// New component for external links with proper SEO attributes
+const ExternalLink = ({ href, children, className }) => {
+  return (
+    <a 
+      href={href} 
+      className={className}
+      target="_blank" 
+      rel="nofollow noopener noreferrer"
+    >
+      {children}
+    </a>
   );
 };
 
@@ -119,18 +132,18 @@ const Footer = () => {
             &copy; {new Date().getFullYear()} PVAFree.com. All rights reserved.
           </div>
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
-            <a href="#" className="text-gray-400 hover:text-science-300 transition-colors">
+            <ExternalLink href="#" className="text-gray-400 hover:text-science-300 transition-colors">
               <Mail className="h-5 w-5" />
               <span className="sr-only">Email</span>
-            </a>
-            <a href="#" className="text-gray-400 hover:text-science-300 transition-colors">
+            </ExternalLink>
+            <ExternalLink href="#" className="text-gray-400 hover:text-science-300 transition-colors">
               <Github className="h-5 w-5" />
               <span className="sr-only">GitHub</span>
-            </a>
-            <a href="#" className="text-gray-400 hover:text-science-300 transition-colors">
+            </ExternalLink>
+            <ExternalLink href="#" className="text-gray-400 hover:text-science-300 transition-colors">
               <Twitter className="h-5 w-5" />
               <span className="sr-only">Twitter</span>
-            </a>
+            </ExternalLink>
           </div>
         </div>
       </div>
