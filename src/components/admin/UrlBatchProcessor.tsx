@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,10 +14,12 @@ interface ScanResult {
   success: boolean;
   productId?: string;
   error?: string;
+  requiresReview?: boolean;
   productInfo?: {
     name: string;
     brand: string;
     pvaPercentage: number | null;
+    pvaFound?: boolean;
   };
 }
 
@@ -69,7 +71,7 @@ const UrlBatchProcessor: React.FC = () => {
         console.error("Error invoking scan-product-urls function:", error);
         toast({
           title: "Processing Failed",
-          description: error.message || "Failed to process URLs. Please try again.",
+          description: "Failed to connect to the product scanning service. Please try again.",
           variant: "destructive"
         });
         setIsProcessing(false);
@@ -89,9 +91,11 @@ const UrlBatchProcessor: React.FC = () => {
       setResults(data.results);
       
       const successCount = data.results.filter((r: ScanResult) => r.success).length;
+      const reviewCount = data.results.filter((r: ScanResult) => r.success && r.requiresReview).length;
+      
       toast({
         title: "Processing Complete",
-        description: `Successfully processed ${successCount} out of ${urls.length} URLs.`,
+        description: `Successfully processed ${successCount} out of ${urls.length} URLs. ${reviewCount} products need manual PVA verification.`,
         variant: "default"
       });
     } catch (error) {
@@ -164,9 +168,17 @@ const UrlBatchProcessor: React.FC = () => {
             
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
               {results.map((result, index) => (
-                <Alert key={index} className={result.success ? "bg-green-50" : "bg-red-50"}>
+                <Alert 
+                  key={index} 
+                  className={result.success 
+                    ? (result.requiresReview ? "bg-yellow-50 border-yellow-200" : "bg-green-50 border-green-200")
+                    : "bg-red-50 border-red-200"
+                  }
+                >
                   {result.success ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    result.requiresReview 
+                      ? <Info className="h-4 w-4 text-yellow-600" /> 
+                      : <CheckCircle2 className="h-4 w-4 text-green-600" />
                   ) : (
                     <AlertCircle className="h-4 w-4 text-red-600" />
                   )}
@@ -176,9 +188,12 @@ const UrlBatchProcessor: React.FC = () => {
                   <AlertDescription className="text-xs mt-1">
                     {result.success ? (
                       <span>
-                        Added {result.productInfo?.brand} {result.productInfo?.name} 
-                        {result.productInfo?.pvaPercentage !== null && 
-                          ` with ${result.productInfo?.pvaPercentage}% PVA`
+                        Added {result.productInfo?.brand} {result.productInfo?.name}
+                        {result.requiresReview 
+                          ? " (Needs manual PVA verification)" 
+                          : result.productInfo?.pvaPercentage !== null 
+                            ? ` with ${result.productInfo?.pvaPercentage}% PVA` 
+                            : " (No PVA percentage available)"
                         }
                       </span>
                     ) : (
@@ -194,7 +209,8 @@ const UrlBatchProcessor: React.FC = () => {
       
       <CardFooter className="flex flex-col items-start text-sm text-muted-foreground">
         <p>
-          Note: Products will be added to the pending queue and need admin approval before appearing in the database.
+          Note: All products will be added to the pending queue and need admin approval before appearing in the database.
+          Products where PVA content could not be determined will be flagged for manual review.
         </p>
       </CardFooter>
     </Card>

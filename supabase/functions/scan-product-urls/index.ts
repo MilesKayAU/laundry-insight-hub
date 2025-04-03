@@ -44,51 +44,62 @@ serve(async (req) => {
     // Process each URL in parallel
     const results = await Promise.all(
       urls.map(async (url) => {
-        // Simulate URL scanning
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+        try {
+          // Simulate URL scanning
+          await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
-        // In a real implementation, you would use a web scraper here
-        // For now, simulate extracting product information
-        const productInfo = await simulateUrlScan(url);
+          // In a real implementation, you would use a web scraper here
+          // For now, simulate extracting product information
+          const productInfo = await simulateUrlScan(url);
 
-        // Generate a unique ID for the submission
-        const id = crypto.randomUUID();
-        
-        // Create product submission in database
-        const { data, error } = await supabase
-          .from('product_submissions')
-          .insert({
-            id,
-            name: productInfo.name,
-            brand: productInfo.brand,
-            type: productInfo.type || 'Unknown',
-            description: productInfo.description || '',
-            pvastatus: 'contains',
-            pvapercentage: productInfo.pvaPercentage || null,
-            approved: false,
-            country: productInfo.country || 'Global',
-            websiteurl: url,
-            imageurl: productInfo.imageUrl || null,
-            createdat: new Date().toISOString(),
-            updatedat: new Date().toISOString()
-          })
-          .select();
-        
-        if (error) {
-          console.error(`Error inserting product from URL ${url}:`, error);
+          // Generate a unique ID for the submission
+          const id = crypto.randomUUID();
+          
+          // Always create product submission in database, even if PVA is not detected
+          const { data, error } = await supabase
+            .from('product_submissions')
+            .insert({
+              id,
+              name: productInfo.name,
+              brand: productInfo.brand,
+              type: productInfo.type || 'Unknown',
+              description: productInfo.description || '',
+              // If PVA is detected, mark as 'contains', otherwise use 'unknown' so admins can review
+              pvastatus: productInfo.pvaFound ? 'contains' : 'unknown',
+              pvapercentage: productInfo.pvaPercentage || null,
+              approved: false,
+              country: productInfo.country || 'Global',
+              websiteurl: url,
+              imageurl: productInfo.imageUrl || null,
+              createdat: new Date().toISOString(),
+              updatedat: new Date().toISOString()
+            })
+            .select();
+          
+          if (error) {
+            console.error(`Error inserting product from URL ${url}:`, error);
+            return { 
+              url, 
+              success: false, 
+              error: error.message 
+            };
+          }
+
+          return { 
+            url, 
+            success: true, 
+            productId: id,
+            productInfo,
+            requiresReview: !productInfo.pvaFound
+          };
+        } catch (error) {
+          console.error(`Error processing URL ${url}:`, error);
           return { 
             url, 
             success: false, 
-            error: error.message 
+            error: error instanceof Error ? error.message : String(error)
           };
         }
-
-        return { 
-          url, 
-          success: true, 
-          productId: id,
-          productInfo 
-        };
       })
     );
 
@@ -100,7 +111,7 @@ serve(async (req) => {
     console.error("Error in scan-product-urls function:", error);
     
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : String(error) }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
@@ -124,8 +135,8 @@ async function simulateUrlScan(url: string) {
   // Generate random data for simulation
   const productTypes = ['Detergent', 'Dishwasher Pod', 'Laundry Pod', 'Cleaning Sheet', 'Dish Soap'];
   const randomType = productTypes[Math.floor(Math.random() * productTypes.length)];
-  const hasPva = Math.random() > 0.1; // 90% chance of containing PVA
-  const pvaPercentage = hasPva ? Math.floor(Math.random() * 30) + 5 : 0;
+  const hasPva = Math.random() > 0.3; // 70% chance of containing PVA
+  const pvaPercentage = hasPva ? Math.floor(Math.random() * 30) + 5 : null;
   
   return {
     name: `${randomType} ${Math.random().toString(36).substring(2, 7)}`,
@@ -134,6 +145,7 @@ async function simulateUrlScan(url: string) {
     description: `A ${randomType.toLowerCase()} product that ${hasPva ? 'contains' : 'may contain'} PVA.`,
     pvaPercentage: hasPva ? pvaPercentage : null,
     country: 'Global',
-    imageUrl: null
+    imageUrl: null,
+    pvaFound: hasPva
   };
 }
