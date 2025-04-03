@@ -64,10 +64,16 @@ const UrlBatchProcessor: React.FC = () => {
     try {
       console.log("Calling scan-product-urls edge function with URLs:", urls);
       
+      // Set initial progress
+      setProgress(10);
+      
       // Call the Supabase Edge Function with better error handling
       const { data, error } = await supabase.functions.invoke('scan-product-urls', {
         body: { urls }
       });
+      
+      // Update progress
+      setProgress(70);
       
       if (error) {
         console.error("Error invoking scan-product-urls function:", error);
@@ -105,14 +111,35 @@ const UrlBatchProcessor: React.FC = () => {
       console.log("Processing results:", data.results);
       setResults(data.results);
       
-      const successCount = data.results.filter((r: ScanResult) => r.success).length;
-      const reviewCount = data.results.filter((r: ScanResult) => r.success && r.requiresReview).length;
+      // Manually reload products to ensure the pending tab is updated
+      // Add a slight delay to allow server processing to complete
+      setTimeout(() => {
+        // Dispatch an event to signal that products need to be reloaded
+        window.dispatchEvent(new CustomEvent('reload-products'));
+        
+        setProgress(100);
+        
+        const successCount = data.results.filter((r: ScanResult) => r.success).length;
+        const reviewCount = data.results.filter((r: ScanResult) => r.success && r.requiresReview).length;
+        
+        toast({
+          title: "Processing Complete",
+          description: `Successfully processed ${successCount} out of ${urls.length} URLs. ${reviewCount} products need manual verification.`,
+          variant: "default"
+        });
+        
+        // Add an additional message specifically about pending queue
+        if (successCount > 0) {
+          setTimeout(() => {
+            toast({
+              title: "Products Added to Pending Queue",
+              description: "Please switch to the Pending Products tab to review the new submissions.",
+              variant: "default"
+            });
+          }, 1000);
+        }
+      }, 1500);
       
-      toast({
-        title: "Processing Complete",
-        description: `Successfully processed ${successCount} out of ${urls.length} URLs. ${reviewCount} products need manual verification.`,
-        variant: "default"
-      });
     } catch (error) {
       console.error("Error processing URLs:", error);
       toast({
@@ -122,7 +149,6 @@ const UrlBatchProcessor: React.FC = () => {
       });
     } finally {
       setIsProcessing(false);
-      setProgress(100);
     }
   };
   

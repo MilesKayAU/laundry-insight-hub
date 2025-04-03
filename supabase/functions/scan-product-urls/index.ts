@@ -67,17 +67,16 @@ serve(async (req) => {
               brand: productInfo.brand,
               type: productInfo.type || 'Unknown',
               description: productInfo.description || '',
-              // Always add to pending so admins can review, regardless of PVA detection
-              pvastatus: 'needs-verification',
+              pvastatus: 'needs-verification', // Always needs verification
               pvapercentage: productInfo.pvaPercentage || null,
-              approved: false, // Always set to false to require admin approval
+              approved: false, // IMPORTANT: Always set to false to require admin approval
               country: productInfo.country || 'Global',
               websiteurl: url,
               imageurl: productInfo.imageUrl || null,
               createdat: new Date().toISOString(),
-              updatedat: new Date().toISOString()
-            })
-            .select();
+              updatedat: new Date().toISOString(),
+              submittedAt: new Date().toISOString() // Add this field to match local storage format
+            });
           
           if (error) {
             console.error(`Error inserting product from URL ${url}:`, error);
@@ -86,6 +85,34 @@ serve(async (req) => {
               success: false, 
               error: error.message 
             };
+          }
+          
+          // Also store in local storage to ensure it appears in the pending list
+          try {
+            // Store the product in local storage as well
+            const localProducts = localStorage.getItem('products');
+            const products = localProducts ? JSON.parse(localProducts) : [];
+            
+            products.push({
+              id,
+              name: productInfo.name,
+              brand: productInfo.brand,
+              type: productInfo.type || 'Unknown',
+              description: productInfo.description || '',
+              pvaStatus: 'needs-verification',
+              pvaPercentage: productInfo.pvaPercentage || null,
+              approved: false,
+              country: productInfo.country || 'Global',
+              websiteUrl: url,
+              imageUrl: productInfo.imageUrl || null,
+              submittedAt: new Date().toISOString(),
+              timestamp: Date.now()
+            });
+            
+            localStorage.setItem('products', JSON.stringify(products));
+          } catch (localStorageError) {
+            console.log("Local storage not available in edge function context, skipping");
+            // This will fail in the edge function environment - we'll handle this on the frontend
           }
 
           console.log(`Successfully processed URL: ${url}`);

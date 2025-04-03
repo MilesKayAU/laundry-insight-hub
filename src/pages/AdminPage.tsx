@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Tabs, 
   TabsContent, 
@@ -110,7 +109,7 @@ const AdminPage = () => {
     return Array.from(productMap.values());
   };
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       console.log("AdminPage: Loading and deduplicating products...");
@@ -165,11 +164,22 @@ const AdminPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     loadProducts();
-  }, [toast]);
+    
+    const handleReloadProducts = () => {
+      console.log("Reloading products from event trigger");
+      loadProducts();
+    };
+    
+    window.addEventListener('reload-products', handleReloadProducts);
+    
+    return () => {
+      window.removeEventListener('reload-products', handleReloadProducts);
+    };
+  }, [loadProducts]);
 
   const handleVerifyProduct = (product: ProductSubmission) => {
     if (!product.websiteUrl) {
