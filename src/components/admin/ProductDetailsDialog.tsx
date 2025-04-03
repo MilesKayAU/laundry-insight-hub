@@ -28,24 +28,27 @@ const ImagePreview = ({ url }: { url: string }) => {
   );
 };
 
+// Define the ProductDetails interface separately to avoid self-reference
+interface ProductDetailsType {
+  brand: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  videoUrl: string;
+  websiteUrl: string;
+  pvaPercentage: string;
+  country: string;
+  ingredients: string;
+  pvaStatus: string;
+  type: string;
+}
+
 interface ProductDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   product: ProductSubmission;
-  details: {
-    brand: string;
-    name: string;
-    description: string;
-    imageUrl: string;
-    videoUrl: string;
-    websiteUrl: string;
-    pvaPercentage: string;
-    country: string;
-    ingredients: string;
-    pvaStatus: string;
-    type: string;
-  };
-  onDetailsChange: (details: Partial<typeof details>) => void;
+  details: ProductDetailsType;
+  onDetailsChange: (details: Partial<ProductDetailsType>) => void;
   onSave: () => void;
 }
 
