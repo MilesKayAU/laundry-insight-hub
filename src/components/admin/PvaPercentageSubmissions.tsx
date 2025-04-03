@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUp } from "lucide-react";
 import { useSubmissions } from "./pva-submissions/useSubmissions";
 import { SubmissionsTable } from "./pva-submissions/SubmissionsTable";
 import SubmissionDetailsDialog from "./pva-submissions/SubmissionDetailsDialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const PvaPercentageSubmissions: React.FC = () => {
   const { 
@@ -16,8 +17,30 @@ const PvaPercentageSubmissions: React.FC = () => {
     handleSelectSubmission, 
     handleApprove, 
     handleReject,
-    resetSubmissions
+    resetSubmissions,
+    isProcessing
   } = useSubmissions();
+  
+  const [lastAction, setLastAction] = useState<{
+    type: 'approve' | 'reject',
+    product: string
+  } | null>(null);
+  
+  const onApprove = (submission: any) => {
+    handleApprove(submission, submission.proposedPercentage);
+    setLastAction({ 
+      type: 'approve', 
+      product: `${submission.brandName} ${submission.productName}` 
+    });
+  };
+  
+  const onReject = (submission: any) => {
+    handleReject(submission);
+    setLastAction({ 
+      type: 'reject', 
+      product: `${submission.brandName} ${submission.productName}` 
+    });
+  };
   
   return (
     <Card>
@@ -33,22 +56,32 @@ const PvaPercentageSubmissions: React.FC = () => {
             </CardDescription>
           </div>
           
-          {/* Add a button to reset submissions for testing purposes */}
           <Button 
             variant="outline" 
             size="sm"
             onClick={resetSubmissions}
+            disabled={isProcessing}
           >
             Reset Submissions
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {lastAction && (
+          <Alert variant={lastAction.type === 'approve' ? 'default' : 'destructive'} className="mb-4">
+            <AlertDescription>
+              {lastAction.type === 'approve' 
+                ? `Approved PVA percentage update for ${lastAction.product}.` 
+                : `Rejected PVA percentage update for ${lastAction.product}.`}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <SubmissionsTable 
           submissions={pendingSubmissions}
           onReview={handleSelectSubmission}
-          onApprove={(submission) => handleApprove(submission, submission.proposedPercentage)}
-          onReject={handleReject}
+          onApprove={onApprove}
+          onReject={onReject}
         />
       </CardContent>
       

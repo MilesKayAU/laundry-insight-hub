@@ -38,56 +38,83 @@ export const usePvaForm = ({
       if (isAdmin && defaultBrand && defaultProduct) {
         console.log("Admin updating PVA percentage for:", defaultBrand, defaultProduct);
         
-        // Try to find the product in Supabase
-        const { data: products, error: findError } = await supabase
-          .from('product_submissions')
-          .select('id')
-          .eq('brand', defaultBrand)
-          .eq('name', defaultProduct)
-          .limit(1);
-          
-        if (findError) {
-          console.error("Error finding product in database:", findError);
-          toast({
-            title: "Database Query Error",
-            description: `Error finding product: ${findError.message}`,
-            variant: "destructive"
-          });
-        } else if (products && products.length > 0) {
-          const productId = products[0].id;
-          console.log("Found product to update:", productId);
-          
-          // Update the product's PVA percentage
-          const { error: updateError } = await supabase
+        try {
+          // Try to find the product in Supabase
+          const { data: products, error: findError } = await supabase
             .from('product_submissions')
-            .update({
-              pvapercentage: parseFloat(values.pvaPercentage),
-              updatedat: new Date().toISOString(),
-              pvastatus: 'verified' // Mark as verified since an admin is setting it
-            })
-            .eq('id', productId);
+            .select('id')
+            .eq('brand', defaultBrand)
+            .eq('name', defaultProduct)
+            .limit(1);
             
-          if (updateError) {
-            console.error("Error updating product PVA percentage:", updateError);
+          if (findError) {
+            console.error("Error finding product in database:", findError);
             toast({
-              title: "Database Update Error",
-              description: `Failed to update in database: ${updateError.message}`,
+              title: "Database Query Error",
+              description: `Error finding product: ${findError.message}`,
               variant: "destructive"
             });
-            throw updateError;
+          } else if (products && products.length > 0) {
+            const productId = products[0].id;
+            console.log("Found product to update:", productId);
+            
+            // First verify the product still exists
+            const { data: productCheck, error: checkError } = await supabase
+              .from('product_submissions')
+              .select('id')
+              .eq('id', productId)
+              .single();
+              
+            if (checkError) {
+              console.error("Product doesn't exist or can't be accessed:", checkError);
+              toast({
+                title: "Product Not Available",
+                description: "This product may have been deleted or you don't have access to it.",
+                variant: "destructive"
+              });
+              throw checkError;
+            }
+            
+            // Update the product's PVA percentage
+            const { error: updateError } = await supabase
+              .from('product_submissions')
+              .update({
+                pvapercentage: parseFloat(values.pvaPercentage),
+                updatedat: new Date().toISOString(),
+                pvastatus: 'verified' // Mark as verified since an admin is setting it
+              })
+              .eq('id', productId);
+              
+            if (updateError) {
+              console.error("Error updating product PVA percentage:", updateError);
+              toast({
+                title: "Database Update Error",
+                description: `Failed to update in database: ${updateError.message}`,
+                variant: "destructive"
+              });
+              throw updateError;
+            }
+            
+            console.log("Successfully updated PVA percentage in database");
+            
+            // Trigger a global refresh event
+            window.dispatchEvent(new Event('reload-products'));
+          } else {
+            console.warn("No matching product found in database for update");
+            toast({
+              title: "Product Not Found",
+              description: "Could not find the product in the database to update.",
+              variant: "warning"
+            });
           }
-          
-          console.log("Successfully updated PVA percentage in database");
-          
-          // Trigger a global refresh event
-          window.dispatchEvent(new Event('reload-products'));
-        } else {
-          console.warn("No matching product found in database for update");
+        } catch (supabaseError) {
+          console.error("Supabase operation error:", supabaseError);
           toast({
-            title: "Product Not Found",
-            description: "Could not find the product in the database to update.",
-            variant: "warning"
+            title: "Database Operation Failed",
+            description: "Failed to complete the operation in the database.",
+            variant: "destructive"
           });
+          throw supabaseError;
         }
       }
       
