@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
@@ -183,13 +182,17 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
 
   const handleConfirmDelete = () => {
     if (confirmDeleteId && onDelete) {
-      // Perform optimistic UI update
+      // Immediately update UI optimistically - remove product from local state
       setLocalProducts(prev => prev.filter(p => p.id !== confirmDeleteId));
       
-      // Call the actual delete function
-      onDelete(confirmDeleteId);
+      // Close dialog immediately to improve perceived performance
+      setConfirmDeleteId(null);
+      
+      // Call the actual delete function with a slight delay
+      setTimeout(() => {
+        onDelete(confirmDeleteId);
+      }, 100);
     }
-    setConfirmDeleteId(null);
   };
   
   return (

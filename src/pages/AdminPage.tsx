@@ -425,24 +425,24 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting approved product with ID:", productId);
       
+      // Perform optimistic UI update first
       setLocalProducts(prev => prev.filter(p => p.id !== productId));
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
       try {
+        // Add slight delay to ensure UI updates first
         await new Promise(resolve => setTimeout(resolve, 100));
         
         const deleteSuccess = await hookDeleteProduct(productId);
         if (!deleteSuccess) {
-          throw new Error("Product deletion failed");
+          console.warn("Product deletion reported failure - will refresh data anyway");
         }
         
-        console.log("Product deleted successfully:", productId);
-        toast({
-          title: "Product Deleted",
-          description: "The product has been successfully deleted",
-        });
-        
+        // Always refresh data after deletion attempt
+        console.log("Refreshing product list after deletion");
         setTimeout(() => {
+          invalidateProductCache();
+          forceProductRefresh();
           safeLoadProducts().catch(e => {
             console.error("Failed to refresh after product deletion:", e);
           });
@@ -456,6 +456,7 @@ const AdminPage = () => {
           variant: "destructive"
         });
         
+        // Force refresh after error
         setTimeout(() => {
           safeLoadProducts().catch(e => {
             console.error("Failed to refresh after delete error:", e);
@@ -470,6 +471,7 @@ const AdminPage = () => {
         variant: "destructive"
       });
     } finally {
+      // Release delete lock after a short delay
       setTimeout(() => {
         setDeletingProductId(null);
       }, 500);
@@ -486,28 +488,27 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting pending product with ID:", productId);
       
+      // Perform optimistic UI update first
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
       try {
+        // Add slight delay to ensure UI updates first
         await new Promise(resolve => setTimeout(resolve, 100));
         
         const deleteSuccess = await hookDeleteProduct(productId);
         if (!deleteSuccess) {
-          console.warn("Product deletion reported failure");
-          throw new Error("Product deletion failed");
+          console.warn("Product deletion reported failure - will refresh data anyway");
         }
         
-        console.log("Pending product deleted successfully:", productId);
-        toast({
-          title: "Product Deleted",
-          description: "The pending product has been successfully deleted",
-        });
-        
+        // Always refresh data after deletion attempt
+        console.log("Refreshing product list after deletion");
         setTimeout(() => {
+          invalidateProductCache();
+          forceProductRefresh();
           safeLoadProducts().catch(e => {
             console.error("Failed to refresh after product deletion:", e);
           });
-        }, 1000);
+        }, 500);
       } catch (error) {
         console.error("Failed to delete pending product:", productId, error);
         
@@ -517,6 +518,7 @@ const AdminPage = () => {
           variant: "destructive"
         });
         
+        // Force refresh after error
         setTimeout(() => {
           safeLoadProducts().catch(e => {
             console.error("Failed to refresh after delete error:", e);
@@ -531,6 +533,7 @@ const AdminPage = () => {
         variant: "destructive"
       });
     } finally {
+      // Release delete lock after a short delay
       setTimeout(() => {
         setDeletingProductId(null);
       }, 500);

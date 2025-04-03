@@ -289,6 +289,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      force_delete_product: {
+        Args: {
+          product_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           role: string
