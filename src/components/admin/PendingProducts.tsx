@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -11,9 +11,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Search, Edit } from "lucide-react";
+import { CheckCircle, XCircle, Search, Edit, RefreshCw } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
+import { forceProductRefresh } from "@/utils/supabaseUtils";
 
 interface PendingProductsProps {
   products: ProductSubmission[];
@@ -32,9 +33,28 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
 }) => {
   const { toast } = useToast();
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Log how many pending products we have for debugging
   console.log(`PendingProducts component received ${products.length} pending products`);
+  
+  // Force refresh every few minutes to ensure data is current
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      handleForceRefresh();
+    }, 2 * 60 * 1000); // Every 2 minutes
+    
+    return () => clearInterval(refreshInterval);
+  }, []);
+  
+  const handleForceRefresh = () => {
+    setRefreshing(true);
+    forceProductRefresh();
+    
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+  };
   
   const handleEdit = (product: ProductSubmission) => {
     console.log("Edit button clicked for product:", product.name);
@@ -78,11 +98,23 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Pending Submissions</CardTitle>
-        <CardDescription>
-          Review and approve user-submitted product information
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle>Pending Submissions</CardTitle>
+          <CardDescription>
+            Review and approve user-submitted product information
+          </CardDescription>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleForceRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-1"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </CardHeader>
       <CardContent>
         {products.length > 0 ? (

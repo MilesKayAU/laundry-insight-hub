@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +23,6 @@ const UrlBatchProcessor = () => {
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [currentUrl, setCurrentUrl] = useState('');
 
-  // Debug function to check if Supabase access is working correctly
   const checkSupabaseAccess = async () => {
     try {
       const { data, error } = await supabase
@@ -56,7 +54,6 @@ const UrlBatchProcessor = () => {
     }
 
     try {
-      // First verify we can access Supabase correctly
       const canAccessSupabase = await checkSupabaseAccess();
       if (!canAccessSupabase) {
         toast({
@@ -71,7 +68,6 @@ const UrlBatchProcessor = () => {
       setResults([]);
       setProgress(0);
 
-      // Split URLs and filter out empty lines
       const urls = urlList.split('\n').filter(url => url.trim() !== '');
       
       if (urls.length === 0) {
@@ -93,16 +89,17 @@ const UrlBatchProcessor = () => {
         const url = urls[i].trim();
         setCurrentUrl(url);
         
-        // Add to results as pending
         setResults(prev => [
           ...prev, 
           { url, status: 'pending' }
         ]);
 
         try {
-          // Call the Supabase Edge function
           const { data, error } = await supabase.functions.invoke('scan-product-urls', {
-            body: { url },
+            body: { 
+              url,
+              markAsPending: true
+            },
           });
 
           if (error) {
@@ -124,20 +121,17 @@ const UrlBatchProcessor = () => {
               } : r
             ));
 
-            // Display what was added
             if (data.productData) {
               toast({
                 title: "Product detected",
                 description: `Found: ${data.productData.brand} - ${data.productData.name}`,
               });
               
-              // Force reload of products
               window.dispatchEvent(new Event('reload-products'));
             }
           } else {
             console.warn(`No product data found for URL ${url}:`, data);
             
-            // Check if the product already exists but was just not added
             if (data && data.status === 'error' && data.message && data.message.includes('Product already exists')) {
               setResults(prev => prev.map(r => 
                 r.url === url ? { 
@@ -147,7 +141,6 @@ const UrlBatchProcessor = () => {
                 } : r
               ));
               
-              // Also notify if this is an already existing product
               if (data.productData) {
                 toast({
                   title: "Product already exists",
@@ -175,7 +168,6 @@ const UrlBatchProcessor = () => {
           ));
         }
 
-        // Update progress
         const newProgress = Math.round(((i + 1) / urls.length) * 100);
         setProgress(newProgress);
       }
@@ -186,8 +178,19 @@ const UrlBatchProcessor = () => {
         description: `Processed ${urls.length} URLs with ${successCount} successes.`,
       });
 
-      // Force reload of products to ensure UI is updated with new additions
       window.dispatchEvent(new Event('reload-products'));
+      
+      setTimeout(() => {
+        try {
+          const event = new CustomEvent('invalidate-product-cache', {
+            detail: { timestamp: Date.now() }
+          });
+          window.dispatchEvent(event);
+          console.log("Product cache invalidated after URL batch processing");
+        } catch (e) {
+          console.error("Error invalidating product cache:", e);
+        }
+      }, 2000);
     } catch (error) {
       console.error("Error in batch processing:", error);
       toast({

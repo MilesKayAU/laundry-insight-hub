@@ -4,6 +4,7 @@ import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor'
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeCountry } from '@/utils/countryUtils';
+import { invalidateProductCache } from '@/utils/supabaseUtils';
 
 // Define the ProductDetails interface to match the one in ProductDetailsDialog
 interface ProductDetails {
@@ -74,107 +75,99 @@ export const useProductEditing = (onSuccess?: () => void) => {
   };
 
   const handleSaveChanges = async () => {
-    if (!selectedProduct) {
-      console.error("Cannot save changes: No product selected");
-      toast({
-        title: "Error",
-        description: "Cannot save changes: No product selected",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    console.log("Saving changes to product:", selectedProduct.id);
+    if (!selectedProduct) return;
     setIsSaving(true);
     
     try {
-      // Prepare the data to update
-      const parseNumber = (value: string): number | null => {
-        if (!value || value.trim() === '') return null;
-        const parsed = parseFloat(value);
-        return isNaN(parsed) ? null : parsed;
-      };
+      // Format the percentage value
+      const pvaPercentage = productDetails.pvaPercentage ? 
+        parseFloat(productDetails.pvaPercentage) : null;
       
-      const updateData: Partial<ProductSubmission> = {
-        brand: productDetails.brand.trim(),
-        name: productDetails.name.trim(),
+      // Prepare updated product data
+      const updatedData: Partial<ProductSubmission> = {
+        brand: productDetails.brand,
+        name: productDetails.name,
         description: productDetails.description,
         imageUrl: productDetails.imageUrl,
         videoUrl: productDetails.videoUrl,
         websiteUrl: productDetails.websiteUrl,
-        pvaPercentage: parseNumber(productDetails.pvaPercentage),
-        country: normalizeCountry(productDetails.country),
+        pvaPercentage,
+        country: productDetails.country,
         ingredients: productDetails.ingredients,
-        pvaStatus: productDetails.pvaStatus as ProductSubmission['pvaStatus'],
+        pvaStatus: productDetails.pvaStatus as any,
         type: productDetails.type
       };
 
-      console.log("Update data:", updateData);
+      console.log("Product ID being updated:", selectedProduct.id);
+      console.log("Updated data being applied:", updatedData);
 
-      // First try to update in localStorage
-      const localSuccess = updateProductSubmission(selectedProduct.id, updateData);
-
-      // If the product is in Supabase, also update it there
-      if (selectedProduct.id && selectedProduct.id.length > 0) {
-        try {
-          // Convert the keys to match Supabase column names
-          const supabaseUpdateData = {
-            brand: updateData.brand,
-            name: updateData.name,
-            description: updateData.description,
-            imageurl: updateData.imageUrl,
-            videourl: updateData.videoUrl,
-            websiteurl: updateData.websiteUrl,
-            pvapercentage: updateData.pvaPercentage,
-            country: updateData.country,
-            pvastatus: updateData.pvaStatus,
-            type: updateData.type,
+      // Update in Supabase first
+      let supabaseSuccess = false;
+      try {
+        const { error } = await supabase
+          .from('product_submissions')
+          .update({
+            brand: updatedData.brand,
+            name: updatedData.name,
+            description: updatedData.description,
+            type: updatedData.type,
+            pvastatus: updatedData.pvaStatus,
+            pvapercentage: updatedData.pvaPercentage,
+            country: updatedData.country,
+            websiteurl: updatedData.websiteUrl,
+            videourl: updatedData.videoUrl,
+            imageurl: updatedData.imageUrl,
             updatedat: new Date().toISOString()
-          };
-
-          console.log("Updating in Supabase:", supabaseUpdateData);
+          })
+          .eq('id', selectedProduct.id);
           
-          const { error } = await supabase
-            .from('product_submissions')
-            .update(supabaseUpdateData)
-            .eq('id', selectedProduct.id);
-          
-          if (error) {
-            console.error("Error updating product in Supabase:", error);
-            // Continue with local update even if Supabase fails
-          } else {
-            console.log("Product updated in Supabase successfully");
-          }
-        } catch (error) {
-          console.error("Exception updating product in Supabase:", error);
-          // Continue with local update even if Supabase fails
+        if (error) {
+          console.error("Error updating product in Supabase:", error);
+          throw error;
         }
-      }
-
-      if (localSuccess) {
-        toast({
-          title: "Success",
-          description: "Product details updated successfully"
-        });
-        setIsDialogOpen(false);
         
-        // Call the optional success callback
-        if (onSuccess) {
+        console.log("Successfully updated product in Supabase");
+        supabaseSuccess = true;
+      }
+      catch (error) {
+        console.error("Failed to update product in Supabase:", error);
+        // Continue with local update even if Supabase update fails
+      }
+      
+      // Update the product in localStorage
+      const success = updateProductSubmission(selectedProduct.id, updatedData);
+      
+      if (success || supabaseSuccess) {
+        // Clear any cached data to force reload
+        invalidateProductCache();
+        
+        toast({
+          title: "Product Updated",
+          description: `${updatedData.brand} ${updatedData.name} updated successfully`,
+        });
+
+        // Close the dialog
+        setIsDialogOpen(false);
+
+        // Execute the success callback if provided
+        if (typeof onSuccess === 'function') {
           onSuccess();
         }
+
+        // Force a refresh by dispatching a reload event
+        window.dispatchEvent(new Event('reload-products'));
       } else {
         toast({
-          title: "Warning",
-          description: "Product may have been updated but with errors. Please check the data.",
-          variant: "warning"
+          title: "Update Failed",
+          description: "Failed to update the product. Please try again.",
+          variant: "destructive"
         });
-        setIsDialogOpen(false);
       }
     } catch (error) {
       console.error("Error saving product changes:", error);
       toast({
         title: "Error",
-        description: "Failed to update product details: " + (error instanceof Error ? error.message : String(error)),
+        description: "An error occurred while saving changes",
         variant: "destructive"
       });
     } finally {
