@@ -91,6 +91,12 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     };
     
     console.log("Calling onViewDetails with enhanced product:", enhancedProduct);
+    
+    toast({
+      title: "Editing Product",
+      description: `Editing ${product.brand} ${product.name}`,
+    });
+    
     onViewDetails(enhancedProduct);
   };
 
@@ -132,6 +138,14 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     }
     
     try {
+      const productToApprove = localProducts.find(p => p.id === productId);
+      if (productToApprove) {
+        toast({
+          title: "Approving",
+          description: `Approving ${productToApprove.brand} ${productToApprove.name}...`,
+        });
+      }
+      
       onApprove(productId);
     } catch (error) {
       console.error("Error during approval:", error);
@@ -155,6 +169,14 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     }
     
     try {
+      const productToReject = localProducts.find(p => p.id === productId);
+      if (productToReject) {
+        toast({
+          title: "Rejecting",
+          description: `Rejecting ${productToReject.brand} ${productToReject.name}...`,
+        });
+      }
+      
       onReject(productId);
     } catch (error) {
       console.error("Error during rejection:", error);

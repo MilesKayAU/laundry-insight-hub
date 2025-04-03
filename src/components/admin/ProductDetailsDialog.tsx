@@ -87,6 +87,23 @@ const ProductDetailsDialog = ({
     'Other'
   ];
   
+  // Countries list
+  const countries = [
+    'Global',
+    'United States',
+    'Canada',
+    'United Kingdom',
+    'Australia',
+    'New Zealand',
+    'Germany',
+    'France',
+    'Spain',
+    'Italy',
+    'Other'
+  ];
+  
+  console.log("Rendering dialog with details:", details);
+  
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
@@ -146,16 +163,9 @@ const ProductDetailsDialog = ({
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Global">Global</SelectItem>
-                  <SelectItem value="United States">United States</SelectItem>
-                  <SelectItem value="Canada">Canada</SelectItem>
-                  <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                  <SelectItem value="Australia">Australia</SelectItem>
-                  <SelectItem value="New Zealand">New Zealand</SelectItem>
-                  <SelectItem value="Germany">Germany</SelectItem>
-                  <SelectItem value="France">France</SelectItem>
-                  <SelectItem value="Spain">Spain</SelectItem>
-                  <SelectItem value="Italy">Italy</SelectItem>
+                  {countries.map((country) => (
+                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -201,7 +211,6 @@ const ProductDetailsDialog = ({
                 onChange={(e) => onDetailsChange({ description: e.target.value })}
                 placeholder="Enter product description"
                 rows={3}
-                defaultValue="This product may contain PVA according to customers - please verify"
               />
             </div>
             

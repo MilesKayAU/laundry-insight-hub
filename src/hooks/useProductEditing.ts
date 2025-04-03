@@ -82,7 +82,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       const pvaPercentage = productDetails.pvaPercentage ? 
         parseFloat(productDetails.pvaPercentage) : null;
       
-      // Prepare updated product data
+      // Prepare updated product data ensuring all fields are included
       const updatedData: Partial<ProductSubmission> = {
         brand: productDetails.brand,
         name: productDetails.name,
@@ -117,6 +117,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
             websiteurl: updatedData.websiteUrl,
             videourl: updatedData.videoUrl,
             imageurl: updatedData.imageUrl,
+            ingredients: updatedData.ingredients,
             updatedat: new Date().toISOString()
           })
           .eq('id', selectedProduct.id);

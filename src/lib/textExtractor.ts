@@ -414,7 +414,8 @@ export const updateProductSubmission = (productId: string, updatedData: Partial<
     const updatedProduct = {
       ...allProducts[productIndex],
       ...updatedData,
-      updated_at: Date.now() // Add updated timestamp
+      updated_at: Date.now(),
+      updatedat: new Date().toISOString()
     };
     
     console.log("Product before update:", allProducts[productIndex]);
