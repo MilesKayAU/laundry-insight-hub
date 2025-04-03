@@ -406,7 +406,7 @@ const AdminPage = () => {
             new Promise((_, reject) => setTimeout(() => reject(new Error("Refresh timeout")), 5000))
           ]).catch(e => {
             console.warn("forceProductRefresh timed out or failed:", e);
-            // Continue execution even if refresh fails
+            throw e; // Rethrow to trigger rollback
           });
           
           // Load products with timeout
@@ -415,31 +415,24 @@ const AdminPage = () => {
             new Promise((_, reject) => setTimeout(() => reject(new Error("Load products timeout")), 5000))
           ]).catch(e => {
             console.warn("loadProducts timed out or failed:", e);
-            toast({
-              title: "Warning",
-              description: "Product was deleted, but refreshing product list took too long",
-              variant: "warning"
-            });
+            throw e; // Rethrow to trigger rollback
           });
         } catch (refreshError) {
           console.error("Error refreshing data after delete:", refreshError);
-          toast({
-            title: "Warning",
-            description: "Product was deleted, but the list may need manual refreshing",
-            variant: "warning"
-          });
+          throw refreshError; // Rethrow to trigger rollback
         }
       } catch (error) {
         console.error("Failed to delete product:", productId, error);
-        toast({
-          title: "Error",
-          description: "Failed to delete product",
-          variant: "destructive"
-        });
         
         // Always roll back UI state if any error occurs
         setLocalProducts(previousProducts);
         setApprovedProducts(previousApproved);
+        
+        toast({
+          title: "Error",
+          description: "Failed to delete product, we've restored the product in the list",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error("Error in handleDeleteProduct:", error);
@@ -501,7 +494,7 @@ const AdminPage = () => {
             new Promise((_, reject) => setTimeout(() => reject(new Error("Refresh timeout")), 5000))
           ]).catch(e => {
             console.warn("forceProductRefresh timed out or failed:", e);
-            // Continue execution even if refresh fails
+            throw e; // Rethrow to trigger rollback
           });
           
           // Load products with timeout
@@ -510,30 +503,23 @@ const AdminPage = () => {
             new Promise((_, reject) => setTimeout(() => reject(new Error("Load products timeout")), 5000))
           ]).catch(e => {
             console.warn("loadProducts timed out or failed:", e);
-            toast({
-              title: "Warning",
-              description: "Product was deleted, but refreshing product list took too long",
-              variant: "warning"
-            });
+            throw e; // Rethrow to trigger rollback
           });
         } catch (refreshError) {
           console.error("Error refreshing data after delete:", refreshError);
-          toast({
-            title: "Warning",
-            description: "Product was deleted, but the list may need manual refreshing",
-            variant: "warning"
-          });
+          throw refreshError; // Rethrow to trigger rollback
         }
       } catch (error) {
         console.error("Failed to delete pending product:", productId, error);
+        
+        // Always roll back UI state if any error occurs
+        setPendingProducts(previousProducts);
+        
         toast({
           title: "Error",
           description: "Failed to delete pending product",
           variant: "destructive"
         });
-        
-        // Always roll back UI state if any error occurs
-        setPendingProducts(previousProducts);
       }
     } catch (error) {
       console.error("Error in handleDeletePendingProduct:", error);
