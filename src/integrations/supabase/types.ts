@@ -164,6 +164,7 @@ export type Database = {
           description: string | null
           id: string
           imageurl: string | null
+          ingredients: string | null
           name: string
           owner_id: string | null
           pvapercentage: number | null
@@ -181,6 +182,7 @@ export type Database = {
           description?: string | null
           id?: string
           imageurl?: string | null
+          ingredients?: string | null
           name: string
           owner_id?: string | null
           pvapercentage?: number | null
@@ -198,6 +200,7 @@ export type Database = {
           description?: string | null
           id?: string
           imageurl?: string | null
+          ingredients?: string | null
           name?: string
           owner_id?: string | null
           pvapercentage?: number | null
