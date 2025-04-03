@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -65,7 +64,7 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
       description: item.description || '',
       pvaStatus: item.pvastatus || 'needs-verification',
       pvaPercentage: item.pvapercentage || null,
-      approved: item.approved || false,
+      approved: typeof item.approved === 'boolean' ? item.approved : true, // Default to true if not specified
       country: item.country || 'Global',
       websiteUrl: item.websiteurl || '',
       videoUrl: item.videourl || '',
@@ -75,7 +74,9 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
     }));
     
     console.log("Transformed Supabase data:", transformedData);
+    console.log("Checking approval status of items:", transformedData.map(item => `${item.name}: ${item.approved}`));
     console.log("Returning all Supabase data without filtering");
+    
     return transformedData;
   } catch (error) {
     console.error("Exception fetching products from Supabase:", error);
@@ -186,6 +187,9 @@ export const useProductsData = (selectedCountry: string) => {
   console.log("Is admin view:", isAdminView);
   console.log("Live data only:", liveDataOnly);
   console.log("All Supabase products (before filtering):", supabaseProducts);
+  
+  // Debug logs for approval status
+  console.log("Approval status check:", supabaseProducts.map(p => `${p.name}: ${p.approved}`));
   
   // Filter Supabase products based on admin view or public view
   const approvedSupabaseSubmissions = isAdminView 
