@@ -105,21 +105,35 @@ export const useSubmissions = () => {
       if (submission.productId && submission.productId.startsWith('prod-') === false) {
         try {
           console.log(`Updating product ${submission.productId} with new PVA percentage: ${percentage}`);
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('product_submissions')
             .update({ 
               pvapercentage: percentage,
-              pvastatus: 'verified'
+              pvastatus: 'verified',
+              updatedat: new Date().toISOString()
             })
             .eq('id', submission.productId);
             
           if (error) {
             console.error("Error updating product PVA percentage:", error);
+            toast({
+              title: "Database Update Error",
+              description: `Failed to update in database: ${error.message}`,
+              variant: "destructive"
+            });
+            throw error;
           } else {
-            console.log("Successfully updated product PVA percentage in database");
+            console.log("Successfully updated product PVA percentage in database, response:", data);
+            // Trigger a global refresh event
+            window.dispatchEvent(new Event('reload-products'));
           }
         } catch (dbError) {
           console.error("Failed to update product in database:", dbError);
+          toast({
+            title: "Database Error",
+            description: "Failed to update the product in the database, but local changes were saved.",
+            variant: "warning"
+          });
         }
       }
       

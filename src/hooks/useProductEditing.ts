@@ -104,7 +104,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       let supabaseSuccess = false;
       try {
         console.log("Updating product in Supabase...");
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('product_submissions')
           .update({
             brand: updatedData.brand,
@@ -124,10 +124,15 @@ export const useProductEditing = (onSuccess?: () => void) => {
           
         if (error) {
           console.error("Error updating product in Supabase:", error);
+          toast({
+            title: "Supabase Update Error",
+            description: `Failed to update in database: ${error.message}`,
+            variant: "destructive"
+          });
           throw error;
         }
         
-        console.log("Successfully updated product in Supabase");
+        console.log("Successfully updated product in Supabase, data response:", data);
         supabaseSuccess = true;
       }
       catch (error) {
@@ -139,9 +144,19 @@ export const useProductEditing = (onSuccess?: () => void) => {
       const success = updateProductSubmission(selectedProduct.id, updatedData);
       
       if (success || supabaseSuccess) {
+        // Set more specific toast message based on where the update succeeded
+        let successMessage = "";
+        if (supabaseSuccess) {
+          successMessage = success 
+            ? "Product updated successfully in both database and local storage." 
+            : "Product updated in database but local update failed.";
+        } else {
+          successMessage = "Product updated in local storage only. Database update failed.";
+        }
+        
         toast({
           title: "Product Updated",
-          description: `${updatedData.brand} ${updatedData.name} updated successfully`,
+          description: `${updatedData.brand} ${updatedData.name} - ${successMessage}`,
         });
 
         console.log("Product update successful, closing dialog");
@@ -153,6 +168,9 @@ export const useProductEditing = (onSuccess?: () => void) => {
           console.log("Calling success callback");
           onSuccess();
         }
+        
+        // Trigger a global product refresh event
+        window.dispatchEvent(new Event('reload-products'));
       } else {
         console.error("Both local and Supabase updates failed");
         toast({

@@ -48,25 +48,46 @@ export const usePvaForm = ({
           
         if (findError) {
           console.error("Error finding product in database:", findError);
+          toast({
+            title: "Database Query Error",
+            description: `Error finding product: ${findError.message}`,
+            variant: "destructive"
+          });
         } else if (products && products.length > 0) {
           const productId = products[0].id;
           console.log("Found product to update:", productId);
           
           // Update the product's PVA percentage
-          const { error: updateError } = await supabase
+          const { data, error: updateError } = await supabase
             .from('product_submissions')
             .update({
               pvapercentage: parseFloat(values.pvaPercentage),
-              updatedat: new Date().toISOString()
+              updatedat: new Date().toISOString(),
+              pvastatus: 'verified' // Mark as verified since an admin is setting it
             })
             .eq('id', productId);
             
           if (updateError) {
             console.error("Error updating product PVA percentage:", updateError);
+            toast({
+              title: "Database Update Error",
+              description: `Failed to update in database: ${updateError.message}`,
+              variant: "destructive"
+            });
             throw updateError;
           }
           
-          console.log("Successfully updated PVA percentage in database");
+          console.log("Successfully updated PVA percentage in database, response:", data);
+          
+          // Trigger a global refresh event
+          window.dispatchEvent(new Event('reload-products'));
+        } else {
+          console.warn("No matching product found in database for update");
+          toast({
+            title: "Product Not Found",
+            description: "Could not find the product in the database to update.",
+            variant: "warning"
+          });
         }
       }
       

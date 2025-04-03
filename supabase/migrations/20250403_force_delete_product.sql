@@ -7,7 +7,17 @@ SECURITY DEFINER
 AS $$
 DECLARE
   deleted_row RECORD;
+  row_exists BOOLEAN;
 BEGIN
+  -- First check if the row exists
+  SELECT EXISTS(SELECT 1 FROM public.product_submissions WHERE id = product_id) INTO row_exists;
+  
+  -- If row doesn't exist, log and return false
+  IF NOT row_exists THEN
+    RAISE NOTICE 'Product % does not exist', product_id;
+    RETURN FALSE;
+  END IF;
+
   -- Attempt to directly delete the row and return it
   DELETE FROM public.product_submissions
   WHERE id = product_id
