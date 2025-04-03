@@ -207,24 +207,31 @@ const AdminPage = () => {
         description: "Failed to load product submissions",
         variant: "destructive"
       });
+      throw error; // Make sure the error is propagated
     } finally {
       setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    loadProducts();
+    loadProducts().catch(error => {
+      console.error("Initial product load failed:", error);
+    });
     
     const handleReloadProducts = () => {
       console.log("Reloading products from event trigger");
-      loadProducts();
+      loadProducts().catch(error => {
+        console.error("Event-triggered product load failed:", error);
+      });
     };
     
     window.addEventListener('reload-products', handleReloadProducts);
     
     const intervalId = setInterval(() => {
       console.log("Periodically refreshing product data...");
-      loadProducts();
+      loadProducts().catch(error => {
+        console.error("Periodic product load failed:", error);
+      });
     }, 30000);
     
     return () => {
@@ -382,10 +389,8 @@ const AdminPage = () => {
       setLocalProducts(prev => prev.filter(p => p.id !== productId));
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
-      // Try the delete operation with a timeout
-      let deleteSuccess = false;
       try {
-        deleteSuccess = await hookDeleteProduct(productId);
+        const deleteSuccess = await hookDeleteProduct(productId);
         if (!deleteSuccess) {
           throw new Error("Product deletion failed");
         }
@@ -409,14 +414,13 @@ const AdminPage = () => {
             throw e; // Rethrow to trigger rollback
           });
           
-          // Load products with timeout
-          await Promise.race([
-            loadProducts(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Load products timeout")), 5000))
-          ]).catch(e => {
-            console.warn("loadProducts timed out or failed:", e);
-            throw e; // Rethrow to trigger rollback
-          });
+          // Direct load products call instead of dispatching event
+          try {
+            await loadProducts();
+          } catch (loadError) {
+            console.error("Failed to reload products after delete:", loadError);
+            throw loadError; // Rethrow to trigger rollback
+          }
         } catch (refreshError) {
           console.error("Error refreshing data after delete:", refreshError);
           throw refreshError; // Rethrow to trigger rollback
@@ -444,9 +448,11 @@ const AdminPage = () => {
       
       // Force a product reload to ensure UI is consistent
       try {
-        loadProducts().catch(e => console.error("Failed to reload products after error:", e));
+        await loadProducts();
       } catch (e) {
         console.error("Even emergency reload failed:", e);
+        // If emergency reload fails, reset loading state at minimum
+        setLoading(false);
       }
     } finally {
       // Always reset the deleting state to prevent UI lock
@@ -470,10 +476,8 @@ const AdminPage = () => {
       // Optimistic UI update
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
-      // Try the delete operation with a timeout
-      let deleteSuccess = false;
       try {
-        deleteSuccess = await hookDeleteProduct(productId);
+        const deleteSuccess = await hookDeleteProduct(productId);
         if (!deleteSuccess) {
           throw new Error("Product deletion failed");
         }
@@ -497,14 +501,13 @@ const AdminPage = () => {
             throw e; // Rethrow to trigger rollback
           });
           
-          // Load products with timeout
-          await Promise.race([
-            loadProducts(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Load products timeout")), 5000))
-          ]).catch(e => {
-            console.warn("loadProducts timed out or failed:", e);
-            throw e; // Rethrow to trigger rollback
-          });
+          // Direct load products call instead of dispatching event
+          try {
+            await loadProducts();
+          } catch (loadError) {
+            console.error("Failed to reload products after delete:", loadError);
+            throw loadError; // Rethrow to trigger rollback
+          }
         } catch (refreshError) {
           console.error("Error refreshing data after delete:", refreshError);
           throw refreshError; // Rethrow to trigger rollback
@@ -531,9 +534,11 @@ const AdminPage = () => {
       
       // Force a product reload to ensure UI is consistent
       try {
-        loadProducts().catch(e => console.error("Failed to reload products after error:", e));
+        await loadProducts();
       } catch (e) {
         console.error("Even emergency reload failed:", e);
+        // If emergency reload fails, reset loading state at minimum
+        setLoading(false);
       }
     } finally {
       // Always reset the deleting state to prevent UI lock
