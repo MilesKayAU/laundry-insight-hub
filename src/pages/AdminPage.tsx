@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Tabs, 
@@ -21,6 +20,8 @@ import { ProductSubmission, getProductSubmissions, deleteProductSubmission, PVA_
 import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
 import { useProductEditing } from '@/hooks/useProductEditing';
 import UrlBatchProcessor from '@/components/admin/UrlBatchProcessor';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 type ProductStatus = 'pending' | 'approved' | 'rejected';
 
@@ -59,6 +60,8 @@ const AdminPage = () => {
 
   const fetchSupabaseProducts = async () => {
     try {
+      console.log("Fetching products from Supabase...");
+      
       const { data, error } = await supabase
         .from('product_submissions')
         .select('*');
@@ -69,6 +72,7 @@ const AdminPage = () => {
       }
       
       console.log(`AdminPage: Fetched ${data?.length || 0} products from Supabase`);
+      console.log("Raw products data from Supabase:", data);
       
       return (data || []).map(item => ({
         id: item.id,
@@ -78,7 +82,7 @@ const AdminPage = () => {
         description: item.description || '',
         pvaStatus: item.pvastatus || 'needs-verification',
         pvaPercentage: item.pvapercentage || null,
-        approved: item.approved || false,
+        approved: typeof item.approved === 'boolean' ? item.approved : false,
         country: item.country || 'Global',
         websiteUrl: item.websiteurl || '',
         videoUrl: item.videourl || '',
@@ -163,6 +167,8 @@ const AdminPage = () => {
       setVerifications(brandVerifications);
       
       console.log(`AdminPage: ${pending.length} pending, ${approved.length} approved products`);
+      console.log("Approved products:", approved);
+      console.log("Pending products:", pending);
     } catch (error) {
       console.error("Error loading products:", error);
       toast({
@@ -187,8 +193,9 @@ const AdminPage = () => {
     
     // Add an interval to refresh products periodically
     const intervalId = setInterval(() => {
+      console.log("Periodically refreshing product data...");
       loadProducts();
-    }, 60000); // Refresh every minute
+    }, 30000); // Refresh every 30 seconds
     
     return () => {
       window.removeEventListener('reload-products', handleReloadProducts);
@@ -214,7 +221,7 @@ const AdminPage = () => {
     window.open(product.websiteUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const handleApproveProduct = (productId: string) => {
+  const handleApproveProduct = async (productId: string) => {
     try {
       console.log("Approving product with ID:", productId);
       const productToApprove = pendingProducts.find(p => p.id === productId);
@@ -223,17 +230,38 @@ const AdminPage = () => {
         return;
       }
       
+      // Update Supabase - Do this first to ensure database consistency
+      try {
+        console.log("Updating product in Supabase:", productId);
+        const { error } = await supabase
+          .from('product_submissions')
+          .update({ approved: true })
+          .eq('id', productId);
+        
+        if (error) {
+          console.error("Error updating product in Supabase:", error);
+          toast({
+            title: "Database Error",
+            description: "Failed to update product in database, but will continue with local update.",
+            variant: "warning"
+          });
+        } else {
+          console.log("Successfully updated product in Supabase:", productId);
+        }
+      } catch (dbError) {
+        console.error("Exception updating product in Supabase:", dbError);
+        toast({
+          title: "Database Connection Error",
+          description: "Failed to connect to database, but will continue with local update.",
+          variant: "warning"
+        });
+      }
+      
       const updatedProduct = {
         ...productToApprove, 
         approved: true,
         status: 'approved' as ProductStatus
       };
-      
-      // Update Supabase if product exists there
-      if (productToApprove.websiteUrl) {
-        updateSupabaseProductStatus(productId, true)
-          .catch(error => console.error("Error updating Supabase product:", error));
-      }
       
       // Update local state
       setApprovedProducts([...approvedProducts, updatedProduct]);
@@ -254,6 +282,11 @@ const AdminPage = () => {
         title: "Success",
         description: `Product "${productToApprove.brand} ${productToApprove.name}" approved successfully`,
       });
+      
+      // Force a refresh to ensure consistent view
+      setTimeout(() => {
+        loadProducts();
+      }, 500);
     } catch (error) {
       console.error("Error approving product:", error);
       toast({
@@ -263,29 +296,8 @@ const AdminPage = () => {
       });
     }
   };
-  
-  // New function to update product status in Supabase
-  const updateSupabaseProductStatus = async (productId: string, approved: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('product_submissions')
-        .update({ approved: approved })
-        .eq('id', productId);
-      
-      if (error) {
-        console.error("Error updating product in Supabase:", error);
-        throw error;
-      }
-      
-      console.log(`Product ${productId} status updated in Supabase to ${approved ? 'approved' : 'pending'}`);
-      return true;
-    } catch (error) {
-      console.error("Exception updating product in Supabase:", error);
-      throw error;
-    }
-  };
 
-  const handleRejectProduct = (productId: string) => {
+  const handleRejectProduct = async (productId: string) => {
     try {
       console.log("Rejecting and deleting product with ID:", productId);
       const productToDelete = pendingProducts.find(p => p.id === productId);
@@ -509,6 +521,16 @@ const AdminPage = () => {
   return (
     <div className="container mx-auto py-10 pb-32 px-4">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      
+      {loading && (
+        <Alert variant="default" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Loading product data</AlertTitle>
+          <AlertDescription>
+            Please wait while product data is being loaded...
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Tabs defaultValue="pending" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-8">

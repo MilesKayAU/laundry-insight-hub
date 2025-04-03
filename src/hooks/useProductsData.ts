@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -7,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { isLiveDataOnlyMode } from "@/utils/supabaseUtils";
-import { Spinner } from "@/components/ui/spinner";
 
 // Define custom typing for product submissions from Supabase
 type SupabaseProductSubmission = {
@@ -64,7 +64,7 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
       description: item.description || '',
       pvaStatus: item.pvastatus || 'needs-verification',
       pvaPercentage: item.pvapercentage || null,
-      approved: typeof item.approved === 'boolean' ? item.approved : true, // Default to true if not specified
+      approved: typeof item.approved === 'boolean' ? item.approved : false, // Default to false if not specified
       country: item.country || 'Global',
       websiteUrl: item.websiteurl || '',
       videoUrl: item.videourl || '',
@@ -75,7 +75,6 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
     
     console.log("Transformed Supabase data:", transformedData);
     console.log("Checking approval status of items:", transformedData.map(item => `${item.name}: ${item.approved}`));
-    console.log("Returning all Supabase data without filtering");
     
     return transformedData;
   } catch (error) {
@@ -117,8 +116,9 @@ export const useProductsData = (selectedCountry: string) => {
     handleRefreshData();
     
     const intervalId = setInterval(() => {
+      console.log("Periodic refresh of product data...");
       handleRefreshData();
-    }, 30000);
+    }, 30000); // Every 30 seconds
     
     return () => clearInterval(intervalId);
   }, []);
@@ -259,9 +259,42 @@ export const useProductsData = (selectedCountry: string) => {
   }
 
   // Update product function
-  const updateProduct = (productId: string, updatedData: Partial<ProductSubmission>) => {
+  const updateProduct = async (productId: string, updatedData: Partial<ProductSubmission>) => {
     try {
       console.log("Updating product:", productId, updatedData);
+      
+      // First update in Supabase if possible
+      try {
+        const { error } = await supabase
+          .from('product_submissions')
+          .update({
+            name: updatedData.name,
+            brand: updatedData.brand,
+            description: updatedData.description,
+            type: updatedData.type,
+            pvastatus: updatedData.pvaStatus,
+            pvapercentage: updatedData.pvaPercentage,
+            approved: updatedData.approved,
+            country: updatedData.country,
+            websiteurl: updatedData.websiteUrl,
+            updatedat: new Date().toISOString()
+          })
+          .eq('id', productId);
+        
+        if (error) {
+          console.error("Error updating product in Supabase:", error);
+          toast({
+            title: "Database Update Error",
+            description: "Failed to update product in database. Will continue with local update.",
+            variant: "warning"
+          });
+        } else {
+          console.log("Successfully updated product in Supabase");
+        }
+      } catch (dbError) {
+        console.error("Failed to update product in Supabase:", dbError);
+        // Continue with local update
+      }
       
       // Update product in the database/localStorage
       const success = updateProductSubmission(productId, updatedData);

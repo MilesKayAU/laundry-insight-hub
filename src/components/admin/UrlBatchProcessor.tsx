@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CheckCircle2, Loader2, Info } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,6 +16,7 @@ interface ScanResult {
   productId?: string;
   error?: string;
   requiresReview?: boolean;
+  containsPva?: boolean;
   productInfo?: {
     name: string;
     brand: string;
@@ -111,6 +112,8 @@ const UrlBatchProcessor: React.FC = () => {
         return;
       }
       
+      console.log("Raw response from edge function:", data);
+      
       if (!data.success) {
         console.error("Processing failed:", data.error);
         setProcessingError(data.error || "Failed to process URLs. Please try again.");
@@ -125,6 +128,21 @@ const UrlBatchProcessor: React.FC = () => {
       }
       
       console.log("Processing results:", data.results);
+      
+      // Check if results array exists and has the expected format
+      if (!Array.isArray(data.results)) {
+        console.error("Invalid results format:", data.results);
+        setProcessingError("The server returned an invalid response format. Please try again.");
+        toast({
+          title: "Processing Failed",
+          description: "The server returned an invalid response format. Please try again.",
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+        setProgress(0);
+        return;
+      }
+      
       setResults(data.results || []);
       
       // Manually reload products to ensure the pending tab is updated
@@ -136,11 +154,11 @@ const UrlBatchProcessor: React.FC = () => {
         setProgress(100);
         
         const successCount = data.results.filter((r: ScanResult) => r.success).length;
-        const reviewCount = data.results.filter((r: ScanResult) => r.success && r.requiresReview).length;
+        const reviewCount = data.results.filter((r: ScanResult) => r.success && (r.requiresReview || r.containsPva)).length;
         
         toast({
           title: "Processing Complete",
-          description: `Successfully processed ${successCount} out of ${urls.length} URLs. ${reviewCount} products need manual verification.`,
+          description: `Successfully processed ${successCount} out of ${urls.length} URLs. ${reviewCount} products added to the pending queue.`,
           variant: "default"
         });
         

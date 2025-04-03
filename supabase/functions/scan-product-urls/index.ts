@@ -83,7 +83,8 @@ serve(async (req) => {
         // create a product submission in the database
         if (scanResult.success && (scanResult.needsManualVerification || scanResult.containsPva)) {
           try {
-            const productId = await createProductSubmission(supabase, scanResult, userId);
+            // Always set initial approved state to false for all new products from URL processor
+            const productId = await createProductSubmission(supabase, scanResult, userId, false);
             if (productId) {
               // Add the product ID to the result
               scanResult.productId = productId;
@@ -244,7 +245,7 @@ async function scanUrl(url: string): Promise<UrlScanResult> {
 }
 
 // Create a product submission in the database
-async function createProductSubmission(supabase: any, scanResult: UrlScanResult, userId?: string) {
+async function createProductSubmission(supabase: any, scanResult: UrlScanResult, userId?: string, approved = false) {
   try {
     // Extract domain for brand name if not already available
     const brandName = scanResult.productInfo?.brand || new URL(scanResult.url).hostname.split('.')[0];
@@ -262,7 +263,7 @@ async function createProductSubmission(supabase: any, scanResult: UrlScanResult,
       description: `A product that may contain PVA. URL: ${scanResult.url}`,
       pvastatus: scanResult.containsPva ? 'contains' : 'needs-verification',
       pvapercentage: scanResult.extractedPvaPercentage || null,
-      approved: false, // Needs approval
+      approved: approved, // Initially not approved until admin reviews
       country: 'Global', // Default country
       websiteurl: scanResult.url,
       owner_id: userId || null,
