@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission, deleteProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { forceProductRefresh, invalidateProductCache } from '@/utils/supabaseUtils';
 
 // Define the ProductDetails interface to match the one in ProductDetailsDialog
 interface ProductDetails {
@@ -173,70 +172,90 @@ export const useProductEditing = (onSuccess?: () => void) => {
     }
   };
 
-  // Completely rewritten product deletion functionality with guaranteed error handling
+  // Updated product deletion functionality with timeouts and better error handling
   const handleDeleteProduct = async (productId: string): Promise<boolean> => {
     console.log("Starting deletion process for product ID:", productId);
     
     // Promise will resolve to true/false based on success
     return new Promise((resolve) => {
-      // Guaranteed completion with timeout
+      // Master timeout to ensure operation completes
       const masterTimeout = setTimeout(() => {
         console.error("Master timeout triggered - ensuring operation completes");
         resolve(false);
       }, 6000);
 
-      // Try to delete from both Supabase and local storage
+      // Separate Supabase deletion with its own timeout
+      const deleteFromSupabase = async (): Promise<boolean> => {
+        try {
+          // Race against a timeout for Supabase deletion
+          return await Promise.race([
+            (async () => {
+              const { error } = await supabase
+                .from('product_submissions')
+                .delete()
+                .eq('id', productId);
+                
+              if (error) {
+                console.error("Supabase delete failed:", error);
+                return false;
+              }
+              console.log("Successfully deleted product from Supabase");
+              return true;
+            })(),
+            new Promise<boolean>((_, reject) => 
+              setTimeout(() => reject(new Error("Supabase delete timeout")), 3000)
+            )
+          ]);
+        } catch (error) {
+          console.error("Supabase delete error or timeout:", error);
+          return false;
+        }
+      };
+
+      // Separate local storage deletion with its own error handling
+      const deleteFromLocalStorage = (): boolean => {
+        try {
+          // First try the standard delete function
+          const success = deleteProductSubmission(productId);
+          if (success) {
+            console.log("Local storage delete successful");
+            return true;
+          }
+          
+          // Fallback: manual removal from localStorage
+          try {
+            const productsString = localStorage.getItem('product_submissions') || '[]';
+            const allProducts = JSON.parse(productsString);
+            const filteredProducts = allProducts.filter((p: any) => p.id !== productId);
+            localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
+            console.log("Product deleted through fallback method");
+            return true;
+          } catch (err) {
+            console.error("Even fallback deletion failed:", err);
+            return false;
+          }
+        } catch (localError) {
+          console.error("Error deleting from localStorage:", localError);
+          return false;
+        }
+      };
+
+      // Execute both operations separately and handle their outcomes
       (async () => {
         try {
           // Track each operation separately
-          let supabaseSuccess = false;
-          let localSuccess = false;
+          const supabasePromise = deleteFromSupabase();
+          const localSuccess = deleteFromLocalStorage();
           
-          // Attempt to delete from Supabase first
-          try {
-            const { error } = await supabase
-              .from('product_submissions')
-              .delete()
-              .eq('id', productId);
-              
-            if (error) {
-              console.error("Supabase delete failed:", error);
-            } else {
-              console.log("Successfully deleted product from Supabase");
-              supabaseSuccess = true;
-            }
-          } catch (dbError) {
-            console.error("Exception during Supabase delete:", dbError);
-            // Continue to local delete even if Supabase fails
-          }
-
-          // Then delete from local storage
-          try {
-            localSuccess = deleteProductSubmission(productId);
-            console.log("Local storage delete result:", localSuccess ? "success" : "failed");
-            
-            if (!localSuccess) {
-              // Fallback: manual removal from localStorage
-              try {
-                const productsString = localStorage.getItem('product_submissions') || '[]';
-                const allProducts = JSON.parse(productsString);
-                const filteredProducts = allProducts.filter((p: any) => p.id !== productId);
-                localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
-                console.log("Product deleted through fallback method");
-                localSuccess = true;
-              } catch (err) {
-                console.error("Even fallback deletion failed:", err);
-              }
-            }
-          } catch (localError) {
-            console.error("Error deleting from localStorage:", localError);
-          }
-
+          // Wait for Supabase operation to complete
+          const supabaseSuccess = await supabasePromise;
+          
           // Overall success if either operation succeeded
           const success = supabaseSuccess || localSuccess;
-          clearTimeout(masterTimeout);
-          resolve(success);
           
+          clearTimeout(masterTimeout);
+          console.log(`Delete operation completed. Supabase success: ${supabaseSuccess}, Local success: ${localSuccess}`);
+          resolve(success);
         } catch (finalError) {
           console.error("Uncaught error in delete operation:", finalError);
           clearTimeout(masterTimeout);

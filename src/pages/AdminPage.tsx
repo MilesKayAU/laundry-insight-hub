@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Tabs, 
   TabsContent, 
@@ -45,6 +45,8 @@ const AdminPage = () => {
   const [messageResponse, setMessageResponse] = useState("");
   const [newKeyword, setNewKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("commonNames");
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const loadingRef = useRef(false);
   
   const { 
     isDialogOpen, 
@@ -57,8 +59,7 @@ const AdminPage = () => {
     handleDeleteProduct: hookDeleteProduct 
   } = useProductEditing(() => {
     console.log("Product edit success callback triggered");
-    loadProducts();
-    window.dispatchEvent(new Event('reload-products'));
+    safeLoadProducts();
   });
 
   const mockMessages: any[] = [];
@@ -110,7 +111,6 @@ const AdminPage = () => {
       }
       
       console.log(`AdminPage: Fetched ${data?.length || 0} products from Supabase`);
-      console.log("Raw products data from Supabase:", data);
       
       return (data || []).map(item => ({
         id: item.id,
@@ -154,8 +154,15 @@ const AdminPage = () => {
   };
 
   const loadProducts = useCallback(async () => {
+    if (loadingRef.current) {
+      console.log("Already loading products, skipping redundant call");
+      return;
+    }
+    
+    loadingRef.current = true;
+    setLoading(true);
+    
     try {
-      setLoading(true);
       console.log("AdminPage: Loading and deduplicating products...");
       
       const allLocalProducts = getProductSubmissions();
@@ -210,35 +217,56 @@ const AdminPage = () => {
       throw error; // Make sure the error is propagated
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [toast]);
 
+  const safeLoadProducts = useCallback(async () => {
+    try {
+      await Promise.race([
+        loadProducts(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("load timeout")), 5000))
+      ]);
+    } catch (error) {
+      console.error("loadProducts failed or timed out:", error);
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  }, [loadProducts]);
+
+  const debouncedLoadProducts = useCallback(() => {
+    console.log("Debounced load products triggered");
+    clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      safeLoadProducts();
+    }, 1000);
+  }, [safeLoadProducts]);
+
   useEffect(() => {
-    loadProducts().catch(error => {
-      console.error("Initial product load failed:", error);
-    });
+    safeLoadProducts();
     
     const handleReloadProducts = () => {
-      console.log("Reloading products from event trigger");
-      loadProducts().catch(error => {
-        console.error("Event-triggered product load failed:", error);
-      });
+      console.log("Reload products event received");
+      debouncedLoadProducts();
     };
     
     window.addEventListener('reload-products', handleReloadProducts);
     
     const intervalId = setInterval(() => {
-      console.log("Periodically refreshing product data...");
-      loadProducts().catch(error => {
-        console.error("Periodic product load failed:", error);
-      });
-    }, 30000);
+      console.log("Periodic refresh trigger");
+      if (!loadingRef.current) {
+        debouncedLoadProducts();
+      } else {
+        console.log("Skipping periodic refresh - already loading");
+      }
+    }, 60000);
     
     return () => {
       window.removeEventListener('reload-products', handleReloadProducts);
       clearInterval(intervalId);
+      clearTimeout(refreshTimeoutRef.current);
     };
-  }, [loadProducts]);
+  }, [safeLoadProducts, debouncedLoadProducts]);
 
   const handleVerifyProduct = (product: ProductSubmission) => {
     if (!product.websiteUrl) {
@@ -267,40 +295,55 @@ const AdminPage = () => {
         return;
       }
       
-      await updateSupabaseProductStatus(productId, true);
+      const previousPending = [...pendingProducts];
+      const previousApproved = [...approvedProducts];
       
-      const updatedProduct = {
-        ...productToApprove, 
-        approved: true,
-        status: 'approved' as ProductStatus
-      };
-      
-      setApprovedProducts([...approvedProducts, updatedProduct]);
       setPendingProducts(pendingProducts.filter(p => p.id !== productId));
       
-      const allProducts = getProductSubmissions();
-      const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
-        p.id === productId ? { 
-          ...p, 
-          approved: true 
-        } : p
-      );
-      localStorage.setItem('product_submissions', JSON.stringify(updatedAllProducts));
-      
-      console.log("Product approved successfully:", productId);
-      toast({
-        title: "Success",
-        description: `Product "${productToApprove.brand} ${productToApprove.name}" approved successfully`,
-      });
-      
-      setTimeout(() => {
-        loadProducts();
-      }, 500);
+      try {
+        await updateSupabaseProductStatus(productId, true);
+        
+        const updatedProduct = {
+          ...productToApprove, 
+          approved: true,
+          status: 'approved' as ProductStatus
+        };
+        
+        setApprovedProducts([...approvedProducts, updatedProduct]);
+        
+        const allProducts = getProductSubmissions();
+        const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
+          p.id === productId ? { 
+            ...p, 
+            approved: true 
+          } : p
+        );
+        localStorage.setItem('product_submissions', JSON.stringify(updatedAllProducts));
+        
+        console.log("Product approved successfully:", productId);
+        toast({
+          title: "Success",
+          description: `Product "${productToApprove.brand} ${productToApprove.name}" approved successfully`,
+        });
+        
+        await safeLoadProducts();
+      } catch (error) {
+        console.error("Error approving product:", error);
+        
+        setPendingProducts(previousPending);
+        setApprovedProducts(previousApproved);
+        
+        toast({
+          title: "Error",
+          description: "Failed to approve product, changes rolled back",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
-      console.error("Error approving product:", error);
+      console.error("Error in approve product flow:", error);
       toast({
         title: "Error",
-        description: "Failed to approve product",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
     }
@@ -315,43 +358,44 @@ const AdminPage = () => {
         return;
       }
       
-      if (productToDelete.websiteUrl) {
-        updateSupabaseProductStatus(productId, false)
-          .catch(error => console.error("Error updating Supabase product:", error));
-      }
+      const previousPending = [...pendingProducts];
       
       setPendingProducts(pendingProducts.filter(p => p.id !== productId));
       
-      const success = deleteProductSubmission(productId);
-      
-      if (success) {
-        console.log("Product rejected and deleted successfully from localStorage:", productId);
-        toast({
-          title: "Success",
-          description: `Product "${productToDelete.brand} ${productToDelete.name}" rejected and deleted successfully`,
-        });
-      } else {
-        console.error("Failed to delete product from localStorage:", productId);
-        
-        try {
-          const allProducts = getProductSubmissions();
-          const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
-          localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
-          console.log("Product deleted through fallback method");
-        } catch (fallbackError) {
-          console.error("Even fallback deletion failed:", fallbackError);
-          toast({
-            title: "Error",
-            description: "Failed to delete product properly, please try again",
-            variant: "destructive"
-          });
+      try {
+        if (productToDelete.websiteUrl) {
+          await updateSupabaseProductStatus(productId, false);
         }
+        
+        const success = deleteProductSubmission(productId);
+        
+        if (success) {
+          console.log("Product rejected and deleted successfully from localStorage:", productId);
+          toast({
+            title: "Success",
+            description: `Product "${productToDelete.brand} ${productToDelete.name}" rejected and deleted successfully`,
+          });
+          
+          await safeLoadProducts();
+        } else {
+          throw new Error("Failed to delete product from localStorage");
+        }
+      } catch (error) {
+        console.error("Error rejecting product:", error);
+        
+        setPendingProducts(previousPending);
+        
+        toast({
+          title: "Error",
+          description: "Failed to reject product, changes rolled back",
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      console.error("Error rejecting product:", error);
+      console.error("Error in reject product flow:", error);
       toast({
         title: "Error",
-        description: "Failed to reject product",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
     }
@@ -381,11 +425,9 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting approved product with ID:", productId);
       
-      // Store previous state for rollback
       const previousProducts = [...localProducts];
       const previousApproved = [...approvedProducts];
       
-      // Optimistic UI update
       setLocalProducts(prev => prev.filter(p => p.id !== productId));
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
@@ -401,31 +443,10 @@ const AdminPage = () => {
           description: "The product has been successfully deleted",
         });
         
-        // Refresh data without dispatching events
-        try {
-          invalidateProductCache();
-          
-          // Try refresh but with a timeout
-          await Promise.race([
-            forceProductRefresh(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Refresh timeout")), 5000))
-          ]);
-          
-          // Directly load products
-          try {
-            await loadProducts();
-          } catch (loadError) {
-            console.error("Failed to reload products after delete:", loadError);
-            throw loadError; // Rethrow to trigger rollback
-          }
-        } catch (refreshError) {
-          console.error("Error refreshing data after delete:", refreshError);
-          throw refreshError; // Rethrow to trigger rollback
-        }
+        await safeLoadProducts();
       } catch (error) {
-        console.error("Failed to delete product or refresh data:", productId, error);
+        console.error("Failed to delete product or reload data:", productId, error);
         
-        // Roll back UI state
         setLocalProducts(previousProducts);
         setApprovedProducts(previousApproved);
         
@@ -443,15 +464,14 @@ const AdminPage = () => {
         variant: "destructive"
       });
       
-      // Force a product reload to ensure UI is consistent
       try {
-        await loadProducts();
+        await safeLoadProducts();
       } catch (e) {
         console.error("Even emergency reload failed:", e);
         setLoading(false);
+        loadingRef.current = false;
       }
     } finally {
-      // Always reset the deleting state to prevent UI lock
       setDeletingProductId(null);
     }
   };
@@ -466,10 +486,8 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting pending product with ID:", productId);
       
-      // Store previous state for rollback
       const previousProducts = [...pendingProducts];
       
-      // Optimistic UI update
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
       try {
@@ -484,31 +502,10 @@ const AdminPage = () => {
           description: "The pending product has been successfully deleted",
         });
         
-        // Refresh data without dispatching events
-        try {
-          invalidateProductCache();
-          
-          // Try refresh but with a timeout
-          await Promise.race([
-            forceProductRefresh(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Refresh timeout")), 5000))
-          ]);
-          
-          // Directly load products
-          try {
-            await loadProducts();
-          } catch (loadError) {
-            console.error("Failed to reload products after delete:", loadError);
-            throw loadError; // Rethrow to trigger rollback
-          }
-        } catch (refreshError) {
-          console.error("Error refreshing data after delete:", refreshError);
-          throw refreshError; // Rethrow to trigger rollback
-        }
+        await safeLoadProducts();
       } catch (error) {
-        console.error("Failed to delete pending product or refresh data:", productId, error);
+        console.error("Failed to delete pending product or reload data:", productId, error);
         
-        // Roll back UI state
         setPendingProducts(previousProducts);
         
         toast({
@@ -525,15 +522,14 @@ const AdminPage = () => {
         variant: "destructive"
       });
       
-      // Force a product reload to ensure UI is consistent
       try {
-        await loadProducts();
+        await safeLoadProducts();
       } catch (e) {
         console.error("Even emergency reload failed:", e);
         setLoading(false);
+        loadingRef.current = false;
       }
     } finally {
-      // Always reset the deleting state to prevent UI lock
       setDeletingProductId(null);
     }
   };

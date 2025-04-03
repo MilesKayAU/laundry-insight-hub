@@ -14,7 +14,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, XCircle, Search, Edit, RefreshCw, Trash, Loader2 } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
-import { forceProductRefresh } from "@/utils/supabaseUtils";
 import { Spinner } from "@/components/ui/spinner";
 
 interface PendingProductsProps {
@@ -40,53 +39,44 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [localProducts, setLocalProducts] = useState<ProductSubmission[]>([]);
+  const refreshTimeoutRef = React.useRef<NodeJS.Timeout>();
   
   useEffect(() => {
     console.log(`PendingProducts: Received ${products.length} products from parent`);
     setLocalProducts(products);
   }, [products]);
   
-  useEffect(() => {
-    const handleInvalidateCache = () => {
-      console.log("PendingProducts: Cache invalidation event received");
-      handleForceRefresh();
-    };
-    
-    const handleReloadProducts = () => {
-      console.log("PendingProducts: reload-products event received");
-      handleForceRefresh();
-    };
-    
-    window.addEventListener('invalidate-product-cache', handleInvalidateCache);
-    window.addEventListener('reload-products', handleReloadProducts);
-    
-    // Auto-refresh with longer interval (15 seconds)
-    const refreshInterval = setInterval(() => {
-      console.log("PendingProducts: Auto-refresh triggered");
-      handleForceRefresh();
-    }, 15 * 1000);
-    
-    return () => {
-      window.removeEventListener('invalidate-product-cache', handleInvalidateCache);
-      window.removeEventListener('reload-products', handleReloadProducts);
-      clearInterval(refreshInterval);
-    };
-  }, []);
-  
+  // Enhanced force refresh with debouncing and timeout
   const handleForceRefresh = useCallback(() => {
+    if (refreshing) {
+      console.log("Refresh already in progress, ignoring");
+      return;
+    }
+    
     setRefreshing(true);
     console.log("PendingProducts: Force refresh triggered");
     
+    // Clear any pending timeouts
+    clearTimeout(refreshTimeoutRef.current);
+    
+    // Dispatch the reload event
     try {
-      forceProductRefresh();
+      window.dispatchEvent(new Event('reload-products'));
     } catch (e) {
-      console.error("Error during refresh:", e);
+      console.error("Error during refresh event dispatch:", e);
     }
     
-    // Always end refreshing state after a short delay, even if there was an error
-    setTimeout(() => {
+    // End refreshing state after a short delay
+    refreshTimeoutRef.current = setTimeout(() => {
       setRefreshing(false);
     }, 1000);
+  }, [refreshing]);
+  
+  useEffect(() => {
+    return () => {
+      // Clean up any pending timeouts when component unmounts
+      clearTimeout(refreshTimeoutRef.current);
+    };
   }, []);
   
   const handleEdit = (product: ProductSubmission) => {
@@ -137,6 +127,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     }
   };
   
+  // Modified handlers to avoid direct UI updates (parent component should handle that)
   const handleApprove = (productId: string) => {
     // Abort if delete is in progress
     if (deletingProductId !== null) {
@@ -148,18 +139,10 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       return;
     }
     
-    // Store previous state for rollback
-    const previousProducts = [...localProducts];
-    
-    // Optimistic UI update
-    setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
-    
     try {
       onApprove(productId);
     } catch (error) {
       console.error("Error during approval:", error);
-      // Rollback UI state on error
-      setLocalProducts(previousProducts);
       
       toast({
         title: "Approval Failed",
@@ -180,18 +163,10 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       return;
     }
     
-    // Store previous state for rollback
-    const previousProducts = [...localProducts];
-    
-    // Optimistic UI update
-    setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
-    
     try {
       onReject(productId);
     } catch (error) {
       console.error("Error during rejection:", error);
-      // Rollback UI state on error
-      setLocalProducts(previousProducts);
       
       toast({
         title: "Rejection Failed",
@@ -231,7 +206,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
           variant="outline" 
           size="sm" 
           onClick={handleForceRefresh}
-          disabled={refreshing}
+          disabled={refreshing || deletingProductId !== null}
           className="flex items-center gap-1"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -293,7 +268,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           onClick={() => handleEdit(product)}
                           title="Edit Product"
                           className={`text-blue-500 hover:text-blue-700 flex items-center gap-1 ${editingProductId === product.id ? 'bg-blue-100' : ''}`}
-                          disabled={deletingProductId === product.id}
+                          disabled={deletingProductId === product.id || deletingProductId !== null}
                         >
                           <Edit className="h-4 w-4" />
                           Edit
@@ -306,7 +281,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                             onClick={() => handleVerify(product)}
                             title="Verify Website"
                             className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                            disabled={deletingProductId === product.id}
+                            disabled={deletingProductId === product.id || deletingProductId !== null}
                           >
                             <Search className="h-4 w-4" />
                           </Button>
@@ -318,7 +293,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           onClick={() => handleApprove(product.id)}
                           className="text-green-500 hover:text-green-700 hover:bg-green-50"
                           title="Approve"
-                          disabled={deletingProductId === product.id}
+                          disabled={deletingProductId === product.id || deletingProductId !== null}
                         >
                           <CheckCircle className="h-4 w-4" />
                         </Button>
@@ -329,7 +304,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           onClick={() => handleReject(product.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
                           title="Reject"
-                          disabled={deletingProductId === product.id}
+                          disabled={deletingProductId === product.id || deletingProductId !== null}
                         >
                           <XCircle className="h-4 w-4" />
                         </Button>
@@ -340,7 +315,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           onClick={() => handleDelete(product.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
                           title="Delete"
-                          disabled={deletingProductId === product.id}
+                          disabled={deletingProductId !== null}
                         >
                           {deletingProductId === product.id ? (
                             <Spinner size="sm" />

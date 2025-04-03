@@ -164,39 +164,86 @@ export const getSupabaseClientInfo = () => {
  * Clear the React Query cache for a specific key
  * This will force a fresh fetch of data from the server
  */
-export const invalidateProductCache = () => {
+const debounce = (func: Function, wait: number) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      timeout = null;
+      func(...args);
+    };
+    
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(later, wait);
+  };
+};
+
+// Flag to track if an invalidate is already in progress
+let invalidationInProgress = false;
+
+export const invalidateProductCache = debounce(() => {
+  if (invalidationInProgress) {
+    console.log("Invalidation already in progress, skipping");
+    return;
+  }
+  
+  invalidationInProgress = true;
+  
   try {
     // Dispatch an event that React Query can listen to for invalidating cache
+    console.log("Dispatching product cache invalidation event");
     const event = new CustomEvent('invalidate-product-cache', {
       detail: { timestamp: Date.now() }
     });
     window.dispatchEvent(event);
-    console.log("Product cache invalidation event dispatched");
-    
-    // Also trigger a general product reload
-    window.dispatchEvent(new Event('reload-products'));
   } catch (e) {
     console.error("Error invalidating product cache:", e);
+  } finally {
+    // Release the lock after a short delay to prevent rapid consecutive calls
+    setTimeout(() => {
+      invalidationInProgress = false;
+    }, 1000);
   }
-};
+}, 500);
 
 /**
  * Force a complete refresh of all product data
  */
-export const forceProductRefresh = () => {
+let refreshInProgress = false;
+
+export const forceProductRefresh = async () => {
+  if (refreshInProgress) {
+    console.log("Refresh already in progress, skipping");
+    return Promise.resolve();
+  }
+  
+  refreshInProgress = true;
+  
   try {
-    // Invalidate the cache
-    invalidateProductCache();
-    
-    // Also clear any localStorage cache
-    localStorage.removeItem("product_submissions");
-    
     console.log("Product data cache cleared, forcing complete refresh");
     
-    // Trigger a product reload
-    window.dispatchEvent(new Event('reload-products'));
+    // We don't remove localStorage data anymore, as it can cause data loss
+    // Instead, we rely on the reload event to trigger a refresh
+    
+    // Dispatch the invalidate and reload events
+    const reloadEvent = new Event('reload-products');
+    window.dispatchEvent(reloadEvent);
+    
+    // Return a promise that resolves after a delay
+    // This gives time for listeners to process the event
+    return new Promise((resolve) => {
+      setTimeout(resolve, 1000);
+    });
   } catch (e) {
     console.error("Error forcing product refresh:", e);
+    return Promise.reject(e);
+  } finally {
+    // Release the lock after a delay to prevent rapid consecutive calls
+    setTimeout(() => {
+      refreshInProgress = false;
+    }, 2000);
   }
 };
 
