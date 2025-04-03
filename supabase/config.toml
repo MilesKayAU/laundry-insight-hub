@@ -4,7 +4,6 @@ project_id = "wtxqdzcihxjaiosmffvm"
 [api]
 # Port to use for the API URL.
 port = 54321
-schemes = ["http", "https"]
 
 [db]
 # Port to use for the local database URL.

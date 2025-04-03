@@ -318,7 +318,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       </CardHeader>
       <CardContent>
         {isAdmin ? (
-          <Alert variant="success" className="mb-4 bg-green-50 border-green-200">
+          <Alert variant="warning" className="mb-4 bg-green-50 border-green-200">
             <Check className="h-4 w-4 text-green-600" />
             <AlertTitle className="text-green-800">Admin Access</AlertTitle>
             <AlertDescription className="text-green-700">
