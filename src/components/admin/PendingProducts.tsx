@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
@@ -59,6 +60,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     window.addEventListener('invalidate-product-cache', handleInvalidateCache);
     window.addEventListener('reload-products', handleReloadProducts);
     
+    // Auto-refresh with longer interval (15 seconds)
     const refreshInterval = setInterval(() => {
       console.log("PendingProducts: Auto-refresh triggered");
       handleForceRefresh();
@@ -81,12 +83,19 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       console.error("Error during refresh:", e);
     }
     
+    // Always end refreshing state after a short delay, even if there was an error
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
   }, []);
   
   const handleEdit = (product: ProductSubmission) => {
+    // Abort if delete is in progress
+    if (deletingProductId !== null) {
+      console.log("Edit canceled: Delete operation in progress");
+      return;
+    }
+    
     console.log("Edit button clicked for product:", product);
     setEditingProductId(product.id);
     
@@ -101,6 +110,12 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
 
   const handleVerify = (product: ProductSubmission) => {
+    // Abort if delete is in progress
+    if (deletingProductId !== null) {
+      console.log("Verify canceled: Delete operation in progress");
+      return;
+    }
+    
     if (!product.websiteUrl) {
       toast({
         title: "No URL available",
@@ -123,6 +138,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
   
   const handleApprove = (productId: string) => {
+    // Abort if delete is in progress
     if (deletingProductId !== null) {
       toast({
         title: "Action in Progress",
@@ -132,14 +148,17 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       return;
     }
     
+    // Store previous state for rollback
     const previousProducts = [...localProducts];
     
+    // Optimistic UI update
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
     try {
       onApprove(productId);
     } catch (error) {
       console.error("Error during approval:", error);
+      // Rollback UI state on error
       setLocalProducts(previousProducts);
       
       toast({
@@ -148,13 +167,10 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
         variant: "destructive"
       });
     }
-    
-    setTimeout(() => {
-      handleForceRefresh();
-    }, 500);
   };
   
   const handleReject = (productId: string) => {
+    // Abort if delete is in progress
     if (deletingProductId !== null) {
       toast({
         title: "Action in Progress",
@@ -164,14 +180,17 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       return;
     }
     
+    // Store previous state for rollback
     const previousProducts = [...localProducts];
     
+    // Optimistic UI update
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
     try {
       onReject(productId);
     } catch (error) {
       console.error("Error during rejection:", error);
+      // Rollback UI state on error
       setLocalProducts(previousProducts);
       
       toast({
@@ -180,13 +199,10 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
         variant: "destructive"
       });
     }
-    
-    setTimeout(() => {
-      handleForceRefresh();
-    }, 500);
   };
 
   const handleDelete = (productId: string) => {
+    // Abort if delete is already in progress
     if (deletingProductId !== null) {
       toast({
         title: "Delete in Progress",
@@ -196,6 +212,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       return;
     }
     
+    // Call the parent's delete handler
     if (onDelete) {
       onDelete(productId);
     }
@@ -326,7 +343,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           disabled={deletingProductId === product.id}
                         >
                           {deletingProductId === product.id ? (
-                            <Spinner size="sm" color="danger" />
+                            <Spinner size="sm" />
                           ) : (
                             <Trash className="h-4 w-4" />
                           )}

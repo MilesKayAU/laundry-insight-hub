@@ -401,20 +401,17 @@ const AdminPage = () => {
           description: "The product has been successfully deleted",
         });
         
-        // Try refresh operations with timeouts
+        // Refresh data without dispatching events
         try {
           invalidateProductCache();
           
-          // Force product refresh with timeout
+          // Try refresh but with a timeout
           await Promise.race([
             forceProductRefresh(),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Refresh timeout")), 5000))
-          ]).catch(e => {
-            console.warn("forceProductRefresh timed out or failed:", e);
-            throw e; // Rethrow to trigger rollback
-          });
+          ]);
           
-          // Direct load products call instead of dispatching event
+          // Directly load products
           try {
             await loadProducts();
           } catch (loadError) {
@@ -426,15 +423,15 @@ const AdminPage = () => {
           throw refreshError; // Rethrow to trigger rollback
         }
       } catch (error) {
-        console.error("Failed to delete product:", productId, error);
+        console.error("Failed to delete product or refresh data:", productId, error);
         
-        // Always roll back UI state if any error occurs
+        // Roll back UI state
         setLocalProducts(previousProducts);
         setApprovedProducts(previousApproved);
         
         toast({
           title: "Error",
-          description: "Failed to delete product, we've restored the product in the list",
+          description: "Failed to delete product completely. The product has been restored in the list.",
           variant: "destructive"
         });
       }
@@ -451,7 +448,6 @@ const AdminPage = () => {
         await loadProducts();
       } catch (e) {
         console.error("Even emergency reload failed:", e);
-        // If emergency reload fails, reset loading state at minimum
         setLoading(false);
       }
     } finally {
@@ -488,20 +484,17 @@ const AdminPage = () => {
           description: "The pending product has been successfully deleted",
         });
         
-        // Try refresh operations with timeouts
+        // Refresh data without dispatching events
         try {
           invalidateProductCache();
           
-          // Force product refresh with timeout
+          // Try refresh but with a timeout
           await Promise.race([
             forceProductRefresh(),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Refresh timeout")), 5000))
-          ]).catch(e => {
-            console.warn("forceProductRefresh timed out or failed:", e);
-            throw e; // Rethrow to trigger rollback
-          });
+          ]);
           
-          // Direct load products call instead of dispatching event
+          // Directly load products
           try {
             await loadProducts();
           } catch (loadError) {
@@ -513,14 +506,14 @@ const AdminPage = () => {
           throw refreshError; // Rethrow to trigger rollback
         }
       } catch (error) {
-        console.error("Failed to delete pending product:", productId, error);
+        console.error("Failed to delete pending product or refresh data:", productId, error);
         
-        // Always roll back UI state if any error occurs
+        // Roll back UI state
         setPendingProducts(previousProducts);
         
         toast({
           title: "Error",
-          description: "Failed to delete pending product",
+          description: "Failed to delete pending product completely. The product has been restored in the list.",
           variant: "destructive"
         });
       }
@@ -528,7 +521,7 @@ const AdminPage = () => {
       console.error("Error in handleDeletePendingProduct:", error);
       toast({
         title: "Error",
-        description: "Failed to delete pending product completely",
+        description: "An unexpected error occurred while deleting the pending product",
         variant: "destructive"
       });
       
@@ -537,7 +530,6 @@ const AdminPage = () => {
         await loadProducts();
       } catch (e) {
         console.error("Even emergency reload failed:", e);
-        // If emergency reload fails, reset loading state at minimum
         setLoading(false);
       }
     } finally {
