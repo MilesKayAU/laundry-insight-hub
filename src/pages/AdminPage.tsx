@@ -22,6 +22,7 @@ import { useProductEditing } from '@/hooks/useProductEditing';
 import UrlBatchProcessor from '@/components/admin/UrlBatchProcessor';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { forceProductRefresh } from "@/utils/supabaseUtils";
 
 type ProductStatus = 'pending' | 'approved' | 'rejected';
 
@@ -36,6 +37,7 @@ const AdminPage = () => {
   const [approvedProducts, setApprovedProducts] = useState<ExtendedProductSubmission[]>([]);
   const [verifications, setVerifications] = useState<ExtendedProductSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -364,23 +366,28 @@ const AdminPage = () => {
 
   const handleDeleteProduct = async (productId: string) => {
     try {
+      setDeletingProductId(productId);
       console.log("Deleting approved product with ID:", productId);
+      
       const productToDelete = approvedProducts.find(p => p.id === productId);
       if (!productToDelete) {
         console.error("Product not found for deletion:", productId);
+        setDeletingProductId(null);
         return;
       }
+      
+      setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
       const deleteSuccess = await hookDeleteProduct(productId);
       
       if (deleteSuccess) {
-        setApprovedProducts(approvedProducts.filter(p => p.id !== productId));
-        
         console.log("Product deleted successfully:", productId);
         toast({
           title: "Product Deleted",
           description: "The product has been successfully deleted",
         });
+        
+        forceProductRefresh();
         
         setTimeout(() => {
           loadProducts();
@@ -388,6 +395,9 @@ const AdminPage = () => {
         }, 500);
       } else {
         console.error("Failed to delete product:", productId);
+        
+        loadProducts();
+        
         toast({
           title: "Error",
           description: "Failed to delete product",
@@ -401,28 +411,30 @@ const AdminPage = () => {
         description: "Failed to delete product",
         variant: "destructive"
       });
+      
+      loadProducts();
+    } finally {
+      setDeletingProductId(null);
     }
   };
 
   const handleDeletePendingProduct = async (productId: string) => {
     try {
+      setDeletingProductId(productId);
       console.log("Deleting pending product with ID:", productId);
-      const productToDelete = pendingProducts.find(p => p.id === productId);
-      if (!productToDelete) {
-        console.error("Product not found for deletion:", productId);
-        return;
-      }
+      
+      setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
       const deleteSuccess = await hookDeleteProduct(productId);
       
       if (deleteSuccess) {
-        setPendingProducts(pendingProducts.filter(p => p.id !== productId));
-        
         console.log("Pending product deleted successfully:", productId);
         toast({
           title: "Product Deleted",
           description: "The pending product has been successfully deleted",
         });
+        
+        forceProductRefresh();
         
         setTimeout(() => {
           loadProducts();
@@ -430,6 +442,9 @@ const AdminPage = () => {
         }, 500);
       } else {
         console.error("Failed to delete pending product:", productId);
+        
+        loadProducts();
+        
         toast({
           title: "Error",
           description: "Failed to delete pending product",
@@ -443,6 +458,10 @@ const AdminPage = () => {
         description: "Failed to delete pending product completely",
         variant: "destructive"
       });
+      
+      loadProducts();
+    } finally {
+      setDeletingProductId(null);
     }
   };
 
@@ -586,6 +605,7 @@ const AdminPage = () => {
             onReject={handleRejectProduct}
             onVerify={handleVerifyProduct}
             onDelete={handleDeletePendingProduct}
+            deletingProductId={deletingProductId}
           />
         </TabsContent>
         
@@ -601,6 +621,7 @@ const AdminPage = () => {
             showCleanupDialog={showCleanupDialog}
             setShowCleanupDialog={setShowCleanupDialog}
             onCleanDuplicates={handleCleanDuplicates}
+            deletingProductId={deletingProductId}
           />
         </TabsContent>
         

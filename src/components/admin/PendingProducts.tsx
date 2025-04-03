@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
@@ -10,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Search, Edit, RefreshCw, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, Search, Edit, RefreshCw, Trash2, Loader2 } from "lucide-react";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
 import { forceProductRefresh } from "@/utils/supabaseUtils";
@@ -22,6 +23,7 @@ interface PendingProductsProps {
   onReject: (productId: string) => void;
   onVerify?: (product: ProductSubmission) => void;
   onDelete?: (productId: string) => void;
+  deletingProductId?: string | null;
 }
 
 const PendingProducts: React.FC<PendingProductsProps> = ({ 
@@ -30,7 +32,8 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   onApprove, 
   onReject,
   onVerify,
-  onDelete
+  onDelete,
+  deletingProductId
 }) => {
   const { toast } = useToast();
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -121,8 +124,11 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   
   const handleApprove = (productId: string) => {
     onApprove(productId);
+    
+    // Update local state immediately for better UX
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
+    // Schedule a refresh to sync with backend
     setTimeout(() => {
       handleForceRefresh();
     }, 500);
@@ -130,8 +136,11 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   
   const handleReject = (productId: string) => {
     onReject(productId);
+    
+    // Update local state immediately for better UX
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
+    // Schedule a refresh to sync with backend
     setTimeout(() => {
       handleForceRefresh();
     }, 500);
@@ -139,12 +148,11 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
 
   const handleDelete = (productId: string) => {
     if (onDelete) {
+      // Call the parent component's delete handler
       onDelete(productId);
-      setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
       
-      setTimeout(() => {
-        handleForceRefresh();
-      }, 500);
+      // No need to update local state here as it will be handled by the parent
+      // and passed down via props
     } else {
       toast({
         title: "Action unavailable",
@@ -191,7 +199,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
               </TableHeader>
               <TableBody>
                 {localProducts.map((product) => (
-                  <TableRow key={product.id}>
+                  <TableRow key={product.id} className={deletingProductId === product.id ? 'opacity-50' : ''}>
                     <TableCell className="text-[115%] font-medium">{product.brand}</TableCell>
                     <TableCell>{product.name}</TableCell>
                     <TableCell>{product.type || 'Detergent'}</TableCell>
@@ -229,6 +237,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           onClick={() => handleEdit(product)}
                           title="Edit Product"
                           className={`text-blue-500 hover:text-blue-700 flex items-center gap-1 ${editingProductId === product.id ? 'bg-blue-100' : ''}`}
+                          disabled={deletingProductId === product.id}
                         >
                           <Edit className="h-4 w-4" />
                           Edit
@@ -241,6 +250,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                             onClick={() => handleVerify(product)}
                             title="Verify Website"
                             className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                            disabled={deletingProductId === product.id}
                           >
                             <Search className="h-4 w-4" />
                           </Button>
@@ -252,6 +262,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           onClick={() => handleApprove(product.id)}
                           className="text-green-500 hover:text-green-700 hover:bg-green-50"
                           title="Approve"
+                          disabled={deletingProductId === product.id}
                         >
                           <CheckCircle className="h-4 w-4" />
                         </Button>
@@ -262,6 +273,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           onClick={() => handleReject(product.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
                           title="Reject"
+                          disabled={deletingProductId === product.id}
                         >
                           <XCircle className="h-4 w-4" />
                         </Button>
@@ -272,8 +284,13 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                           onClick={() => handleDelete(product.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
                           title="Delete"
+                          disabled={deletingProductId === product.id}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {deletingProductId === product.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>

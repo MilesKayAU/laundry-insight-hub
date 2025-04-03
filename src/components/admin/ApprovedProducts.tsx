@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Table, 
   TableBody, 
@@ -30,7 +29,7 @@ interface ApprovedProductsProps {
   showCleanupDialog: boolean;
   setShowCleanupDialog: (show: boolean) => void;
   onCleanDuplicates: () => void;
-  // Remove onMessageSelect as it's not needed here
+  deletingProductId?: string | null;
 }
 
 const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
@@ -43,7 +42,8 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
   onBulkUpload,
   showCleanupDialog,
   setShowCleanupDialog,
-  onCleanDuplicates
+  onCleanDuplicates,
+  deletingProductId
 }) => {
   const { toast } = useToast();
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -166,6 +166,12 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
     setVerificationUrl(null);
   };
   
+  const handleDelete = (productId: string) => {
+    if (onDelete && productId !== deletingProductId) {
+      onDelete(productId);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="space-y-1">
@@ -337,11 +343,15 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                             <Button 
                               variant="ghost" 
                               size="icon"
-                              onClick={() => onDelete(product.id)}
+                              onClick={() => handleDelete(product.id)}
                               className="text-red-500 hover:text-red-700 hover:bg-red-50"
                               title="Delete"
                             >
-                              <Trash className="h-4 w-4" />
+                              {deletingProductId === product.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </TableCell>
