@@ -8,6 +8,7 @@ import ProofDocumentation from './pva-percentage/ProofDocumentation';
 import { usePvaForm } from './pva-percentage/usePvaForm';
 import { useUrlVerification } from './pva-percentage/useUrlVerification';
 import { PvaPercentageFormProps } from './pva-percentage/types';
+import { Loader2 } from "lucide-react";
 
 const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({ 
   onSubmitSuccess,
@@ -15,7 +16,7 @@ const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({
   defaultProduct = "",
   isAdmin = false
 }) => {
-  const { form, proofTab, setProofTab, onSubmit } = usePvaForm({
+  const { form, proofTab, setProofTab, onSubmit, isSubmitting } = usePvaForm({
     defaultBrand,
     defaultProduct,
     onSubmitSuccess,
@@ -55,8 +56,15 @@ const PvaPercentageForm: React.FC<PvaPercentageFormProps> = ({
             
             <AdditionalNotesSection form={form} />
             
-            <Button type="submit" className="w-full">
-              {isAdmin ? "Update PVA Percentage" : "Submit for Review"}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isAdmin ? "Updating..." : "Submitting..."}
+                </>
+              ) : (
+                isAdmin ? "Update PVA Percentage" : "Submit for Review"
+              )}
             </Button>
           </form>
         </Form>

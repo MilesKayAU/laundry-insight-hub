@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "../communications/utils";
+import { supabase } from '@/integrations/supabase/client';
 
 export interface PvaSubmission {
   id: string;
@@ -78,6 +79,7 @@ export const useSubmissions = () => {
   const [submissions, setSubmissions] = useState<PvaSubmission[]>(generateSampleSubmissions());
   const [selectedSubmission, setSelectedSubmission] = useState<PvaSubmission | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // Save submissions to localStorage whenever they change
   useEffect(() => {
@@ -89,40 +91,86 @@ export const useSubmissions = () => {
     setDialogOpen(true);
   };
   
-  const handleApprove = (submission: PvaSubmission, percentage: number) => {
-    // Update the submission status
-    const updatedSubmissions = submissions.map(sub => 
-      sub.id === submission.id 
-        ? { ...sub, status: 'approved' as const, proposedPercentage: percentage } 
-        : sub
-    );
-    
-    // Save updated submissions
-    setSubmissions(updatedSubmissions);
-    
-    toast({
-      title: "Update Approved",
-      description: `Updated PVA percentage for ${submission.brandName} ${submission.productName} to ${percentage}%.`,
-      variant: "default"
-    });
+  const handleApprove = async (submission: PvaSubmission, percentage: number) => {
+    setIsProcessing(true);
+    try {
+      // Update the submission status
+      const updatedSubmissions = submissions.map(sub => 
+        sub.id === submission.id 
+          ? { ...sub, status: 'approved' as const, proposedPercentage: percentage } 
+          : sub
+      );
+      
+      // Update the product in Supabase if it exists
+      if (submission.productId && submission.productId.startsWith('prod-') === false) {
+        try {
+          console.log(`Updating product ${submission.productId} with new PVA percentage: ${percentage}`);
+          const { error } = await supabase
+            .from('product_submissions')
+            .update({ 
+              pvapercentage: percentage,
+              pvastatus: 'verified'
+            })
+            .eq('id', submission.productId);
+            
+          if (error) {
+            console.error("Error updating product PVA percentage:", error);
+          } else {
+            console.log("Successfully updated product PVA percentage in database");
+          }
+        } catch (dbError) {
+          console.error("Failed to update product in database:", dbError);
+        }
+      }
+      
+      // Save updated submissions
+      setSubmissions(updatedSubmissions);
+      
+      toast({
+        title: "Update Approved",
+        description: `Updated PVA percentage for ${submission.brandName} ${submission.productName} to ${percentage}%.`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Error approving submission:", error);
+      toast({
+        title: "Action Failed",
+        description: "There was a problem approving the PVA update.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   const handleReject = (submission: PvaSubmission) => {
-    // Update the submission status
-    const updatedSubmissions = submissions.map(sub => 
-      sub.id === submission.id 
-        ? { ...sub, status: 'rejected' as const } 
-        : sub
-    );
-    
-    // Save updated submissions
-    setSubmissions(updatedSubmissions);
-    
-    toast({
-      title: "Update Rejected",
-      description: `Rejected PVA percentage update for ${submission.brandName} ${submission.productName}.`,
-      variant: "destructive"
-    });
+    setIsProcessing(true);
+    try {
+      // Update the submission status
+      const updatedSubmissions = submissions.map(sub => 
+        sub.id === submission.id 
+          ? { ...sub, status: 'rejected' as const } 
+          : sub
+      );
+      
+      // Save updated submissions
+      setSubmissions(updatedSubmissions);
+      
+      toast({
+        title: "Update Rejected",
+        description: `Rejected PVA percentage update for ${submission.brandName} ${submission.productName}.`,
+        variant: "destructive"
+      });
+    } catch (error) {
+      console.error("Error rejecting submission:", error);
+      toast({
+        title: "Action Failed",
+        description: "There was a problem rejecting the PVA update.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const resetSubmissions = () => {
@@ -147,6 +195,7 @@ export const useSubmissions = () => {
     handleApprove,
     handleReject,
     resetSubmissions,
+    isProcessing,
     formatDate
   };
 };

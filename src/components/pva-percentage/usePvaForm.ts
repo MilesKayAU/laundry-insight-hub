@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { formSchema, PvaFormValues, PvaPercentageFormProps } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 export const usePvaForm = ({
   defaultBrand = "",
@@ -13,6 +14,7 @@ export const usePvaForm = ({
 }: PvaPercentageFormProps) => {
   const { toast } = useToast();
   const [proofTab, setProofTab] = useState<"url" | "sds">("url");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<PvaFormValues>({
     resolver: zodResolver(formSchema),
@@ -29,11 +31,48 @@ export const usePvaForm = ({
 
   const onSubmit = async (values: PvaFormValues) => {
     console.log("Form values:", values);
+    setIsSubmitting(true);
     
     try {
+      // For admin updates, attempt to update directly in Supabase first
+      if (isAdmin && defaultBrand && defaultProduct) {
+        console.log("Admin updating PVA percentage for:", defaultBrand, defaultProduct);
+        
+        // Try to find the product in Supabase
+        const { data: products, error: findError } = await supabase
+          .from('product_submissions')
+          .select('id')
+          .eq('brand', defaultBrand)
+          .eq('name', defaultProduct)
+          .limit(1);
+          
+        if (findError) {
+          console.error("Error finding product in database:", findError);
+        } else if (products && products.length > 0) {
+          const productId = products[0].id;
+          console.log("Found product to update:", productId);
+          
+          // Update the product's PVA percentage
+          const { error: updateError } = await supabase
+            .from('product_submissions')
+            .update({
+              pvapercentage: parseFloat(values.pvaPercentage),
+              updatedat: new Date().toISOString()
+            })
+            .eq('id', productId);
+            
+          if (updateError) {
+            console.error("Error updating product PVA percentage:", updateError);
+            throw updateError;
+          }
+          
+          console.log("Successfully updated PVA percentage in database");
+        }
+      }
+      
       // In a real implementation, this would send the data to the backend
       // For now, we'll simulate a successful submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const message = isAdmin 
         ? "The product PVA percentage has been updated."
@@ -57,6 +96,8 @@ export const usePvaForm = ({
         description: "There was an error submitting your data. Please try again later.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -64,6 +105,7 @@ export const usePvaForm = ({
     form,
     proofTab, 
     setProofTab,
-    onSubmit
+    onSubmit,
+    isSubmitting
   };
 };
