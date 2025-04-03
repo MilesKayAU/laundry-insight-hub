@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
@@ -178,10 +179,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
     let deleteSuccess = false;
     
     try {
-      // Step 1: Call the new force_delete_product RPC function
+      // Step 1: Call the force_delete_product RPC function with an explicit type assertion
       console.log("Calling force_delete_product RPC function for product:", productId);
       const { data: rpcResult, error: rpcError } = await supabase.rpc(
-        'force_delete_product', 
+        'force_delete_product' as any, // Use type assertion to bypass type checking
         { product_id: productId }
       );
       
