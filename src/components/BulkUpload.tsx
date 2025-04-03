@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Card, 
@@ -91,7 +90,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     trustLevel: UserTrustLevel.NEW
   });
 
-  // Check submission limits when component mounts
   useEffect(() => {
     const checkLimits = async () => {
       const limits = await checkUserSubmissionLimits(
@@ -187,15 +185,13 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         throw new Error("No valid data rows");
       }
       
-      // Apply selected countries to all products if specified
       if (selectedCountries.length > 0) {
         parsedData.forEach(item => {
           item.countries = selectedCountries;
         });
       }
       
-      // Check if user can submit this many products
-      if (!isAdmin && user?.id) {
+      if (user?.id) {
         const limits = await checkUserSubmissionLimits(
           user.id,
           isAdmin,
@@ -214,7 +210,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
           return;
         }
         
-        // If user can't upload all products, limit the number
         if (parsedData.length > limits.remainingAllowed) {
           toast({
             title: "Submission limit applied",
@@ -246,11 +241,9 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       }
       
       if (result.success.length > 0) {
-        // Update the pending submission count
         if (user?.id) {
           updatePendingSubmissionCount(user.id, result.success.length);
           
-          // Refresh limits after submission
           const newLimits = await checkUserSubmissionLimits(
             user.id,
             isAdmin,
@@ -303,7 +296,6 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     }
   };
   
-  // Get trust level message based on current status
   const getTrustLevelMessage = () => {
     switch (submissionLimits.trustLevel) {
       case UserTrustLevel.VERIFIED:

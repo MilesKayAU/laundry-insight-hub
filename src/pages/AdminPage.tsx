@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
@@ -19,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ProductSubmission, getProductSubmissions, deleteProductSubmission, PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
 import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
 import { useProductEditing } from '@/hooks/useProductEditing';
+import UrlBatchProcessor from '@/components/admin/UrlBatchProcessor';
 
 type ProductStatus = 'pending' | 'approved' | 'rejected';
 
@@ -459,6 +461,7 @@ const AdminPage = () => {
           <TabsTrigger value="communications">Communications</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="batchProcessor">Batch URL Processor</TabsTrigger>
         </TabsList>
         
         <TabsContent value="pending">
@@ -539,6 +542,10 @@ const AdminPage = () => {
             onResetDatabase={handleResetDatabase}
             getCategoryDisplayName={getCategoryDisplayName}
           />
+        </TabsContent>
+
+        <TabsContent value="batchProcessor">
+          <UrlBatchProcessor />
         </TabsContent>
       </Tabs>
       
