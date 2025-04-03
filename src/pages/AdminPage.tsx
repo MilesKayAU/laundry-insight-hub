@@ -52,7 +52,9 @@ const AdminPage = () => {
     handleDetailsChange, 
     handleSaveChanges 
   } = useProductEditing(() => {
+    console.log("Product edit success callback triggered");
     loadProducts();
+    window.dispatchEvent(new Event('reload-products'));
   });
 
   const mockMessages: any[] = [];

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -166,31 +165,39 @@ export const getSupabaseClientInfo = () => {
  * This will force a fresh fetch of data from the server
  */
 export const invalidateProductCache = () => {
-  // Dispatch an event that React Query can listen to for invalidating cache
-  const event = new CustomEvent('invalidate-product-cache', {
-    detail: { timestamp: Date.now() }
-  });
-  window.dispatchEvent(event);
-  console.log("Product cache invalidation event dispatched");
-  
-  // Also trigger a general product reload
-  window.dispatchEvent(new Event('reload-products'));
+  try {
+    // Dispatch an event that React Query can listen to for invalidating cache
+    const event = new CustomEvent('invalidate-product-cache', {
+      detail: { timestamp: Date.now() }
+    });
+    window.dispatchEvent(event);
+    console.log("Product cache invalidation event dispatched");
+    
+    // Also trigger a general product reload
+    window.dispatchEvent(new Event('reload-products'));
+  } catch (e) {
+    console.error("Error invalidating product cache:", e);
+  }
 };
 
 /**
  * Force a complete refresh of all product data
  */
 export const forceProductRefresh = () => {
-  // Invalidate the cache
-  invalidateProductCache();
-  
-  // Also clear any localStorage cache
-  localStorage.removeItem("product_submissions");
-  
-  console.log("Product data cache cleared, forcing complete refresh");
-  
-  // Trigger a product reload
-  window.dispatchEvent(new Event('reload-products'));
+  try {
+    // Invalidate the cache
+    invalidateProductCache();
+    
+    // Also clear any localStorage cache
+    localStorage.removeItem("product_submissions");
+    
+    console.log("Product data cache cleared, forcing complete refresh");
+    
+    // Trigger a product reload
+    window.dispatchEvent(new Event('reload-products'));
+  } catch (e) {
+    console.error("Error forcing product refresh:", e);
+  }
 };
 
 /**
@@ -408,4 +415,3 @@ export const updatePendingSubmissionCount = (userId?: string, count = 1): void =
     console.error("Error updating pending submission count:", e);
   }
 };
-

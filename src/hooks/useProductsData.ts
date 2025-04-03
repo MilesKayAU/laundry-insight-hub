@@ -1,11 +1,10 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { isLiveDataOnlyMode } from "@/utils/supabaseUtils";
 
@@ -91,13 +90,14 @@ export const useProductsData = (selectedCountry: string) => {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const liveDataOnly = isLiveDataOnlyMode();
+  const queryClient = useQueryClient();
 
   // Fetch product submissions from both local and Supabase
   const { data: supabaseProducts = [], isError, error, refetch } = useQuery({
     queryKey: ['supabaseProducts', refreshKey, isAuthenticated],
     queryFn: () => fetchProductsFromSupabase(isAuthenticated),
-    staleTime: 30 * 1000, // 30 seconds - reduced for more frequent refreshing
-    gcTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 15 * 1000, // 15 seconds - reduced for more frequent refreshing
+    gcTime: 1 * 60 * 1000, // 1 minute - reduced to clear cache more frequently
     retry: 2, // Try up to 3 times (initial + 2 retries)
     enabled: true, // Always fetch on mount
   });
@@ -114,17 +114,38 @@ export const useProductsData = (selectedCountry: string) => {
   }, [isError, error, toast]);
 
   useEffect(() => {
+    const handleInvalidateCache = () => {
+      console.log("useProductsData: Cache invalidation event received");
+      queryClient.invalidateQueries({ queryKey: ['supabaseProducts'] });
+      handleRefreshData();
+    };
+    
+    const handleReloadProducts = () => {
+      console.log("useProductsData: reload-products event received");
+      setRefreshKey(prev => prev + 1);
+      handleRefreshData();
+    };
+    
+    window.addEventListener('invalidate-product-cache', handleInvalidateCache);
+    window.addEventListener('reload-products', handleReloadProducts);
+    
+    // Initial load
     handleRefreshData();
     
-    const intervalId = setInterval(() => {
-      console.log("Periodic refresh of product data...");
+    // Auto-refresh on a timer - more frequent refresh
+    const refreshInterval = setInterval(() => {
+      console.log("useProductsData: Periodic refresh of product data...");
       handleRefreshData();
-    }, 15000); // Every 15 seconds - more frequent refresh
+    }, 10000); // Every 10 seconds
     
-    return () => clearInterval(intervalId);
+    return () => {
+      window.removeEventListener('invalidate-product-cache', handleInvalidateCache);
+      window.removeEventListener('reload-products', handleReloadProducts);
+      clearInterval(refreshInterval);
+    };
   }, []);
 
-  const handleRefreshData = async () => {
+  const handleRefreshData = useCallback(async () => {
     setLoading(true);
     
     try {
@@ -165,7 +186,6 @@ export const useProductsData = (selectedCountry: string) => {
         console.error("Error checking approved products:", e);
       }
       
-      setLoading(false);
       setRefreshKey(prev => prev + 1);
       
       if (!liveDataOnly) {
@@ -181,8 +201,10 @@ export const useProductsData = (selectedCountry: string) => {
         description: "There was an error refreshing the product database.",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [liveDataOnly, refetch, toast]);
 
   // Determine which products to show based on authentication, admin view, and filters
   const isAdminView = isAuthenticated && window.location.pathname.includes('/admin');
@@ -286,32 +308,31 @@ export const useProductsData = (selectedCountry: string) => {
             approved: updatedData.approved,
             country: updatedData.country,
             websiteurl: updatedData.websiteUrl,
+            videourl: updatedData.videoUrl,
+            imageurl: updatedData.imageUrl,
             updatedat: new Date().toISOString()
           })
           .eq('id', productId);
         
         if (error) {
           console.error("Error updating product in Supabase:", error);
-          toast({
-            title: "Database Update Error",
-            description: "Failed to update product in database. Will continue with local update.",
-            variant: "warning"
-          });
-        } else {
-          console.log("Successfully updated product in Supabase");
-          
-          // Force a refetch to ensure we have the latest data
-          refetch();
-          
-          // Also trigger a global refresh
-          window.dispatchEvent(new Event('reload-products'));
+          throw error;
         }
+        
+        console.log("Successfully updated product in Supabase");
+        
+        // Force a refetch to ensure we have the latest data
+        queryClient.invalidateQueries({ queryKey: ['supabaseProducts'] });
+        refetch();
+        
+        // Also trigger a global refresh
+        window.dispatchEvent(new Event('reload-products'));
       } catch (dbError) {
         console.error("Failed to update product in Supabase:", dbError);
         // Continue with local update
       }
       
-      // Update product in the database/localStorage
+      // Update product in localStorage
       const success = updateProductSubmission(productId, updatedData);
       
       if (success) {
@@ -330,6 +351,7 @@ export const useProductsData = (selectedCountry: string) => {
         
         // Force data refresh
         setRefreshKey(prev => prev + 1);
+        handleRefreshData();
         
         return true;
       } else {

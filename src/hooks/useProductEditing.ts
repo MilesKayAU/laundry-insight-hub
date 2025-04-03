@@ -4,7 +4,7 @@ import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor'
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeCountry } from '@/utils/countryUtils';
-import { invalidateProductCache } from '@/utils/supabaseUtils';
+import { forceProductRefresh, invalidateProductCache } from '@/utils/supabaseUtils';
 
 // Define the ProductDetails interface to match the one in ProductDetailsDialog
 interface ProductDetails {
@@ -131,8 +131,8 @@ export const useProductEditing = (onSuccess?: () => void) => {
         console.log("Successfully updated product in Supabase");
         supabaseSuccess = true;
         
-        // Force immediate invalidation of caches
-        invalidateProductCache();
+        // Force immediate refresh of data from Supabase
+        forceProductRefresh();
       }
       catch (error) {
         console.error("Failed to update product in Supabase:", error);
@@ -165,31 +165,20 @@ export const useProductEditing = (onSuccess?: () => void) => {
         console.log("Dispatching reload-products event");
         window.dispatchEvent(new Event('reload-products'));
         
+        // Force product data refresh to update UI immediately
+        forceProductRefresh();
+        
         setTimeout(() => {
           console.log("Dispatching delayed reload-products event (500ms)");
           window.dispatchEvent(new Event('reload-products'));
-          
-          // Try to trigger an invalidation event as well
-          try {
-            const event = new CustomEvent('invalidate-product-cache', {
-              detail: { timestamp: Date.now() }
-            });
-            window.dispatchEvent(event);
-          } catch (e) {
-            console.error("Error dispatching custom event:", e);
-          }
+          forceProductRefresh();
         }, 500);
         
         setTimeout(() => {
           console.log("Dispatching delayed reload-products event (1500ms)");
           window.dispatchEvent(new Event('reload-products'));
+          forceProductRefresh();
         }, 1500);
-
-        // Final attempt after a longer delay in case of slow UI updates
-        setTimeout(() => {
-          console.log("Final reload-products dispatch (3000ms)");
-          window.dispatchEvent(new Event('reload-products'));
-        }, 3000);
       } else {
         console.error("Both local and Supabase updates failed");
         toast({

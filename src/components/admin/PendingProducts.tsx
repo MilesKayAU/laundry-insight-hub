@@ -49,20 +49,23 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       handleForceRefresh();
     };
     
-    window.addEventListener('invalidate-product-cache', handleInvalidateCache);
-    window.addEventListener('reload-products', () => {
+    const handleReloadProducts = () => {
       console.log("PendingProducts: reload-products event received");
-    });
+      handleForceRefresh();
+    };
     
-    // Auto-refresh on a timer
+    window.addEventListener('invalidate-product-cache', handleInvalidateCache);
+    window.addEventListener('reload-products', handleReloadProducts);
+    
+    // Auto-refresh on a timer - every 30 seconds for more frequent updates
     const refreshInterval = setInterval(() => {
       console.log("PendingProducts: Auto-refresh triggered");
       handleForceRefresh();
-    }, 60 * 1000); // Every 60 seconds
+    }, 30 * 1000);
     
     return () => {
       window.removeEventListener('invalidate-product-cache', handleInvalidateCache);
-      window.removeEventListener('reload-products', () => {});
+      window.removeEventListener('reload-products', handleReloadProducts);
       clearInterval(refreshInterval);
     };
   }, []);
@@ -73,7 +76,6 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     
     try {
       forceProductRefresh();
-      window.dispatchEvent(new Event('reload-products'));
     } catch (e) {
       console.error("Error during refresh:", e);
     }
@@ -123,11 +125,21 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   const handleApprove = (productId: string) => {
     onApprove(productId);
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+    
+    // Force a refresh to ensure UI consistency
+    setTimeout(() => {
+      handleForceRefresh();
+    }, 500);
   };
   
   const handleReject = (productId: string) => {
     onReject(productId);
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+    
+    // Force a refresh to ensure UI consistency
+    setTimeout(() => {
+      handleForceRefresh();
+    }, 500);
   };
   
   return (
