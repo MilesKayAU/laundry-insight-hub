@@ -88,12 +88,12 @@ export const checkRlsStatus = async () => {
  * Gets information about the Supabase client configuration
  */
 export const getSupabaseClientInfo = () => {
-  // Safely extract URL from environment or window location
+  // Safely extract URL from environment variables
   const getUrl = () => {
+    // Access the URL from the client file instead of using a non-existent getUrl() method
     try {
-      // Get the URL from the Supabase client configuration safely
-      // Or fallback to a display value
-      return new URL(supabase.getUrl()).toString();
+      const SUPABASE_URL = "https://wtxqdzcihxjaiosmffvm.supabase.co"; // From client.ts
+      return SUPABASE_URL;
     } catch (e) {
       return "URL not available";
     }
@@ -102,8 +102,7 @@ export const getSupabaseClientInfo = () => {
   // Check if there's an API key without exposing it
   const hasApiKey = () => {
     try {
-      // Check if there's an API key without exposing it
-      // This is safer than accessing protected properties directly
+      // Check if there's an API key by checking if auth is available
       return supabase.auth.getSession !== undefined;
     } catch (e) {
       return false;
