@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -34,7 +35,7 @@ const fetchProductsFromSupabase = async () => {
     const { data, error } = await supabase
       .from('product_submissions')
       .select('*')
-      .eq('approved', true) as { data: SupabaseProductSubmission[] | null; error: any };
+      .eq('approved', true);
     
     if (error) {
       console.error("Error fetching products from Supabase:", error);
@@ -65,7 +66,7 @@ const fetchProductsFromSupabase = async () => {
     }));
     
     console.log("Transformed Supabase data:", transformedData);
-    return transformedData || [];
+    return transformedData;
   } catch (error) {
     console.error("Exception fetching products from Supabase:", error);
     return [];
@@ -80,7 +81,7 @@ export const useProductsData = (selectedCountry: string) => {
   const { isAuthenticated } = useAuth();
 
   // Fetch product submissions from both local and Supabase
-  const { data: supabaseProducts, refetch } = useQuery({
+  const { data: supabaseProducts = [], refetch } = useQuery({
     queryKey: ['supabaseProducts', refreshKey],
     queryFn: fetchProductsFromSupabase,
     staleTime: 1 * 60 * 1000, // 1 minute
@@ -136,7 +137,7 @@ export const useProductsData = (selectedCountry: string) => {
   console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
   
   // Get all approved submissions from Supabase - ensure we have data
-  const approvedSupabaseSubmissions = supabaseProducts || [];
+  const approvedSupabaseSubmissions = supabaseProducts;
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
   
   // Combine all products that are approved only

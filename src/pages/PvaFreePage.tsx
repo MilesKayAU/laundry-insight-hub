@@ -27,7 +27,8 @@ import { useQuery } from "@tanstack/react-query";
 
 const fetchPvaFreeProducts = async () => {
   try {
-    const { data: supabaseProducts, error } = await supabase
+    // Query products from Supabase
+    const { data, error } = await supabase
       .from('product_submissions')
       .select('*')
       .eq('approved', true)
@@ -38,9 +39,9 @@ const fetchPvaFreeProducts = async () => {
       return [];
     }
     
-    console.info(`PvaFreePage: Fetched ${supabaseProducts?.length || 0} PVA-free products from Supabase`);
+    console.info(`PvaFreePage: Fetched ${data?.length || 0} PVA-free products from Supabase`);
     
-    const transformedProducts = (supabaseProducts || []).map(item => ({
+    const transformedProducts = (data || []).map(item => ({
       id: item.id,
       name: item.name,
       brand: item.brand,
@@ -67,6 +68,7 @@ const fetchPvaFreeProducts = async () => {
     
     console.info(`PvaFreePage: Found ${localProducts.length} PVA-free submissions from local storage`);
     
+    // Return combined products
     return [...transformedProducts, ...localProducts];
   } catch (error) {
     console.error("Exception fetching PVA-free products:", error);
@@ -85,6 +87,12 @@ const PvaFreePage = () => {
     staleTime: 1 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
+
+  // Add debugging to see what products we're getting
+  useEffect(() => {
+    console.log("PVA Free Products loaded:", pvaFreeProducts.length);
+    console.log("Products data:", pvaFreeProducts);
+  }, [pvaFreeProducts]);
 
   const filteredProducts = pvaFreeProducts.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -191,6 +199,10 @@ const PvaFreePage = () => {
                     src={product.imageUrl} 
                     alt={product.name} 
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.warn(`Image failed to load for product: ${product.name}`);
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 </div>
               )}
