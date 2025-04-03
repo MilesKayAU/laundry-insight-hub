@@ -35,6 +35,7 @@ const AdminPage = () => {
   const { toast } = useToast();
   const [pendingProducts, setPendingProducts] = useState<ExtendedProductSubmission[]>([]);
   const [approvedProducts, setApprovedProducts] = useState<ExtendedProductSubmission[]>([]);
+  const [localProducts, setLocalProducts] = useState<ExtendedProductSubmission[]>([]);
   const [verifications, setVerifications] = useState<ExtendedProductSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
@@ -195,11 +196,10 @@ const AdminPage = () => {
       
       setPendingProducts(pending);
       setApprovedProducts(approved);
+      setLocalProducts(approved);
       setVerifications(brandVerifications);
       
       console.log(`AdminPage: ${pending.length} pending, ${approved.length} approved products`);
-      console.log("Approved products:", approved);
-      console.log("Pending products:", pending);
     } catch (error) {
       console.error("Error loading products:", error);
       toast({
@@ -374,17 +374,22 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting approved product with ID:", productId);
       
-      const productToDelete = approvedProducts.find(p => p.id === productId);
-      if (!productToDelete) {
-        console.error("Product not found for deletion:", productId);
-        setDeletingProductId(null);
-        return;
-      }
+      const previousProducts = [...localProducts];
       
-      const previousProducts = [...approvedProducts];
+      setLocalProducts(prev => prev.filter(p => p.id !== productId));
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
-      const deleteSuccess = await hookDeleteProduct(productId);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Delete operation timed out")), 10000); // 10 second timeout
+      });
+      
+      const deleteSuccess = await Promise.race([
+        hookDeleteProduct(productId),
+        timeoutPromise
+      ]).catch(error => {
+        console.error("Delete operation failed or timed out:", error);
+        return false;
+      });
       
       if (deleteSuccess) {
         console.log("Product deleted successfully:", productId);
@@ -393,13 +398,20 @@ const AdminPage = () => {
           description: "The product has been successfully deleted",
         });
         
-        setTimeout(() => {
+        try {
           invalidateProductCache(); 
-          setTimeout(() => {
-            forceProductRefresh();
-            loadProducts();
-          }, 300);
-        }, 300);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          forceProductRefresh();
+          await new Promise(resolve => setTimeout(resolve, 300));
+          await loadProducts();
+        } catch (refreshError) {
+          console.error("Error refreshing data after delete:", refreshError);
+          toast({
+            title: "Warning",
+            description: "Product was deleted, but the list may need refreshing",
+            variant: "warning"
+          });
+        }
       } else {
         console.error("Failed to delete product:", productId);
         toast({
@@ -408,17 +420,24 @@ const AdminPage = () => {
           variant: "destructive"
         });
         
-        setApprovedProducts(previousProducts);
+        setLocalProducts(previousProducts);
+        setApprovedProducts(prev => 
+          prev.filter(p => p.id !== productId).concat(
+            previousProducts.filter(p => p.id === productId)
+          )
+        );
       }
     } catch (error) {
-      console.error("Error deleting product:", error);
+      console.error("Error in handleDeleteProduct:", error);
       toast({
         title: "Error",
-        description: "Failed to delete product",
+        description: "An unexpected error occurred while deleting the product",
         variant: "destructive"
       });
+      
+      loadProducts().catch(e => console.error("Failed to reload products after error:", e));
     } finally {
-      setTimeout(() => setDeletingProductId(null), 200);
+      setDeletingProductId(null);
     }
   };
 
@@ -436,7 +455,17 @@ const AdminPage = () => {
       
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
-      const deleteSuccess = await hookDeleteProduct(productId);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Delete operation timed out")), 10000); // 10 second timeout
+      });
+      
+      const deleteSuccess = await Promise.race([
+        hookDeleteProduct(productId),
+        timeoutPromise
+      ]).catch(error => {
+        console.error("Delete operation failed or timed out:", error);
+        return false;
+      });
       
       if (deleteSuccess) {
         console.log("Pending product deleted successfully:", productId);
@@ -445,15 +474,20 @@ const AdminPage = () => {
           description: "The pending product has been successfully deleted",
         });
         
-        setTimeout(() => {
+        try {
           invalidateProductCache();
-          setTimeout(() => {
-            forceProductRefresh();
-            setTimeout(() => {
-              loadProducts();
-            }, 100);
-          }, 100);
-        }, 100);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          forceProductRefresh();
+          await new Promise(resolve => setTimeout(resolve, 300));
+          await loadProducts();
+        } catch (refreshError) {
+          console.error("Error refreshing data after delete:", refreshError);
+          toast({
+            title: "Warning",
+            description: "Product was deleted, but the list may need refreshing",
+            variant: "warning"
+          });
+        }
       } else {
         console.error("Failed to delete pending product:", productId);
         toast({
@@ -471,8 +505,10 @@ const AdminPage = () => {
         description: "Failed to delete pending product completely",
         variant: "destructive"
       });
+      
+      loadProducts().catch(e => console.error("Failed to reload products after error:", e));
     } finally {
-      setTimeout(() => setDeletingProductId(null), 200);
+      setDeletingProductId(null);
     }
   };
 
@@ -575,7 +611,7 @@ const AdminPage = () => {
     }
   };
 
-  const filteredApprovedProducts = approvedProducts.filter(product => 
+  const filteredApprovedProducts = localProducts.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
