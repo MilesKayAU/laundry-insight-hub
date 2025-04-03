@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -10,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, Trash, Search, Upload, Eraser, ChevronUp, ChevronDown, Globe, BarChart, ExternalLink, Check, X } from "lucide-react";
+import { Eye, Trash, Search, Upload, Eraser, ChevronUp, ChevronDown, Globe, BarChart, ExternalLink, Check, X, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { ProductSubmission } from "@/lib/textExtractor";
@@ -350,7 +351,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                               {deletingProductId === product.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <Trash2 className="h-4 w-4" />
+                                <Trash className="h-4 w-4" />
                               )}
                             </Button>
                           </div>
