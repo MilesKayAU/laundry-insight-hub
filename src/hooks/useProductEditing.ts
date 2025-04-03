@@ -131,7 +131,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
         supabaseSuccess = true;
         
         // Force immediate refresh of data from Supabase
-        forceProductRefresh();
+        invalidateProductCache();
       }
       catch (error) {
         console.error("Failed to update product in Supabase:", error);
@@ -186,13 +186,12 @@ export const useProductEditing = (onSuccess?: () => void) => {
     }
   };
 
-  // Add product deletion functionality
+  // Completely rewritten product deletion functionality
   const handleDeleteProduct = async (productId: string) => {
-    console.log("Deleting product with ID:", productId);
+    console.log("Starting deletion process for product ID:", productId);
     try {
-      setIsSaving(true);
-
       // First delete from Supabase to ensure database consistency
+      let supabaseSuccess = false;
       try {
         const { error } = await supabase
           .from('product_submissions')
@@ -201,33 +200,27 @@ export const useProductEditing = (onSuccess?: () => void) => {
 
         if (error) {
           console.error("Error deleting product from Supabase:", error);
-          toast({
-            title: "Database Warning",
-            description: "Database deletion issue, but continuing with local deletion.",
-            variant: "warning"
-          });
         } else {
           console.log(`Successfully deleted product ${productId} from Supabase`);
+          supabaseSuccess = true;
+          invalidateProductCache();
         }
       } catch (dbError) {
         console.error("Exception deleting product from Supabase:", dbError);
         // Continue with local deletion even if Supabase fails
       }
 
-      // Then delete from local storage - this should be fast
+      // Then delete from local storage
       const localSuccess = deleteProductSubmission(productId);
       
-      if (!localSuccess) {
-        console.warn("Local deletion may have failed, attempting alternate method");
-        try {
-          // Alternate method to ensure deletion from localStorage
-          const allProducts = JSON.parse(localStorage.getItem('product_submissions') || '[]');
-          const filteredProducts = allProducts.filter((p: any) => p.id !== productId);
-          localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
-          console.log("Product deleted through alternate method");
-        } catch (e) {
-          console.error("Failed alternate deletion method:", e);
-        }
+      if (!localSuccess && !supabaseSuccess) {
+        console.error("Both Supabase and local deletion failed");
+        toast({
+          title: "Delete Failed",
+          description: "Failed to delete product. Please try again.",
+          variant: "destructive"
+        });
+        return false;
       }
 
       console.log("Successfully deleted product:", productId);
@@ -236,13 +229,15 @@ export const useProductEditing = (onSuccess?: () => void) => {
         description: "Product was successfully deleted",
       });
 
-      // Force a single refresh with delay to prevent race conditions
+      // Trigger a single refresh after successful deletion
       if (typeof onSuccess === 'function') {
+        invalidateProductCache();
+        
+        // Add a small delay to prevent race conditions
         setTimeout(() => {
-          invalidateProductCache();
           forceProductRefresh();
           onSuccess();
-        }, 300);
+        }, 400);
       }
 
       return true;
@@ -254,8 +249,6 @@ export const useProductEditing = (onSuccess?: () => void) => {
         variant: "destructive"
       });
       return false;
-    } finally {
-      setIsSaving(false);
     }
   };
 

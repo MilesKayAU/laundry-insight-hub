@@ -11,7 +11,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, Trash, Search, Upload, Eraser, ChevronUp, ChevronDown, Globe, BarChart, ExternalLink, Check, X, Loader2 } from "lucide-react";
+import { 
+  Eye, 
+  Trash, 
+  Search, 
+  Upload, 
+  Eraser, 
+  ChevronUp, 
+  ChevronDown, 
+  Globe, 
+  BarChart, 
+  ExternalLink, 
+  Check, 
+  X, 
+  Loader2 
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { ProductSubmission } from "@/lib/textExtractor";
@@ -167,10 +181,19 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
     setVerificationUrl(null);
   };
   
+  // Improved delete handler to prevent UI freezing issues
   const handleDelete = (productId: string) => {
-    if (onDelete && productId !== deletingProductId) {
-      // Only allow deletion if there isn't already a delete in progress
+    // Only allow deletion if there isn't already a delete in progress
+    if (onDelete && deletingProductId === null) {
+      // Call the parent's delete handler
       onDelete(productId);
+    } else if (deletingProductId !== null) {
+      // Let the user know a deletion is already in progress
+      toast({
+        title: "Delete in Progress",
+        description: "Please wait for the current delete operation to complete.",
+        variant: "warning"
+      });
     }
   };
 
@@ -310,7 +333,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                               variant="ghost" 
                               size="icon"
                               onClick={() => onViewDetails(product)}
-                              disabled={deletingProductId === product.id}
+                              disabled={deletingProductId !== null}
                               title="Edit Details"
                               className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                             >
@@ -322,7 +345,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                                   variant="ghost" 
                                   size="icon"
                                   onClick={() => handleVerifyProduct(product)}
-                                  disabled={verifyingProductId === product.id || deletingProductId === product.id}
+                                  disabled={verifyingProductId === product.id || deletingProductId !== null}
                                   title="Verify Product URL"
                                   className="text-green-500 hover:text-green-700 hover:bg-green-50"
                                 >
@@ -336,7 +359,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                                     setManualVerificationProduct(product);
                                     setShowManualVerificationDialog(true);
                                   }}
-                                  disabled={deletingProductId === product.id}
+                                  disabled={deletingProductId !== null}
                                   title="Manual Verification"
                                   className="text-orange-500 hover:text-orange-700 hover:bg-orange-50"
                                 >

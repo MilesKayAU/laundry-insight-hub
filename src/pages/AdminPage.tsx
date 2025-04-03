@@ -22,7 +22,7 @@ import { useProductEditing } from '@/hooks/useProductEditing';
 import UrlBatchProcessor from '@/components/admin/UrlBatchProcessor';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { forceProductRefresh } from "@/utils/supabaseUtils";
+import { forceProductRefresh, invalidateProductCache } from "@/utils/supabaseUtils";
 
 type ProductStatus = 'pending' | 'approved' | 'rejected';
 
@@ -365,6 +365,11 @@ const AdminPage = () => {
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    if (deletingProductId !== null) {
+      console.log("Delete operation already in progress, ignoring request");
+      return; // Prevent multiple simultaneous deletions
+    }
+
     try {
       setDeletingProductId(productId);
       console.log("Deleting approved product with ID:", productId);
@@ -376,8 +381,10 @@ const AdminPage = () => {
         return;
       }
       
+      // Optimistic UI update - remove from local state immediately for better UX
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
+      // Perform actual deletion
       const deleteSuccess = await hookDeleteProduct(productId);
       
       if (deleteSuccess) {
@@ -387,22 +394,23 @@ const AdminPage = () => {
           description: "The product has been successfully deleted",
         });
         
-        forceProductRefresh();
-        
+        // Wait briefly for the database operations to complete
+        // then refresh the data with a single operation
         setTimeout(() => {
+          invalidateProductCache(); 
+          forceProductRefresh();
           loadProducts();
-          window.dispatchEvent(new Event('reload-products'));
         }, 500);
       } else {
         console.error("Failed to delete product:", productId);
-        
-        loadProducts();
-        
         toast({
           title: "Error",
           description: "Failed to delete product",
           variant: "destructive"
         });
+        
+        // Restore the product in the UI if deletion fails
+        loadProducts();
       }
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -412,17 +420,25 @@ const AdminPage = () => {
         variant: "destructive"
       });
       
+      // Ensure UI is refreshed if error occurs
       loadProducts();
     } finally {
-      setDeletingProductId(null);
+      // Always ensure deletingProductId is reset, even if errors occur
+      setTimeout(() => setDeletingProductId(null), 200);
     }
   };
 
   const handleDeletePendingProduct = async (productId: string) => {
+    if (deletingProductId !== null) {
+      console.log("Delete operation already in progress, ignoring request");
+      return; // Prevent multiple simultaneous deletions
+    }
+    
     try {
       setDeletingProductId(productId);
       console.log("Deleting pending product with ID:", productId);
       
+      // Optimistic UI update
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
       const deleteSuccess = await hookDeleteProduct(productId);
@@ -434,22 +450,23 @@ const AdminPage = () => {
           description: "The pending product has been successfully deleted",
         });
         
-        forceProductRefresh();
-        
+        // Wait briefly for the database operations to complete
+        // then refresh the data with a single operation
         setTimeout(() => {
+          invalidateProductCache();
+          forceProductRefresh();
           loadProducts();
-          window.dispatchEvent(new Event('reload-products'));
         }, 500);
       } else {
         console.error("Failed to delete pending product:", productId);
-        
-        loadProducts();
-        
         toast({
           title: "Error",
           description: "Failed to delete pending product",
           variant: "destructive"
         });
+        
+        // Restore UI state if deletion fails
+        loadProducts();
       }
     } catch (error) {
       console.error("Error in handleDeletePendingProduct:", error);
@@ -459,9 +476,11 @@ const AdminPage = () => {
         variant: "destructive"
       });
       
+      // Ensure UI is refreshed if error occurs
       loadProducts();
     } finally {
-      setDeletingProductId(null);
+      // Always ensure deletingProductId is reset, even if errors occur
+      setTimeout(() => setDeletingProductId(null), 200);
     }
   };
 
