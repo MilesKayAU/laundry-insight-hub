@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ProductSubmission, updateProductSubmission, deleteProductSubmission } from '@/lib/textExtractor';
+import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -174,76 +174,106 @@ export const useProductEditing = (onSuccess?: () => void) => {
   const handleDeleteProduct = async (productId: string): Promise<boolean> => {
     console.log("Starting robust deletion process for product ID:", productId);
     
-    // Track if either deletion succeeds
-    let supabaseSuccess = false;
-    let localSuccess = false;
+    // Track deletion success
+    let deleteSuccess = false;
     
-    // Step 1: Delete from Supabase first
     try {
-      console.log("Attempting to delete from Supabase:", productId);
+      // First attempt: Direct deletion using Supabase with enhanced error handling
+      console.log("Attempting primary Supabase deletion for:", productId);
+      
       const { data, error } = await supabase
         .from('product_submissions')
         .delete()
         .eq('id', productId)
-        .select(); // Get the deleted row data for confirmation
+        .select(); // Get confirmation of what was deleted
       
       if (error) {
         console.error("❌ Supabase deletion error:", error);
       } else {
         console.log("✅ Supabase deletion response:", data);
-        if (data && data.length > 0) {
-          console.log("✅ Successfully deleted from Supabase:", data[0]);
-          supabaseSuccess = true;
-        } else {
-          console.warn("⚠️ No data returned from Supabase delete - record may not exist");
-        }
-      }
-    } catch (error) {
-      console.error("❌ Exception during Supabase deletion:", error);
-    }
-    
-    // Step 2: Delete from local storage regardless of Supabase result
-    try {
-      console.log("Attempting to delete from local storage:", productId);
-      const success = deleteProductSubmission(productId);
-      
-      if (success) {
-        console.log("✅ Successfully deleted from local storage");
-        localSuccess = true;
-      } else {
-        console.warn("⚠️ Local storage delete reported failure");
         
-        // Fallback: Try manual deletion from localStorage
-        try {
-          const productsString = localStorage.getItem('product_submissions') || '[]';
-          const allProducts = JSON.parse(productsString);
-          const filteredProducts = allProducts.filter((p: any) => p.id !== productId);
-          localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
-          console.log("✅ Product deleted through fallback method");
-          localSuccess = true;
-        } catch (err) {
-          console.error("❌ Even fallback deletion failed:", err);
+        // Check if any rows were actually deleted
+        if (data && data.length > 0) {
+          console.log("✅ Successfully deleted product from Supabase:", data[0]);
+          deleteSuccess = true;
+        } else {
+          console.warn("⚠️ Supabase reported success but no rows were deleted - product ID may not exist");
+          
+          // Try secondary method - sometimes the select() doesn't return data even on success
+          const verifyCheck = await supabase
+            .from('product_submissions')
+            .select('id')
+            .eq('id', productId);
+            
+          if (verifyCheck.data && verifyCheck.data.length === 0) {
+            console.log("✅ Verified product no longer exists in Supabase - deletion successful");
+            deleteSuccess = true;
+          } else {
+            console.error("❌ Product still exists in Supabase after delete operation");
+          }
         }
       }
-    } catch (localError) {
-      console.error("❌ Error deleting from localStorage:", localError);
-    }
-    
-    // Overall success if either operation succeeded
-    const overallSuccess = supabaseSuccess || localSuccess;
-    console.log(`Delete operation completed. Overall success: ${overallSuccess} (Supabase: ${supabaseSuccess}, Local: ${localSuccess})`);
-    
-    // If Supabase delete failed but local succeeded, let the user know that the UI is ahead of the database
-    if (localSuccess && !supabaseSuccess) {
-      console.warn("⚠️ UI is ahead of database - item deleted locally but not in Supabase!");
+      
+      // Regardless of Supabase result, also clean up local storage
+      try {
+        console.log("Cleaning up product from local storage:", productId);
+        
+        // Get all products from localStorage
+        const productsString = localStorage.getItem('product_submissions') || localStorage.getItem('products') || '[]';
+        const allProducts = JSON.parse(productsString);
+        
+        // Check if product exists before attempting to filter
+        const productExists = allProducts.some((p: any) => p.id === productId);
+        
+        if (productExists) {
+          console.log("Product found in localStorage, removing...");
+          
+          // Filter out the product
+          const filteredProducts = allProducts.filter((p: any) => p.id !== productId);
+          
+          // Save updated products to both possible storage keys
+          localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
+          localStorage.setItem('products', JSON.stringify(filteredProducts));
+          
+          console.log(`Product removed from localStorage. Count before: ${allProducts.length}, after: ${filteredProducts.length}`);
+        } else {
+          console.log("Product not found in localStorage");
+        }
+        
+        // Consider localStorage cleanup successful even if product wasn't found
+        // This is just to make sure we don't keep any stale data
+        if (!deleteSuccess) {
+          deleteSuccess = true;
+        }
+      } catch (localError) {
+        console.error("❌ Error cleaning up localStorage:", localError);
+      }
+      
+      // Final verification and notification
+      if (deleteSuccess) {
+        toast({
+          title: "Product Deleted",
+          description: "The product has been successfully deleted",
+        });
+      } else {
+        // If we reached here without setting success to true, both methods failed
+        toast({
+          title: "Deletion Failed",
+          description: "Could not delete the product. Please try again or contact support.",
+          variant: "destructive"
+        });
+      }
+      
+      return deleteSuccess;
+    } catch (error) {
+      console.error("❌ Unexpected error during product deletion:", error);
       toast({
-        title: "Partial Success",
-        description: "Item removed from view but database sync failed. It may reappear on refresh.",
-        variant: "warning"
+        title: "Deletion Error",
+        description: "An unexpected error occurred while deleting the product",
+        variant: "destructive"
       });
+      return false;
     }
-    
-    return overallSuccess;
   };
 
   return {

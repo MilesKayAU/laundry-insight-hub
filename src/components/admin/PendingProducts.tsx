@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
@@ -14,6 +15,7 @@ import { CheckCircle, XCircle, Search, Edit, RefreshCw, Trash, Loader2 } from "l
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
 import { Spinner } from "@/components/ui/spinner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface PendingProductsProps {
   products: ProductSubmission[];
@@ -39,6 +41,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [localProducts, setLocalProducts] = useState<ProductSubmission[]>([]);
   const refreshTimeoutRef = React.useRef<NodeJS.Timeout>();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   
   useEffect(() => {
     console.log(`PendingProducts: Received ${products.length} products from parent`);
@@ -165,7 +168,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     }
   };
 
-  const handleDelete = (productId: string) => {
+  const handleOpenDeleteConfirm = (productId: string) => {
     if (deletingProductId !== null) {
       toast({
         title: "Delete in Progress",
@@ -175,13 +178,18 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       return;
     }
     
-    if (window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
-      setLocalProducts(prev => prev.filter(p => p.id !== productId));
+    setConfirmDeleteId(productId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDeleteId && onDelete) {
+      // Perform optimistic UI update
+      setLocalProducts(prev => prev.filter(p => p.id !== confirmDeleteId));
       
-      if (onDelete) {
-        onDelete(productId);
-      }
+      // Call the actual delete function
+      onDelete(confirmDeleteId);
     }
+    setConfirmDeleteId(null);
   };
   
   return (
@@ -303,7 +311,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => handleDelete(product.id)}
+                          onClick={() => handleOpenDeleteConfirm(product.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
                           title="Delete"
                           disabled={deletingProductId !== null}
@@ -326,6 +334,24 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
             No pending submissions to review
           </div>
         )}
+
+        <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will permanently delete this product submission from both the local and cloud databases. 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
