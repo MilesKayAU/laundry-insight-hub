@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeCountry } from '@/utils/countryUtils';
 
 // Define the ProductDetails interface to match the one in ProductDetailsDialog
 interface ProductDetails {
@@ -59,7 +60,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       videoUrl: product.videoUrl || '',
       websiteUrl: product.websiteUrl || '',
       pvaPercentage: product.pvaPercentage !== null ? String(product.pvaPercentage) : '',
-      country: product.country || '',
+      country: product.country || 'Global',
       ingredients: product.ingredients || '',
       pvaStatus: product.pvaStatus || 'needs-verification',
       type: product.type || ''
@@ -68,6 +69,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
   };
 
   const handleDetailsChange = (details: Partial<ProductDetails>) => {
+    console.log("Updating product details:", details);
     setProductDetails(prev => ({ ...prev, ...details }));
   };
 
@@ -87,15 +89,21 @@ export const useProductEditing = (onSuccess?: () => void) => {
     
     try {
       // Prepare the data to update
+      const parseNumber = (value: string): number | null => {
+        if (!value || value.trim() === '') return null;
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? null : parsed;
+      };
+      
       const updateData: Partial<ProductSubmission> = {
-        brand: productDetails.brand,
-        name: productDetails.name,
+        brand: productDetails.brand.trim(),
+        name: productDetails.name.trim(),
         description: productDetails.description,
         imageUrl: productDetails.imageUrl,
         videoUrl: productDetails.videoUrl,
         websiteUrl: productDetails.websiteUrl,
-        pvaPercentage: productDetails.pvaPercentage ? Number(productDetails.pvaPercentage) : null,
-        country: productDetails.country,
+        pvaPercentage: parseNumber(productDetails.pvaPercentage),
+        country: normalizeCountry(productDetails.country),
         ingredients: productDetails.ingredients,
         pvaStatus: productDetails.pvaStatus as ProductSubmission['pvaStatus'],
         type: productDetails.type
@@ -119,6 +127,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
             websiteurl: updateData.websiteUrl,
             pvapercentage: updateData.pvaPercentage,
             country: updateData.country,
+            ingredients: updateData.ingredients,
             pvastatus: updateData.pvaStatus,
             type: updateData.type,
             updatedat: new Date().toISOString()

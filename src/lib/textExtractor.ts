@@ -1,3 +1,4 @@
+
 import { createHash } from "crypto";
 import Tesseract from 'tesseract.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -8,23 +9,44 @@ export const PVA_KEYWORDS_CATEGORIES = {
     "pva",
     "pvoh",
     "polyvinyl alcohol",
+    "polyvinylalcohol", // Without spaces
     "poly vinyl alcohol",
-    "poly(vinyl alcohol)"
+    "poly(vinyl alcohol)",
+    "pva/pvoh",
+    "polyvinyl alcohol film",
   ],
   chemicalSynonyms: [
     "ethenol homopolymer",
     "vinyl alcohol polymer",
     "polyethenol",
     "pvac",
-    "polyvinyl acetate"
+    "polyvinyl acetate",
+    "polyvinylacetate",
+    "ethenol, homopolymer", // IUPAC-style name
+    "water-soluble polymer", // Generic term often used to hide PVA
   ],
   inciTerms: [
     "alcohol, polyvinyl",
-    "polyvinyl alcohol, partially hydrolyzed"
+    "polyvinyl alcohol, partially hydrolyzed",
+    "modified polyvinyl alcohol",
+    "hydrolyzed pva",
+    "fully hydrolyzed pva",
+    "partially hydrolyzed pva"
+  ],
+  casNumbers: [
+    "25213-24-5", // Most common CAS for PVA
+    "9002-89-5"   // Alternative CAS for PVA
   ],
   additional: [
     "poval",
-    "vinnapas"
+    "vinnapas",
+    "mowiol",
+    "elvanol",
+    "water soluble film",
+    "pva film",
+    "pvoh film",
+    "pva coating",
+    "dissolvable film"
   ]
 };
 
@@ -34,6 +56,7 @@ export const getAllPvaPatterns = () => {
     ...PVA_KEYWORDS_CATEGORIES.commonNames,
     ...PVA_KEYWORDS_CATEGORIES.chemicalSynonyms,
     ...PVA_KEYWORDS_CATEGORIES.inciTerms,
+    ...PVA_KEYWORDS_CATEGORIES.casNumbers,
     ...PVA_KEYWORDS_CATEGORIES.additional
   ];
 };
@@ -210,17 +233,31 @@ export const analyzePvaContent = (ingredients: string): {
   const allPatterns = getAllPvaPatterns();
   const detectedTerms: string[] = [];
   
+  // More precise matching with word boundaries when possible
   for (const pattern of allPatterns) {
-    const regex = new RegExp(`\\b${pattern}\\b`, 'i');
+    const regex = new RegExp(`\\b${pattern.replace(/[()]/g, '\\$&')}\\b`, 'i');
     
     if (regex.test(ingredientsLower)) {
       detectedTerms.push(pattern);
     }
   }
   
+  // Also try less strict matching for patterns that might be part of longer words
+  // or have variant spellings
   for (const pattern of allPatterns) {
-    if (ingredientsLower.includes(pattern) && !detectedTerms.includes(pattern)) {
+    if (ingredientsLower.includes(pattern.toLowerCase()) && !detectedTerms.includes(pattern)) {
       detectedTerms.push(pattern);
+    }
+  }
+  
+  // Special case for CAS numbers which should be matched exactly
+  for (const cas of PVA_KEYWORDS_CATEGORIES.casNumbers) {
+    if (ingredientsLower.includes(cas) && !detectedTerms.includes(cas)) {
+      detectedTerms.push(cas);
+      // Also add the common name so we know what chemical this is
+      if (!detectedTerms.includes("POLYVINYL ALCOHOL")) {
+        detectedTerms.push("POLYVINYL ALCOHOL");
+      }
     }
   }
   

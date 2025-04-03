@@ -1,5 +1,5 @@
 
-import { getAllPvaPatterns } from './textExtractor';
+import { getAllPvaPatterns, PVA_KEYWORDS_CATEGORIES } from './textExtractor';
 import { useToast } from "@/hooks/use-toast";
 
 interface VerificationResult {
@@ -13,11 +13,24 @@ interface VerificationResult {
   needsManualVerification?: boolean;
 }
 
-// Additional PVA patterns for CAS numbers
-const PVA_CAS_NUMBERS = [
-  "25213-24-5", // Most common CAS for PVA
-  "9002-89-5",  // Alternative CAS for PVA
-];
+// Get all possible PVA patterns for detection
+const getAllPossiblePvaPatterns = () => {
+  const standardPatterns = getAllPvaPatterns();
+  
+  // Add more variant spellings and formats that might appear in URLs
+  const additionalPatterns = [
+    "polyvinyl-alcohol",
+    "polyvinyl_alcohol",
+    "poly-vinyl-alcohol",
+    "pva25",
+    "pva-25",
+    "25pva",
+    "pvoh25",
+    "25pvoh"
+  ];
+  
+  return [...standardPatterns, ...additionalPatterns];
+};
 
 export const verifyProductUrl = async (
   url: string
@@ -62,10 +75,8 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1500));
   
-  // Get standard PVA patterns from textExtractor
-  const standardPatterns = getAllPvaPatterns();
-  // Combine with CAS numbers
-  const allPatterns = [...standardPatterns, ...PVA_CAS_NUMBERS];
+  // Get all possible PVA patterns to check
+  const allPatterns = getAllPossiblePvaPatterns();
   
   // For testing purposes, we'll check PVA in certain URLs
   let containsPva = false;
@@ -74,10 +85,21 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
   // Check URL for PVA indicators
   const urlLower = url.toLowerCase();
   
+  // Thorough check for all patterns
   for (const pattern of allPatterns) {
-    if (urlLower.includes(pattern.toLowerCase())) {
+    const patternLower = pattern.toLowerCase();
+    
+    // Try different matching strategies
+    if (
+      urlLower.includes(patternLower) || 
+      urlLower.includes(patternLower.replace(/\s+/g, '-')) || 
+      urlLower.includes(patternLower.replace(/\s+/g, '_')) || 
+      urlLower.includes(patternLower.replace(/\s+/g, ''))
+    ) {
       containsPva = true;
-      detectedTerms.push(pattern);
+      if (!detectedTerms.includes(pattern)) {
+        detectedTerms.push(pattern);
+      }
     }
   }
   
@@ -93,6 +115,25 @@ const simulateUrlScan = async (url: string): Promise<VerificationResult> => {
     }
     if (urlLower.includes("9002-89-5") && !detectedTerms.includes("9002-89-5")) {
       detectedTerms.push("9002-89-5");
+    }
+  }
+  
+  // Also check for phrases like "contains X% PVA" or "X% polyvinyl alcohol"
+  const percentPhraseMatch = url.match(/(\d+(?:\.\d+)?)\s*%\s*(pva|pvoh|polyvinyl|poly vinyl)/i);
+  if (percentPhraseMatch) {
+    containsPva = true;
+    const detectedPercentage = parseFloat(percentPhraseMatch[1]);
+    const detectedType = percentPhraseMatch[2].toLowerCase();
+    
+    let termToAdd = "";
+    if (detectedType.includes("pva")) termToAdd = "PVA";
+    else if (detectedType.includes("pvoh")) termToAdd = "PVOH";
+    else if (detectedType.includes("polyvinyl") || detectedType.includes("poly vinyl")) {
+      termToAdd = "POLYVINYL ALCOHOL";
+    }
+    
+    if (termToAdd && !detectedTerms.includes(termToAdd)) {
+      detectedTerms.push(termToAdd);
     }
   }
   

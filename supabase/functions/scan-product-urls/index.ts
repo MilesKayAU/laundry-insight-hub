@@ -15,6 +15,7 @@ const PVA_PATTERNS = [
   "pva",
   "pvoh", 
   "polyvinyl alcohol",
+  "polyvinylalcohol", // Without spaces
   "poly vinyl alcohol", 
   "poly(vinyl alcohol)",
   "polyethenol",
@@ -23,9 +24,22 @@ const PVA_PATTERNS = [
   "25213-24-5", // CAS number for PVA
   "9002-89-5",  // Another CAS number for PVA
   "polyvinyl acetate", // Related polymer
+  "polyvinylacetate", // Without spaces
   "vinnapas", // Commercial name
   "mowiol",   // Commercial name
-  "elvanol"   // Commercial name
+  "elvanol",   // Commercial name
+  "water-soluble polymer",
+  "water soluble film",
+  "pva film",
+  "pvoh film",
+  "pva coating",
+  "dissolvable film",
+  "hydrolyzed pva",
+  "fully hydrolyzed pva",
+  "partially hydrolyzed pva",
+  "modified polyvinyl alcohol",
+  "pva/pvoh",
+  "polyvinyl alcohol film"
 ];
 
 serve(async (req) => {
@@ -91,6 +105,7 @@ serve(async (req) => {
               country: productInfo.country || 'Global',
               websiteurl: url,
               imageurl: productInfo.imageUrl || null,
+              ingredients: productInfo.extractedIngredients || '',
               createdat: new Date().toISOString(),
               updatedat: new Date().toISOString(),
             });
@@ -194,34 +209,53 @@ async function simulateUrlScan(url: string) {
   
   // Enhanced PVA detection logic
   let hasPva = false;
+  let detectedTerms: string[] = [];
   let pvaPercentage = null;
+  let extractedIngredients = null;
   
   // Check URL content for PVA indicators (in a real implementation, this would be done by scraping)
   const urlLower = url.toLowerCase();
   
   // Simulate finding PVA in the URL or page content
   for (const pattern of PVA_PATTERNS) {
-    if (urlLower.includes(pattern.toLowerCase())) {
+    const patternLower = pattern.toLowerCase();
+    
+    // Try different matching strategies
+    if (
+      urlLower.includes(patternLower) || 
+      urlLower.includes(patternLower.replace(/\s+/g, '-')) || 
+      urlLower.includes(patternLower.replace(/\s+/g, '_')) || 
+      urlLower.includes(patternLower.replace(/\s+/g, ''))
+    ) {
       hasPva = true;
-      break;
+      if (!detectedTerms.includes(pattern)) {
+        detectedTerms.push(pattern);
+      }
     }
   }
   
-  // Specific check for "POLYVINYL ALCOHOL 25213-24-5" pattern as in the example
-  if (urlLower.includes("polyvinyl") && urlLower.includes("alcohol") && 
-      (urlLower.includes("25213-24-5") || urlLower.includes("9002-89-5"))) {
+  // Special check for "POLYVINYL ALCOHOL 25213-24-5" pattern
+  if ((urlLower.includes("polyvinyl") && urlLower.includes("alcohol")) || 
+      (urlLower.includes("pva") && (urlLower.includes("25213-24-5") || urlLower.includes("9002-89-5")))) {
     hasPva = true;
-    // Try to extract percentage near the CAS number
-    const percentMatch = url.match(/(\d+(?:\.\d+)?)%\s*(?:polyvinyl|pva)/i) || 
-                        url.match(/(?:polyvinyl|pva)\s*(\d+(?:\.\d+)?)%/i);
-    if (percentMatch) {
-      pvaPercentage = parseFloat(percentMatch[1]);
-    } else {
-      // Default percentage when we detect PVA but no specific percentage
-      pvaPercentage = Math.floor(Math.random() * 30) + 5;
+    if (!detectedTerms.includes("POLYVINYL ALCOHOL")) {
+      detectedTerms.push("POLYVINYL ALCOHOL");
     }
+    if (urlLower.includes("25213-24-5") && !detectedTerms.includes("25213-24-5")) {
+      detectedTerms.push("25213-24-5");
+    }
+    if (urlLower.includes("9002-89-5") && !detectedTerms.includes("9002-89-5")) {
+      detectedTerms.push("9002-89-5");
+    }
+  }
+  
+  // Try to extract PVA percentage (if mentioned)
+  const percentMatch = url.match(/(\d+(?:\.\d+)?)(%|\s*percent|\s*pva)/i);
+  if (percentMatch && !isNaN(parseFloat(percentMatch[1]))) {
+    pvaPercentage = parseFloat(percentMatch[1]);
+    hasPva = true;
   } else if (hasPva) {
-    // Default PVA percentage for other PVA detections
+    // Default PVA percentage for detected PVA
     pvaPercentage = Math.floor(Math.random() * 30) + 5;
   }
   
@@ -255,6 +289,14 @@ async function simulateUrlScan(url: string) {
     productName = `${randomType} ${Math.random().toString(36).substring(2, 7)}`;
   }
   
+  // Create a more realistic ingredients list based on detected PVA
+  if (hasPva) {
+    const pvaIngredient = detectedTerms[0] || 'Polyvinyl Alcohol';
+    extractedIngredients = `Water, Sodium Laureth Sulfate, Cocamidopropyl Betaine, ${pvaIngredient} ${pvaPercentage ? `(${pvaPercentage}%)` : ''}, Sodium Chloride, Glycerin, Fragrance`;
+  } else {
+    extractedIngredients = "Water, Sodium Laureth Sulfate, Cocamidopropyl Betaine, Glycerin, Citric Acid, Sodium Benzoate";
+  }
+  
   return {
     name: productName,
     brand: brand,
@@ -263,6 +305,8 @@ async function simulateUrlScan(url: string) {
     pvaPercentage: hasPva ? pvaPercentage : null,
     country: 'Global',
     imageUrl: null,
-    pvaFound: hasPva
+    pvaFound: hasPva,
+    detectedTerms,
+    extractedIngredients
   };
 }

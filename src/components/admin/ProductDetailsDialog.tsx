@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { Loader2 } from "lucide-react";
+import { normalizeCountry } from "@/utils/countryUtils";
 
 // Define product details interface separately to avoid circular references
 interface ProductDetails {
@@ -51,6 +52,20 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
   }, [product, isOpen]);
 
   if (!product) return null;
+  
+  // Common countries list for dropdown
+  const commonCountries = [
+    { value: "Global", label: "Global / International" },
+    { value: "United States", label: "United States" },
+    { value: "United Kingdom", label: "United Kingdom" },
+    { value: "Canada", label: "Canada" },
+    { value: "Australia", label: "Australia" },
+    { value: "Germany", label: "Germany" },
+    { value: "France", label: "France" },
+    { value: "Japan", label: "Japan" },
+    { value: "China", label: "China" },
+    { value: "India", label: "India" }
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,12 +185,37 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
                 Country
               </Label>
               <div className="col-span-3">
-                <Input 
-                  id="country" 
-                  placeholder="e.g. USA, UK, Global" 
-                  value={details.country} 
-                  onChange={(e) => onDetailsChange({ country: e.target.value })} 
-                />
+                <Select
+                  value={details.country || "Global"}
+                  onValueChange={(value) => onDetailsChange({ country: value })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Common Regions</SelectLabel>
+                      {commonCountries.map(country => (
+                        <SelectItem key={country.value} value={country.value}>
+                          {country.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Custom</SelectLabel>
+                      <SelectItem value="custom">Custom (Enter Below)</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                
+                {details.country === "custom" && (
+                  <Input 
+                    className="mt-2"
+                    placeholder="Enter country or region" 
+                    value=""
+                    onChange={(e) => onDetailsChange({ country: e.target.value })} 
+                  />
+                )}
               </div>
             </div>
             
