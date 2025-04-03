@@ -51,7 +51,7 @@ const AdminPage = () => {
     handleViewDetails, 
     handleDetailsChange, 
     handleSaveChanges,
-    handleDeleteProduct 
+    handleDeleteProduct: hookDeleteProduct 
   } = useProductEditing(() => {
     console.log("Product edit success callback triggered");
     loadProducts();
@@ -383,37 +383,31 @@ const AdminPage = () => {
         return;
       }
       
-      setApprovedProducts(approvedProducts.filter(p => p.id !== productId));
+      // Call the hook's delete function to handle Supabase deletion
+      const deleteSuccess = await hookDeleteProduct(productId);
       
-      const success = deleteProductSubmission(productId);
-      
-      if (success) {
-        console.log("Product deleted successfully from localStorage:", productId);
+      if (deleteSuccess) {
+        // If the hook successfully deleted the product, update local state
+        setApprovedProducts(approvedProducts.filter(p => p.id !== productId));
+        
+        console.log("Product deleted successfully:", productId);
         toast({
           title: "Product Deleted",
           description: "The product has been successfully deleted",
         });
-      } else {
-        console.error("Failed to delete product from localStorage:", productId);
         
-        try {
-          const allProducts = getProductSubmissions();
-          const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
-          localStorage.setItem('products', JSON.stringify(filteredProducts));
-          console.log("Product deleted through fallback method");
-          
-          toast({
-            title: "Product Deleted",
-            description: "The product has been deleted (fallback method)",
-          });
-        } catch (fallbackError) {
-          console.error("Even fallback deletion failed:", fallbackError);
-          toast({
-            title: "Error",
-            description: "Failed to delete product completely, please refresh and try again",
-            variant: "destructive"
-          });
-        }
+        // Refresh data to ensure the UI is in sync with the database
+        setTimeout(() => {
+          loadProducts();
+          window.dispatchEvent(new Event('reload-products'));
+        }, 500);
+      } else {
+        console.error("Failed to delete product:", productId);
+        toast({
+          title: "Error",
+          description: "Failed to delete product",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -428,18 +422,38 @@ const AdminPage = () => {
   const handleDeletePendingProduct = async (productId: string) => {
     try {
       console.log("Deleting pending product with ID:", productId);
+      const productToDelete = pendingProducts.find(p => p.id === productId);
+      if (!productToDelete) {
+        console.error("Product not found for deletion:", productId);
+        return;
+      }
       
-      // Use the hook's delete function which handles both Supabase and local state
-      await handleDeleteProduct(productId);
+      // Use the hook's delete function which handles both Supabase and local storage
+      const deleteSuccess = await hookDeleteProduct(productId);
       
-      // Update local state
-      setPendingProducts(pendingProducts.filter(p => p.id !== productId));
-      
-      // Refresh data to ensure the UI is in sync with the database
-      setTimeout(() => {
-        loadProducts();
-        window.dispatchEvent(new Event('reload-products'));
-      }, 500);
+      if (deleteSuccess) {
+        // Update local state
+        setPendingProducts(pendingProducts.filter(p => p.id !== productId));
+        
+        console.log("Pending product deleted successfully:", productId);
+        toast({
+          title: "Product Deleted",
+          description: "The pending product has been successfully deleted",
+        });
+        
+        // Refresh data to ensure the UI is in sync with the database
+        setTimeout(() => {
+          loadProducts();
+          window.dispatchEvent(new Event('reload-products'));
+        }, 500);
+      } else {
+        console.error("Failed to delete pending product:", productId);
+        toast({
+          title: "Error",
+          description: "Failed to delete pending product",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error("Error in handleDeletePendingProduct:", error);
       toast({
