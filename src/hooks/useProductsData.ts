@@ -47,7 +47,8 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
     }
     
     console.log(`Fetched ${data?.length || 0} total products from Supabase`);
-    console.log("Raw Supabase data:", data);
+    console.log("Raw Supabase data sample:", data?.slice(0, 3));
+    console.log("Approval status sample:", data?.slice(0, 10).map(item => `${item.brand} ${item.name}: ${item.approved}`));
     
     // Handle the case when data is null
     if (!data) {
@@ -73,8 +74,8 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
       timestamp: Date.now()
     }));
     
-    console.log("Transformed Supabase data:", transformedData);
-    console.log("Checking approval status of items:", transformedData.map(item => `${item.name}: ${item.approved}`));
+    console.log("Transformed Supabase data count:", transformedData.length);
+    console.log("Approval status after transform:", transformedData.slice(0, 10).map(item => `${item.brand} ${item.name}: ${item.approved}`));
     
     return transformedData;
   } catch (error) {
@@ -95,9 +96,9 @@ export const useProductsData = (selectedCountry: string) => {
   const { data: supabaseProducts = [], isError, error, refetch } = useQuery({
     queryKey: ['supabaseProducts', refreshKey, isAuthenticated],
     queryFn: () => fetchProductsFromSupabase(isAuthenticated),
-    staleTime: 1 * 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
+    staleTime: 30 * 1000, // 30 seconds - reduced for more frequent refreshing
+    gcTime: 2 * 60 * 1000, // 2 minutes
+    retry: 2, // Try up to 3 times (initial + 2 retries)
     enabled: true, // Always fetch on mount
   });
 
@@ -118,7 +119,7 @@ export const useProductsData = (selectedCountry: string) => {
     const intervalId = setInterval(() => {
       console.log("Periodic refresh of product data...");
       handleRefreshData();
-    }, 30000); // Every 30 seconds
+    }, 15000); // Every 15 seconds - more frequent refresh
     
     return () => clearInterval(intervalId);
   }, []);
@@ -143,15 +144,25 @@ export const useProductsData = (selectedCountry: string) => {
       // Trigger Supabase refetch
       await refetch();
       
-      // Check Supabase connection
-      const { error: checkError } = await supabase.from('product_submissions').select('count').limit(1);
-      if (checkError) {
-        console.error("Supabase connection check failed:", checkError);
-        toast({
-          title: "Database Connection Issue",
-          description: "Failed to connect to product database. Check network connection or API keys.",
-          variant: "destructive"
-        });
+      // Check Supabase connection and count approved products
+      try {
+        const { data, error: checkError } = await supabase
+          .from('product_submissions')
+          .select('count')
+          .eq('approved', true);
+          
+        if (checkError) {
+          console.error("Supabase connection check failed:", checkError);
+          toast({
+            title: "Database Connection Issue",
+            description: "Failed to connect to product database. Check network connection or API keys.",
+            variant: "destructive"
+          });
+        } else {
+          console.log("Approved products count from direct query:", data);
+        }
+      } catch (e) {
+        console.error("Error checking approved products:", e);
       }
       
       setLoading(false);
@@ -178,10 +189,10 @@ export const useProductsData = (selectedCountry: string) => {
   console.log("Is authenticated:", isAuthenticated);
   console.log("Is admin view:", isAdminView);
   console.log("Live data only:", liveDataOnly);
-  console.log("All Supabase products (before filtering):", supabaseProducts);
+  console.log("All Supabase products count:", supabaseProducts.length);
   
   // Debug logs for approval status
-  console.log("Approval status check:", supabaseProducts.map(p => `${p.name}: ${p.approved}`));
+  console.log("Approval status count:", supabaseProducts.filter(p => p.approved === true).length);
   
   // Filter Supabase products based on admin view or public view
   const approvedSupabaseSubmissions = isAdminView 
@@ -291,6 +302,9 @@ export const useProductsData = (selectedCountry: string) => {
           
           // Force a refetch to ensure we have the latest data
           refetch();
+          
+          // Also trigger a global refresh
+          window.dispatchEvent(new Event('reload-products'));
         }
       } catch (dbError) {
         console.error("Failed to update product in Supabase:", dbError);

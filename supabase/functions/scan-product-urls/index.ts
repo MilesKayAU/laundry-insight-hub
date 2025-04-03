@@ -119,6 +119,10 @@ Deno.serve(async (req) => {
     
     if (existingProducts && existingProducts.length > 0) {
       console.log(`Product already exists: ${productData.brand} - ${productData.name}`);
+      
+      // Get the existing product with its current approval status
+      const existingProduct = existingProducts[0];
+      
       // Return the existing product data including its approval status
       return new Response(
         JSON.stringify({
@@ -126,8 +130,8 @@ Deno.serve(async (req) => {
           message: `Product already exists: ${productData.brand} - ${productData.name}`,
           productData: {
             ...productData,
-            id: existingProducts[0].id,
-            approved: existingProducts[0].approved // Keep the existing approval status
+            id: existingProduct.id,
+            approved: existingProduct.approved // Keep the existing approval status
           },
         }),
         {
@@ -362,10 +366,3 @@ function extractProductData(html: string, url: string): ProductData | null {
   
   return productData as ProductData;
 }
-
-// Setup a shared CORS headers file in _shared/cors.ts
-// export const corsHeaders = {
-//   "Access-Control-Allow-Origin": "*",
-//   "Access-Control-Allow-Methods": "POST, OPTIONS",
-//   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
-// };

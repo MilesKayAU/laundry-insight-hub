@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -79,6 +80,51 @@ export const checkRlsStatus = async () => {
     return {
       blocking: 'unknown',
       message: `Could not determine RLS status: ${e instanceof Error ? e.message : 'Unknown error'}`
+    };
+  }
+};
+
+/**
+ * Specifically checks for approved products to verify they are visible
+ * @returns An object with visibility status and count information
+ */
+export const checkApprovedProductsVisibility = async () => {
+  try {
+    // Try to read approved products
+    const { data, error } = await supabase
+      .from('product_submissions')
+      .select('count')
+      .eq('approved', true)
+      .limit(100);
+    
+    if (error) {
+      return {
+        visible: false,
+        count: 0,
+        message: `Error checking approved products: ${error.message}`
+      };
+    }
+    
+    // Get actual products for debugging
+    const { data: productData } = await supabase
+      .from('product_submissions')
+      .select('id, brand, name, approved')
+      .eq('approved', true)
+      .limit(10);
+    
+    console.log("Sample of approved products:", productData);
+    
+    return {
+      visible: true,
+      count: data?.length || 0,
+      message: `Found ${data?.length || 0} approved products`,
+      samples: productData
+    };
+  } catch (e) {
+    return {
+      visible: false,
+      count: 0,
+      message: `Error checking approved products: ${e instanceof Error ? e.message : 'Unknown error'}`
     };
   }
 };
@@ -168,9 +214,6 @@ export const USER_SUBMISSIONS_KEY = 'laundry-hub-user-submissions';
 
 /**
  * Get the current upload limits based on user's trust level
- * @param isAdmin Whether the user is an admin
- * @param trustLevel The user's trust level
- * @returns Object containing the maximum allowed uploads
  */
 export const getUserUploadLimits = (
   isAdmin: boolean, 
@@ -193,8 +236,6 @@ export const getUserUploadLimits = (
 
 /**
  * Get the user's current trust level based on approved submissions
- * @param userId The user's ID
- * @returns The user's trust level
  */
 export const getUserTrustLevel = async (userId?: string): Promise<UserTrustLevel> => {
   if (!userId) {
@@ -243,11 +284,6 @@ export const getUserTrustLevel = async (userId?: string): Promise<UserTrustLevel
 
 /**
  * Check if the user can make more submissions
- * @param userId User ID
- * @param isAdmin Whether the user is an admin
- * @param isBulkUpload Whether this is a bulk upload check
- * @param requestedCount Number of items the user is trying to submit
- * @returns Object with allowed status and limit information
  */
 export const checkUserSubmissionLimits = async (
   userId?: string,
@@ -307,8 +343,6 @@ export const checkUserSubmissionLimits = async (
 
 /**
  * Get the count of pending submissions for a user
- * @param userId User ID
- * @returns Number of pending submissions
  */
 export const getPendingSubmissionCount = (userId?: string): number => {
   if (!userId) return 0;
@@ -327,8 +361,6 @@ export const getPendingSubmissionCount = (userId?: string): number => {
 
 /**
  * Update the count of pending submissions for a user
- * @param userId User ID
- * @param count Number of new submissions
  */
 export const updatePendingSubmissionCount = (userId?: string, count = 1): void => {
   if (!userId) return;

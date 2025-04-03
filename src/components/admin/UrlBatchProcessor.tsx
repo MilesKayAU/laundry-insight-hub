@@ -24,6 +24,27 @@ const UrlBatchProcessor = () => {
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [currentUrl, setCurrentUrl] = useState('');
 
+  // Debug function to check if Supabase access is working correctly
+  const checkSupabaseAccess = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('product_submissions')
+        .select('id, name, brand, approved')
+        .limit(5);
+      
+      if (error) {
+        console.error("Error checking Supabase access:", error);
+        return false;
+      }
+      
+      console.log("Supabase access check - sample products:", data);
+      return true;
+    } catch (err) {
+      console.error("Exception checking Supabase access:", err);
+      return false;
+    }
+  };
+
   const processUrls = async () => {
     if (!urlList.trim()) {
       toast({
@@ -35,6 +56,17 @@ const UrlBatchProcessor = () => {
     }
 
     try {
+      // First verify we can access Supabase correctly
+      const canAccessSupabase = await checkSupabaseAccess();
+      if (!canAccessSupabase) {
+        toast({
+          title: "Database access issue",
+          description: "Cannot access product database properly. Please check your connection.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setIsProcessing(true);
       setResults([]);
       setProgress(0);
