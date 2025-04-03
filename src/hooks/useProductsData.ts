@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -7,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { isLiveDataOnlyMode } from "@/utils/supabaseUtils";
+import { Spinner } from "@/components/ui/spinner";
 
 // Define custom typing for product submissions from Supabase
 type SupabaseProductSubmission = {
@@ -31,8 +33,11 @@ type SupabaseProductSubmission = {
 const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
   console.log("Fetching products from Supabase...");
   try {
-    // Always fetch all products from Supabase, without any filter
-    // We'll filter them later in the component based on admin view or not
+    // Determine if we're in admin view to fetch appropriate data
+    const isAdminView = isAuthenticated && window.location.pathname.includes('/admin');
+    console.log("Is admin view in fetch function:", isAdminView);
+    
+    // Always fetch all products from Supabase first, to ensure we have everything
     const { data, error } = await supabase
       .from('product_submissions')
       .select('*');
@@ -42,7 +47,7 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
       throw new Error(`Supabase query error: ${error.message}`);
     }
     
-    console.log(`Fetched ${data?.length || 0} products from Supabase`);
+    console.log(`Fetched ${data?.length || 0} total products from Supabase`);
     console.log("Raw Supabase data:", data);
     
     // Handle the case when data is null
@@ -70,6 +75,7 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
     }));
     
     console.log("Transformed Supabase data:", transformedData);
+    console.log("Returning all Supabase data without filtering");
     return transformedData;
   } catch (error) {
     console.error("Exception fetching products from Supabase:", error);
@@ -187,6 +193,8 @@ export const useProductsData = (selectedCountry: string) => {
     : supabaseProducts.filter(product => product.approved === true);  // In public view, show only approved
     
   console.info(`Found ${approvedSupabaseSubmissions.length} Supabase submissions for current view`);
+  console.info(`Raw Supabase submissions count: ${supabaseProducts.length}`);
+  console.info(`Admin view: ${isAdminView}, Filtering by approved: ${!isAdminView}`);
   
   // Get all approved submissions from local data - only if not in live-only mode
   const approvedLocalSubmissions = liveDataOnly ? [] : allSubmissions.filter(submission => submission.approved === true);
