@@ -155,11 +155,9 @@ const AdminPage = () => {
       setLoading(true);
       console.log("AdminPage: Loading and deduplicating products...");
       
-      // First get local products
       const allLocalProducts = getProductSubmissions();
       console.log(`AdminPage: Loaded ${allLocalProducts.length} products from localStorage before deduplication`);
       
-      // Deduplicate local products
       const dedupedLocalProducts = removeDuplicateProducts(allLocalProducts);
       console.log(`AdminPage: After deduplication, now have ${dedupedLocalProducts.length} local products`);
       
@@ -173,11 +171,9 @@ const AdminPage = () => {
         });
       }
       
-      // Now get Supabase products
       const supabaseProducts = await fetchSupabaseProducts();
       console.log(`AdminPage: Fetched ${supabaseProducts.length} products from Supabase`);
       
-      // Combine local and Supabase products
       const allProducts = [
         ...dedupedLocalProducts.map(p => ({ 
           ...p, 
@@ -188,11 +184,9 @@ const AdminPage = () => {
       
       console.log(`AdminPage: Total combined products before final deduplication: ${allProducts.length}`);
       
-      // Final deduplication
       const finalDedupedProducts = removeDuplicateProducts(allProducts);
       console.log(`AdminPage: Final deduped product count: ${finalDedupedProducts.length}`);
       
-      // Filter products into pending and approved
       const pending = finalDedupedProducts.filter(p => !p.approved);
       const approved = finalDedupedProducts.filter(p => p.approved);
       const brandVerifications = finalDedupedProducts.filter(p => p.brandOwnershipRequested);
@@ -226,11 +220,10 @@ const AdminPage = () => {
     
     window.addEventListener('reload-products', handleReloadProducts);
     
-    // Add an interval to refresh products periodically
     const intervalId = setInterval(() => {
       console.log("Periodically refreshing product data...");
       loadProducts();
-    }, 30000); // Refresh every 30 seconds
+    }, 30000);
     
     return () => {
       window.removeEventListener('reload-products', handleReloadProducts);
@@ -265,7 +258,6 @@ const AdminPage = () => {
         return;
       }
       
-      // Update Supabase - Do this first to ensure database consistency
       await updateSupabaseProductStatus(productId, true);
       
       const updatedProduct = {
@@ -274,11 +266,9 @@ const AdminPage = () => {
         status: 'approved' as ProductStatus
       };
       
-      // Update local state
       setApprovedProducts([...approvedProducts, updatedProduct]);
       setPendingProducts(pendingProducts.filter(p => p.id !== productId));
       
-      // Update localStorage
       const allProducts = getProductSubmissions();
       const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
         p.id === productId ? { 
@@ -294,7 +284,6 @@ const AdminPage = () => {
         description: `Product "${productToApprove.brand} ${productToApprove.name}" approved successfully`,
       });
       
-      // Force a refresh to ensure consistent view
       setTimeout(() => {
         loadProducts();
       }, 500);
@@ -317,7 +306,6 @@ const AdminPage = () => {
         return;
       }
       
-      // Update Supabase if product exists there
       if (productToDelete.websiteUrl) {
         updateSupabaseProductStatus(productId, false)
           .catch(error => console.error("Error updating Supabase product:", error));
@@ -383,11 +371,9 @@ const AdminPage = () => {
         return;
       }
       
-      // Call the hook's delete function to handle Supabase deletion
       const deleteSuccess = await hookDeleteProduct(productId);
       
       if (deleteSuccess) {
-        // If the hook successfully deleted the product, update local state
         setApprovedProducts(approvedProducts.filter(p => p.id !== productId));
         
         console.log("Product deleted successfully:", productId);
@@ -396,7 +382,6 @@ const AdminPage = () => {
           description: "The product has been successfully deleted",
         });
         
-        // Refresh data to ensure the UI is in sync with the database
         setTimeout(() => {
           loadProducts();
           window.dispatchEvent(new Event('reload-products'));
@@ -428,11 +413,9 @@ const AdminPage = () => {
         return;
       }
       
-      // Use the hook's delete function which handles both Supabase and local storage
       const deleteSuccess = await hookDeleteProduct(productId);
       
       if (deleteSuccess) {
-        // Update local state
         setPendingProducts(pendingProducts.filter(p => p.id !== productId));
         
         console.log("Pending product deleted successfully:", productId);
@@ -441,7 +424,6 @@ const AdminPage = () => {
           description: "The pending product has been successfully deleted",
         });
         
-        // Refresh data to ensure the UI is in sync with the database
         setTimeout(() => {
           loadProducts();
           window.dispatchEvent(new Event('reload-products'));
