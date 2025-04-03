@@ -27,6 +27,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
 import NotFound from "./pages/NotFound";
+import Index from "./pages/Index"; // Make sure Index is properly imported
 
 const createQueryClient = () => new QueryClient({
   defaultOptions: {
@@ -78,6 +79,7 @@ const App: React.FC = () => {
               <Routes>
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<HomePage />} />
+                  <Route path="/index" element={<Index />} />
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/contribute" element={
                     <AuthGuard>

@@ -28,9 +28,6 @@ const Index = () => {
             <Button asChild size="lg" variant="outline" className="border-science-400">
               <Link to="/database">View Database</Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="border-science-400">
-              <Link to="/admin">Admin Dashboard</Link>
-            </Button>
           </div>
         </div>
       </div>
