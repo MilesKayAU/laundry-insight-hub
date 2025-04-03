@@ -127,7 +127,6 @@ export const useProductEditing = (onSuccess?: () => void) => {
             websiteurl: updateData.websiteUrl,
             pvapercentage: updateData.pvaPercentage,
             country: updateData.country,
-            ingredients: updateData.ingredients,
             pvastatus: updateData.pvaStatus,
             type: updateData.type,
             updatedat: new Date().toISOString()

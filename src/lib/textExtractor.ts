@@ -1,4 +1,3 @@
-
 import { createHash } from "crypto";
 import Tesseract from 'tesseract.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -174,6 +173,7 @@ export const deleteProductSubmission = (productId: string): boolean => {
 // Modified function to ensure we get all products with improved error handling
 export const getProductSubmissions = (userId?: string): ProductSubmission[] => {
   try {
+    // Check both possible keys for backward compatibility
     const storedSubmissions = localStorage.getItem('product_submissions') || localStorage.getItem('products');
     
     if (storedSubmissions) {
@@ -395,7 +395,7 @@ export const updateProductSubmission = (productId: string, updatedData: Partial<
     console.log("Updating product with ID:", productId, "with data:", updatedData);
     
     // Get all products from localStorage - trying both possible keys
-    const productsString = localStorage.getItem('products') || localStorage.getItem('product_submissions');
+    const productsString = localStorage.getItem('product_submissions') || localStorage.getItem('products');
     if (!productsString) {
       console.log("No products found in localStorage");
       return false;

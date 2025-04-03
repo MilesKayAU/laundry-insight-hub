@@ -16,7 +16,7 @@ import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmission
 import ResearchManagement from "@/components/admin/ResearchManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProductSubmission, getProductSubmissions, deleteProductSubmission, PVA_KEYWORDS_CATEGORIES } from "@/lib/textExtractor";
+import { ProductSubmission, getProductSubmissions, deleteProductSubmission, PVA_KEYWORDS_CATEGORIES, getAllPvaPatterns } from "@/lib/textExtractor";
 import ProductDetailsDialog from "@/components/admin/ProductDetailsDialog";
 import { useProductEditing } from '@/hooks/useProductEditing';
 import UrlBatchProcessor from '@/components/admin/UrlBatchProcessor';
@@ -84,7 +84,8 @@ const AdminPage = () => {
         imageUrl: item.imageurl || '',
         status: item.approved ? 'approved' as ProductStatus : 'pending' as ProductStatus,
         brandVerified: false,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        ingredients: '' // Ensure ingredients field exists even if not in DB
       })) as ExtendedProductSubmission[];
     } catch (error) {
       console.error("Error in fetchSupabaseProducts:", error);
@@ -114,14 +115,16 @@ const AdminPage = () => {
       setLoading(true);
       console.log("AdminPage: Loading and deduplicating products...");
       
+      // First get local products
       const allLocalProducts = getProductSubmissions();
       console.log(`AdminPage: Loaded ${allLocalProducts.length} products from localStorage before deduplication`);
       
+      // Deduplicate local products
       const dedupedLocalProducts = removeDuplicateProducts(allLocalProducts);
-      console.log(`AdminPage: After deduplication, now have ${dedupedLocalProducts.length} products`);
+      console.log(`AdminPage: After deduplication, now have ${dedupedLocalProducts.length} local products`);
       
       if (dedupedLocalProducts.length !== allLocalProducts.length) {
-        localStorage.setItem('products', JSON.stringify(dedupedLocalProducts));
+        localStorage.setItem('product_submissions', JSON.stringify(dedupedLocalProducts));
         console.log(`AdminPage: Removed ${allLocalProducts.length - dedupedLocalProducts.length} duplicate products`);
         
         toast({
@@ -130,8 +133,11 @@ const AdminPage = () => {
         });
       }
       
+      // Now get Supabase products
       const supabaseProducts = await fetchSupabaseProducts();
+      console.log(`AdminPage: Fetched ${supabaseProducts.length} products from Supabase`);
       
+      // Combine local and Supabase products
       const allProducts = [
         ...dedupedLocalProducts.map(p => ({ 
           ...p, 
@@ -142,9 +148,11 @@ const AdminPage = () => {
       
       console.log(`AdminPage: Total combined products before final deduplication: ${allProducts.length}`);
       
+      // Final deduplication
       const finalDedupedProducts = removeDuplicateProducts(allProducts);
       console.log(`AdminPage: Final deduped product count: ${finalDedupedProducts.length}`);
       
+      // Filter products into pending and approved
       const pending = finalDedupedProducts.filter(p => !p.approved);
       const approved = finalDedupedProducts.filter(p => p.approved);
       const brandVerifications = finalDedupedProducts.filter(p => p.brandOwnershipRequested);

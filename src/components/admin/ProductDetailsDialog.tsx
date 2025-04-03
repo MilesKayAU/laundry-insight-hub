@@ -1,313 +1,247 @@
 
-import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { ProductSubmission } from "@/lib/textExtractor";
-import { Loader2 } from "lucide-react";
-import { normalizeCountry } from "@/utils/countryUtils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
-// Define product details interface separately to avoid circular references
-interface ProductDetails {
-  brand: string;
-  name: string;
-  description: string;
-  imageUrl: string;
-  videoUrl: string;
-  websiteUrl: string;
-  pvaPercentage: string;
-  country: string;
-  ingredients: string;
-  pvaStatus: string;
-  type: string;
-}
+// Image preview component
+const ImagePreview = ({ url }: { url: string }) => {
+  if (!url) return null;
+  
+  return (
+    <div className="overflow-hidden rounded-md border border-gray-200 mt-2">
+      <img 
+        src={url} 
+        alt="Product" 
+        className="h-auto w-full object-contain max-h-[200px]"
+        onError={(e) => {
+          // If image fails to load, show placeholder
+          (e.target as HTMLImageElement).src = "https://placehold.co/300x200?text=Image+Not+Available";
+        }}
+      />
+    </div>
+  );
+};
 
 interface ProductDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  product: ProductSubmission | null;
-  details: ProductDetails;
-  onDetailsChange: (details: Partial<ProductDetails>) => void;
+  product: ProductSubmission;
+  details: {
+    brand: string;
+    name: string;
+    description: string;
+    imageUrl: string;
+    videoUrl: string;
+    websiteUrl: string;
+    pvaPercentage: string;
+    country: string;
+    ingredients: string;
+    pvaStatus: string;
+    type: string;
+  };
+  onDetailsChange: (details: Partial<typeof details>) => void;
   onSave: () => void;
-  isSaving?: boolean;
 }
 
-const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
+const ProductDetailsDialog = ({
   isOpen,
   onOpenChange,
   product,
   details,
   onDetailsChange,
-  onSave,
-  isSaving = false
-}) => {
-  // Ensure the form captures the selected values correctly
-  useEffect(() => {
-    if (product && isOpen) {
-      console.log("Product details dialog opened with product:", product);
-    }
-  }, [product, isOpen]);
-
-  if (!product) return null;
+  onSave
+}: ProductDetailsDialogProps) => {
+  const [isSaving, setIsSaving] = useState(false);
   
-  // Common countries list for dropdown
-  const commonCountries = [
-    { value: "Global", label: "Global / International" },
-    { value: "United States", label: "United States" },
-    { value: "United Kingdom", label: "United Kingdom" },
-    { value: "Canada", label: "Canada" },
-    { value: "Australia", label: "Australia" },
-    { value: "Germany", label: "Germany" },
-    { value: "France", label: "France" },
-    { value: "Japan", label: "Japan" },
-    { value: "China", label: "China" },
-    { value: "India", label: "India" }
-  ];
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Saving product details:", details);
-    onSave();
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave();
+      // If no error is thrown from onSave, we assume it succeeded
+    } catch (error) {
+      console.error("Error saving product:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
-
+  
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Product Details</DialogTitle>
-            <DialogDescription>
-              Make changes to the product information below.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="brand" className="text-right">
-                Brand
-              </Label>
-              <div className="col-span-3">
-                <Input 
-                  id="brand" 
-                  value={details.brand} 
-                  onChange={(e) => onDetailsChange({ brand: e.target.value })}
-                />
-              </div>
+      <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Product Details</DialogTitle>
+          <DialogDescription>
+            Make changes to the product information below.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+          {/* Left column */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="brand">Brand</Label>
+              <Input 
+                id="brand"
+                value={details.brand}
+                onChange={(e) => onDetailsChange({ brand: e.target.value })}
+                placeholder="Enter brand name"
+              />
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <div className="col-span-3">
-                <Input 
-                  id="name" 
-                  value={details.name}
-                  onChange={(e) => onDetailsChange({ name: e.target.value })}
-                />
-              </div>
+            <div>
+              <Label htmlFor="name">Product Name</Label>
+              <Input 
+                id="name"
+                value={details.name}
+                onChange={(e) => onDetailsChange({ name: e.target.value })}
+                placeholder="Enter product name"
+              />
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">
-                Type
-              </Label>
-              <div className="col-span-3">
-                <Select 
-                  value={details.type} 
-                  onValueChange={(value) => onDetailsChange({ type: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Product Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Product Types</SelectLabel>
-                      <SelectItem value="Laundry Pod">Laundry Pod</SelectItem>
-                      <SelectItem value="Dishwasher Pod">Dishwasher Pod</SelectItem>
-                      <SelectItem value="Laundry Sheet">Laundry Sheet</SelectItem>
-                      <SelectItem value="Dishwasher Sheet">Dishwasher Sheet</SelectItem>
-                      <SelectItem value="Cleaning Sheet">Cleaning Sheet</SelectItem>
-                      <SelectItem value="Detergent">Detergent</SelectItem>
-                      <SelectItem value="Dish Soap">Dish Soap</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor="type">Product Type</Label>
+              <Input 
+                id="type"
+                value={details.type}
+                onChange={(e) => onDetailsChange({ type: e.target.value })}
+                placeholder="E.g., Laundry Sheets, Dish Soap, etc."
+              />
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="pvaStatus" className="text-right">
-                PVA Status
-              </Label>
-              <div className="col-span-3">
-                <Select 
-                  value={details.pvaStatus} 
-                  onValueChange={(value: any) => onDetailsChange({ pvaStatus: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select PVA Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contains">Contains PVA</SelectItem>
-                    <SelectItem value="verified-free">Verified PVA Free</SelectItem>
-                    <SelectItem value="needs-verification">Needs Verification</SelectItem>
-                    <SelectItem value="inconclusive">Inconclusive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor="country">Country/Region</Label>
+              <Select 
+                value={details.country}
+                onValueChange={(value) => onDetailsChange({ country: value })}
+              >
+                <SelectTrigger id="country">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Global">Global</SelectItem>
+                  <SelectItem value="United States">United States</SelectItem>
+                  <SelectItem value="Canada">Canada</SelectItem>
+                  <SelectItem value="United Kingdom">United Kingdom</SelectItem>
+                  <SelectItem value="Australia">Australia</SelectItem>
+                  <SelectItem value="New Zealand">New Zealand</SelectItem>
+                  <SelectItem value="Germany">Germany</SelectItem>
+                  <SelectItem value="France">France</SelectItem>
+                  <SelectItem value="Spain">Spain</SelectItem>
+                  <SelectItem value="Italy">Italy</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="pvaPercentage" className="text-right">
-                PVA %
-              </Label>
-              <div className="col-span-3">
-                <Input 
-                  id="pvaPercentage" 
-                  type="number" 
-                  min="0" 
-                  max="100" 
-                  step="0.1"
-                  placeholder="e.g. 25.5" 
-                  value={details.pvaPercentage} 
-                  onChange={(e) => onDetailsChange({ pvaPercentage: e.target.value })} 
-                />
-              </div>
+            <div>
+              <Label htmlFor="pvaPercentage">PVA Percentage</Label>
+              <Input 
+                id="pvaPercentage"
+                type="number"
+                min="0"
+                max="100"
+                value={details.pvaPercentage}
+                onChange={(e) => onDetailsChange({ pvaPercentage: e.target.value })}
+                placeholder="Enter PVA percentage"
+              />
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="country" className="text-right">
-                Country
-              </Label>
-              <div className="col-span-3">
-                <Select
-                  value={details.country || "Global"}
-                  onValueChange={(value) => onDetailsChange({ country: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Common Regions</SelectLabel>
-                      {commonCountries.map(country => (
-                        <SelectItem key={country.value} value={country.value}>
-                          {country.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                    <SelectGroup>
-                      <SelectLabel>Custom</SelectLabel>
-                      <SelectItem value="custom">Custom (Enter Below)</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                
-                {details.country === "custom" && (
-                  <Input 
-                    className="mt-2"
-                    placeholder="Enter country or region" 
-                    value=""
-                    onChange={(e) => onDetailsChange({ country: e.target.value })} 
-                  />
-                )}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="description" className="text-right pt-2">
-                Description
-              </Label>
-              <div className="col-span-3">
-                <Textarea 
-                  id="description" 
-                  className="min-h-[100px]" 
-                  placeholder="Product description" 
-                  value={details.description} 
-                  onChange={(e) => onDetailsChange({ description: e.target.value })} 
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="ingredients" className="text-right pt-2">
-                Ingredients
-              </Label>
-              <div className="col-span-3">
-                <Textarea 
-                  id="ingredients" 
-                  className="min-h-[100px]" 
-                  placeholder="Product ingredients" 
-                  value={details.ingredients || ''} 
-                  onChange={(e) => onDetailsChange({ ingredients: e.target.value })} 
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="websiteUrl" className="text-right">
-                Website URL
-              </Label>
-              <div className="col-span-3">
-                <Input 
-                  id="websiteUrl" 
-                  placeholder="e.g. https://example.com/product" 
-                  value={details.websiteUrl} 
-                  onChange={(e) => onDetailsChange({ websiteUrl: e.target.value })} 
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="imageUrl" className="text-right">
-                Image URL
-              </Label>
-              <div className="col-span-3">
-                <Input 
-                  id="imageUrl" 
-                  placeholder="e.g. https://example.com/image.jpg" 
-                  value={details.imageUrl} 
-                  onChange={(e) => onDetailsChange({ imageUrl: e.target.value })} 
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="videoUrl" className="text-right">
-                Video URL
-              </Label>
-              <div className="col-span-3">
-                <Input 
-                  id="videoUrl" 
-                  placeholder="e.g. https://youtube.com/watch?v=xyz" 
-                  value={details.videoUrl} 
-                  onChange={(e) => onDetailsChange({ videoUrl: e.target.value })} 
-                />
-              </div>
+            <div>
+              <Label htmlFor="pvaStatus">PVA Status</Label>
+              <Select 
+                value={details.pvaStatus}
+                onValueChange={(value) => onDetailsChange({ pvaStatus: value })}
+              >
+                <SelectTrigger id="pvaStatus">
+                  <SelectValue placeholder="Select PVA status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="contains">Contains PVA</SelectItem>
+                  <SelectItem value="verified-free">Verified PVA-Free</SelectItem>
+                  <SelectItem value="needs-verification">Needs Verification</SelectItem>
+                  <SelectItem value="inconclusive">Inconclusive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} type="button">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save changes'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+          {/* Right column */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea 
+                id="description"
+                value={details.description}
+                onChange={(e) => onDetailsChange({ description: e.target.value })}
+                placeholder="Enter product description"
+                rows={3}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="ingredients">Ingredients</Label>
+              <Textarea 
+                id="ingredients"
+                value={details.ingredients}
+                onChange={(e) => onDetailsChange({ ingredients: e.target.value })}
+                placeholder="Enter product ingredients"
+                rows={3}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="websiteUrl">Website URL</Label>
+              <Input 
+                id="websiteUrl"
+                value={details.websiteUrl}
+                onChange={(e) => onDetailsChange({ websiteUrl: e.target.value })}
+                placeholder="Enter website URL"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input 
+                id="imageUrl"
+                value={details.imageUrl}
+                onChange={(e) => onDetailsChange({ imageUrl: e.target.value })}
+                placeholder="Enter image URL"
+              />
+              <ImagePreview url={details.imageUrl} />
+            </div>
+            
+            <div>
+              <Label htmlFor="videoUrl">Video URL</Label>
+              <Input 
+                id="videoUrl"
+                value={details.videoUrl}
+                onChange={(e) => onDetailsChange({ videoUrl: e.target.value })}
+                placeholder="Enter video URL"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? <><Spinner className="mr-2" /> Saving...</> : "Save Changes"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
