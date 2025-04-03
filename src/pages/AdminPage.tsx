@@ -432,8 +432,11 @@ const AdminPage = () => {
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
       try {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         const deleteSuccess = await hookDeleteProduct(productId);
         if (!deleteSuccess) {
+          console.warn("Product deletion reported failure");
           throw new Error("Product deletion failed");
         }
         
@@ -443,7 +446,11 @@ const AdminPage = () => {
           description: "The product has been successfully deleted",
         });
         
-        await safeLoadProducts();
+        setTimeout(() => {
+          safeLoadProducts().catch(e => {
+            console.error("Failed to refresh after product deletion:", e);
+          });
+        }, 500);
       } catch (error) {
         console.error("Failed to delete product or reload data:", productId, error);
         
@@ -455,6 +462,12 @@ const AdminPage = () => {
           description: "Failed to delete product completely. The product has been restored in the list.",
           variant: "destructive"
         });
+        
+        setTimeout(() => {
+          safeLoadProducts().catch(e => {
+            console.error("Failed to refresh after delete error:", e);
+          });
+        }, 1000);
       }
     } catch (error) {
       console.error("Error in handleDeleteProduct:", error);
@@ -463,16 +476,10 @@ const AdminPage = () => {
         description: "An unexpected error occurred while deleting the product",
         variant: "destructive"
       });
-      
-      try {
-        await safeLoadProducts();
-      } catch (e) {
-        console.error("Even emergency reload failed:", e);
-        setLoading(false);
-        loadingRef.current = false;
-      }
     } finally {
-      setDeletingProductId(null);
+      setTimeout(() => {
+        setDeletingProductId(null);
+      }, 500);
     }
   };
 
@@ -491,8 +498,11 @@ const AdminPage = () => {
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
       try {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         const deleteSuccess = await hookDeleteProduct(productId);
         if (!deleteSuccess) {
+          console.warn("Product deletion reported failure");
           throw new Error("Product deletion failed");
         }
         
@@ -502,7 +512,11 @@ const AdminPage = () => {
           description: "The pending product has been successfully deleted",
         });
         
-        await safeLoadProducts();
+        setTimeout(() => {
+          safeLoadProducts().catch(e => {
+            console.error("Failed to refresh after product deletion:", e);
+          });
+        }, 500);
       } catch (error) {
         console.error("Failed to delete pending product or reload data:", productId, error);
         
@@ -513,6 +527,12 @@ const AdminPage = () => {
           description: "Failed to delete pending product completely. The product has been restored in the list.",
           variant: "destructive"
         });
+        
+        setTimeout(() => {
+          safeLoadProducts().catch(e => {
+            console.error("Failed to refresh after delete error:", e);
+          });
+        }, 1000);
       }
     } catch (error) {
       console.error("Error in handleDeletePendingProduct:", error);
@@ -521,16 +541,10 @@ const AdminPage = () => {
         description: "An unexpected error occurred while deleting the pending product",
         variant: "destructive"
       });
-      
-      try {
-        await safeLoadProducts();
-      } catch (e) {
-        console.error("Even emergency reload failed:", e);
-        setLoading(false);
-        loadingRef.current = false;
-      }
     } finally {
-      setDeletingProductId(null);
+      setTimeout(() => {
+        setDeletingProductId(null);
+      }, 500);
     }
   };
 

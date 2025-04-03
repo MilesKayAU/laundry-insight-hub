@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
@@ -46,7 +45,6 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     setLocalProducts(products);
   }, [products]);
   
-  // Enhanced force refresh with debouncing and timeout
   const handleForceRefresh = useCallback(() => {
     if (refreshing) {
       console.log("Refresh already in progress, ignoring");
@@ -56,17 +54,14 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     setRefreshing(true);
     console.log("PendingProducts: Force refresh triggered");
     
-    // Clear any pending timeouts
     clearTimeout(refreshTimeoutRef.current);
     
-    // Dispatch the reload event
     try {
       window.dispatchEvent(new Event('reload-products'));
     } catch (e) {
       console.error("Error during refresh event dispatch:", e);
     }
     
-    // End refreshing state after a short delay
     refreshTimeoutRef.current = setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -74,13 +69,11 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   
   useEffect(() => {
     return () => {
-      // Clean up any pending timeouts when component unmounts
       clearTimeout(refreshTimeoutRef.current);
     };
   }, []);
   
   const handleEdit = (product: ProductSubmission) => {
-    // Abort if delete is in progress
     if (deletingProductId !== null) {
       console.log("Edit canceled: Delete operation in progress");
       return;
@@ -100,7 +93,6 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
 
   const handleVerify = (product: ProductSubmission) => {
-    // Abort if delete is in progress
     if (deletingProductId !== null) {
       console.log("Verify canceled: Delete operation in progress");
       return;
@@ -127,9 +119,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     }
   };
   
-  // Modified handlers to avoid direct UI updates (parent component should handle that)
   const handleApprove = (productId: string) => {
-    // Abort if delete is in progress
     if (deletingProductId !== null) {
       toast({
         title: "Action in Progress",
@@ -153,7 +143,6 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
   
   const handleReject = (productId: string) => {
-    // Abort if delete is in progress
     if (deletingProductId !== null) {
       toast({
         title: "Action in Progress",
@@ -177,7 +166,6 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
 
   const handleDelete = (productId: string) => {
-    // Abort if delete is already in progress
     if (deletingProductId !== null) {
       toast({
         title: "Delete in Progress",
@@ -187,9 +175,12 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
       return;
     }
     
-    // Call the parent's delete handler
-    if (onDelete) {
-      onDelete(productId);
+    if (window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
+      setLocalProducts(prev => prev.filter(p => p.id !== productId));
+      
+      if (onDelete) {
+        onDelete(productId);
+      }
     }
   };
   
