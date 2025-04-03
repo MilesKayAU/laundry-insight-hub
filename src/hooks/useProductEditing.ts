@@ -56,7 +56,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
     setProductDetails({
       brand: product.brand || '',
       name: product.name || '',
-      description: product.description || '',
+      description: product.description || 'This product may contain PVA according to customers - please verify',
       imageUrl: product.imageUrl || '',
       videoUrl: product.videoUrl || '',
       websiteUrl: product.websiteUrl || '',
@@ -64,7 +64,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       country: product.country || 'Global',
       ingredients: product.ingredients || '',
       pvaStatus: product.pvaStatus || 'needs-verification',
-      type: product.type || ''
+      type: product.type || 'Detergent' // Default type for new products
     });
     setIsDialogOpen(true);
   };
@@ -128,6 +128,9 @@ export const useProductEditing = (onSuccess?: () => void) => {
         
         console.log("Successfully updated product in Supabase");
         supabaseSuccess = true;
+        
+        // Force immediate invalidation of caches
+        invalidateProductCache();
       }
       catch (error) {
         console.error("Failed to update product in Supabase:", error);
@@ -156,6 +159,11 @@ export const useProductEditing = (onSuccess?: () => void) => {
 
         // Force a refresh by dispatching a reload event
         window.dispatchEvent(new Event('reload-products'));
+        
+        // Additional refresh to ensure UI updates
+        setTimeout(() => {
+          window.dispatchEvent(new Event('reload-products'));
+        }, 500);
       } else {
         toast({
           title: "Update Failed",

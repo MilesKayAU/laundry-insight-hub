@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,23 @@ const ProductDetailsDialog = ({
       setIsSaving(false);
     }
   };
+
+  // Product types list
+  const productTypes = [
+    'Detergent',
+    'Laundry Sheets',
+    'Dish Soap',
+    'Dishwasher Pods',
+    'Fabric Softener',
+    'All-Purpose Cleaner',
+    'Stain Remover',
+    'Bleach',
+    'Toilet Cleaner',
+    'Window Cleaner',
+    'Floor Cleaner',
+    'Bath & Shower Cleaner',
+    'Other'
+  ];
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -103,12 +121,19 @@ const ProductDetailsDialog = ({
             
             <div>
               <Label htmlFor="type">Product Type</Label>
-              <Input 
-                id="type"
-                value={details.type}
-                onChange={(e) => onDetailsChange({ type: e.target.value })}
-                placeholder="E.g., Laundry Sheets, Dish Soap, etc."
-              />
+              <Select 
+                value={details.type || 'Detergent'}
+                onValueChange={(value) => onDetailsChange({ type: value })}
+              >
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Select product type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productTypes.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div>
@@ -172,10 +197,11 @@ const ProductDetailsDialog = ({
               <Label htmlFor="description">Description</Label>
               <Textarea 
                 id="description"
-                value={details.description}
+                value={details.description || 'This product may contain PVA according to customers - please verify'}
                 onChange={(e) => onDetailsChange({ description: e.target.value })}
                 placeholder="Enter product description"
                 rows={3}
+                defaultValue="This product may contain PVA according to customers - please verify"
               />
             </div>
             

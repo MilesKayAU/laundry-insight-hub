@@ -42,7 +42,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       handleForceRefresh();
-    }, 2 * 60 * 1000); // Every 2 minutes
+    }, 1 * 60 * 1000); // Every 1 minute
     
     return () => clearInterval(refreshInterval);
   }, []);
@@ -51,14 +51,27 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     setRefreshing(true);
     forceProductRefresh();
     
+    // Dispatch a custom event to trigger a reload
+    window.dispatchEvent(new Event('reload-products'));
+    
     setTimeout(() => {
       setRefreshing(false);
-    }, 2000);
+    }, 1000);
   };
   
   const handleEdit = (product: ProductSubmission) => {
     console.log("Edit button clicked for product:", product.name);
     setEditingProductId(product.id);
+    
+    // Ensure product has a default type if missing
+    if (!product.type) {
+      product.type = 'Detergent';
+    }
+    
+    // Ensure product has a default description if missing
+    if (!product.description) {
+      product.description = 'This product may contain PVA according to customers - please verify';
+    }
     
     // Ensure product is properly defined before passing to parent component
     if (product && product.id) {
@@ -136,7 +149,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                   <TableRow key={product.id}>
                     <TableCell className="text-[115%] font-medium">{product.brand}</TableCell>
                     <TableCell>{product.name}</TableCell>
-                    <TableCell>{product.type}</TableCell>
+                    <TableCell>{product.type || 'Detergent'}</TableCell>
                     <TableCell>
                       {product.pvaStatus === 'contains' && (
                         <Badge variant="destructive">Contains PVA</Badge>

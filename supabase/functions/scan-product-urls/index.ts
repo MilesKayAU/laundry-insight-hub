@@ -57,12 +57,12 @@ serve(async (req) => {
       brand: 'Example Brand',
       name: 'Product From URL',
       type: 'Detergent',
-      description: `Product extracted from ${url}`,
+      description: 'This product may contain PVA according to customers - please verify',
       pvaStatus: 'needs-verification',
       pvaPercentage: null,
       country: 'Global',
       websiteUrl: url,
-      approved: markAsPending ? false : true, // Note: new products should start as unapproved
+      approved: false, // Always set to false for new products so they appear in pending
       timestamp: new Date().toISOString()
     };
     
