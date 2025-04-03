@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,8 +33,14 @@ import { Textarea } from "@/components/ui/textarea";
 import MediaUploader from "@/components/MediaUploader";
 import { useToast } from "@/hooks/use-toast";
 import { submitProduct } from "@/lib/textExtractor";
-import { Shield, Camera, Info } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Shield, Camera, Info, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { 
+  checkUserSubmissionLimits, 
+  updatePendingSubmissionCount, 
+  UserTrustLevel 
+} from "@/utils/supabaseUtils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const productSchema = z.object({
   productName: z.string().min(2, {
@@ -90,6 +95,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
   const [submitting, setSubmitting] = useState(false);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const { toast } = useToast();
+  const { user, isAuthenticated, isAdmin } = useAuth();
+  const [submissionLimits, setSubmissionLimits] = useState<{
+    allowed: boolean;
+    remainingAllowed: number;
+    maxAllowed: number;
+    trustLevel: UserTrustLevel;
+  }>({
+    allowed: true,
+    remainingAllowed: 3,
+    maxAllowed: 3,
+    trustLevel: UserTrustLevel.NEW
+  });
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -105,7 +122,30 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
     },
   });
 
+  useEffect(() => {
+    const checkLimits = async () => {
+      const limits = await checkUserSubmissionLimits(
+        user?.id,
+        isAdmin,
+        false,
+        1
+      );
+      setSubmissionLimits(limits);
+    };
+    
+    checkLimits();
+  }, [user?.id, isAdmin]);
+
   const onSubmit = async (data: ProductFormValues) => {
+    if (!submissionLimits.allowed) {
+      toast({
+        title: "Submission limit reached",
+        description: `You can submit up to ${submissionLimits.maxAllowed} products until existing submissions are approved. Please wait for admin review.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSubmitting(true);
     
     try {
@@ -122,6 +162,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
       });
 
       if (success) {
+        if (user?.id) {
+          updatePendingSubmissionCount(user.id, 1);
+          
+          const newLimits = await checkUserSubmissionLimits(
+            user.id,
+            isAdmin,
+            false,
+            1
+          );
+          setSubmissionLimits(newLimits);
+        }
+        
         toast({
           title: "Product submitted successfully",
           description: "Thank you for your contribution to our database.",
@@ -150,6 +202,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
     }
   };
 
+  const getTrustLevelMessage = () => {
+    switch (submissionLimits.trustLevel) {
+      case UserTrustLevel.VERIFIED:
+        return "You're a verified contributor and can submit multiple products.";
+      case UserTrustLevel.TRUSTED:
+        return "You're a trusted contributor and can submit up to 10 products at a time.";
+      case UserTrustLevel.NEW:
+      default:
+        return `As a new contributor, you can submit up to ${submissionLimits.maxAllowed} products until they're approved.`;
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -159,6 +223,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {!submissionLimits.allowed && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Submission Limit Reached</AlertTitle>
+            <AlertDescription>
+              You've reached your submission limit of {submissionLimits.maxAllowed} products. 
+              Please wait for admin approval of your existing submissions before adding more products.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {submissionLimits.allowed && submissionLimits.remainingAllowed < submissionLimits.maxAllowed && (
+          <Alert variant="warning" className="mb-4 bg-amber-50 border-amber-200">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Submission Limit</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              You can submit {submissionLimits.remainingAllowed} more product(s) before reaching your current limit.
+              {getTrustLevelMessage()}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,7 +432,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
               )}
             />
             
-            <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              size="lg" 
+              disabled={submitting || !submissionLimits.allowed}
+            >
               {submitting ? (
                 <>Submitting...</>
               ) : (

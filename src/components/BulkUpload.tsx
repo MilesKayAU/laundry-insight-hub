@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -34,10 +34,17 @@ import {
   FileText,
   HelpCircle,
   Info,
+  Lock,
   Link as LinkIcon
 } from "lucide-react";
 import { BulkProductData, parseCSV, processBulkUpload, getSampleCSVTemplate } from '@/lib/bulkUpload';
 import { MultiSelect } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  checkUserSubmissionLimits, 
+  updatePendingSubmissionCount, 
+  UserTrustLevel 
+} from "@/utils/supabaseUtils";
 
 interface BulkUploadProps {
   onComplete: () => void;
@@ -71,6 +78,33 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     errors: { item: BulkProductData; error: string }[];
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user, isAuthenticated, isAdmin } = useAuth();
+  const [submissionLimits, setSubmissionLimits] = useState<{
+    allowed: boolean;
+    remainingAllowed: number;
+    maxAllowed: number;
+    trustLevel: UserTrustLevel;
+  }>({
+    allowed: true,
+    remainingAllowed: 3,
+    maxAllowed: 3,
+    trustLevel: UserTrustLevel.NEW
+  });
+
+  // Check submission limits when component mounts
+  useEffect(() => {
+    const checkLimits = async () => {
+      const limits = await checkUserSubmissionLimits(
+        user?.id,
+        isAdmin,
+        true,
+        1
+      );
+      setSubmissionLimits(limits);
+    };
+    
+    checkLimits();
+  }, [user?.id, isAdmin]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -122,7 +156,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     reader.readAsText(file);
   };
 
-  const handleProcessData = () => {
+  const handleProcessData = async () => {
     try {
       setIsProcessing(true);
       setParseError(null);
@@ -160,6 +194,40 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         });
       }
       
+      // Check if user can submit this many products
+      if (!isAdmin && user?.id) {
+        const limits = await checkUserSubmissionLimits(
+          user.id,
+          isAdmin,
+          true,
+          parsedData.length
+        );
+        
+        if (!limits.allowed) {
+          toast({
+            title: "Submission limit exceeded",
+            description: `You can only submit up to ${limits.maxAllowed} products at once. You're trying to upload ${parsedData.length} products.`,
+            variant: "destructive",
+          });
+          
+          setIsProcessing(false);
+          return;
+        }
+        
+        // If user can't upload all products, limit the number
+        if (parsedData.length > limits.remainingAllowed) {
+          toast({
+            title: "Submission limit applied",
+            description: `Only the first ${limits.remainingAllowed} products will be processed due to your current submission limit.`,
+            variant: "warning",
+          });
+          
+          parsedData.splice(limits.remainingAllowed);
+        }
+        
+        setSubmissionLimits(limits);
+      }
+      
       const result = processBulkUpload(parsedData);
       setResults(result);
       
@@ -178,6 +246,20 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
       }
       
       if (result.success.length > 0) {
+        // Update the pending submission count
+        if (user?.id) {
+          updatePendingSubmissionCount(user.id, result.success.length);
+          
+          // Refresh limits after submission
+          const newLimits = await checkUserSubmissionLimits(
+            user.id,
+            isAdmin,
+            true,
+            1
+          );
+          setSubmissionLimits(newLimits);
+        }
+        
         onComplete();
       }
     } catch (error) {
@@ -221,6 +303,19 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
     }
   };
   
+  // Get trust level message based on current status
+  const getTrustLevelMessage = () => {
+    switch (submissionLimits.trustLevel) {
+      case UserTrustLevel.VERIFIED:
+        return "As a verified contributor, you can upload many products at once.";
+      case UserTrustLevel.TRUSTED:
+        return `As a trusted contributor, you can upload up to ${submissionLimits.maxAllowed} products at once.`;
+      case UserTrustLevel.NEW:
+      default:
+        return `New contributors can upload up to ${submissionLimits.maxAllowed} products until approved.`;
+    }
+  };
+  
   return (
     <Card className="w-full">
       <CardHeader>
@@ -230,6 +325,33 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {isAdmin ? (
+          <Alert variant="success" className="mb-4 bg-green-50 border-green-200">
+            <Check className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-800">Admin Access</AlertTitle>
+            <AlertDescription className="text-green-700">
+              As an admin, you have unlimited bulk upload privileges.
+            </AlertDescription>
+          </Alert>
+        ) : !submissionLimits.allowed ? (
+          <Alert variant="destructive" className="mb-4">
+            <Lock className="h-4 w-4" />
+            <AlertTitle>Bulk Upload Restricted</AlertTitle>
+            <AlertDescription>
+              You've reached your submission limit. Please wait for admin approval of your existing submissions before adding more products.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert variant="warning" className="mb-4 bg-amber-50 border-amber-200">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Upload Limits</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              You can upload up to {submissionLimits.remainingAllowed} products at once.
+              {getTrustLevelMessage()}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {!results ? (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -314,7 +436,7 @@ const BulkUpload: React.FC<BulkUploadProps> = ({ onComplete }) => {
             <div className="flex items-center space-x-4">
               <Button 
                 onClick={handleProcessData} 
-                disabled={!csvData.trim() || isProcessing}
+                disabled={!csvData.trim() || isProcessing || !submissionLimits.allowed}
                 className="flex items-center gap-2"
               >
                 {isProcessing ? (
