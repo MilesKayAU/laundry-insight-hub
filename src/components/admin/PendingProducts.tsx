@@ -182,13 +182,18 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
 
   const handleConfirmDelete = () => {
     if (confirmDeleteId && onDelete) {
-      // Immediately update UI optimistically - remove product from local state
+      const productToDelete = localProducts.find(p => p.id === confirmDeleteId);
+      const productName = productToDelete ? `${productToDelete.brand} ${productToDelete.name}` : "Product";
+      
       setLocalProducts(prev => prev.filter(p => p.id !== confirmDeleteId));
       
-      // Close dialog immediately to improve perceived performance
       setConfirmDeleteId(null);
       
-      // Call the actual delete function with a slight delay
+      toast({
+        title: "Deleting...",
+        description: `Removing ${productName} from the database...`,
+      });
+      
       setTimeout(() => {
         onDelete(confirmDeleteId);
       }, 100);

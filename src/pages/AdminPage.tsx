@@ -425,6 +425,10 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting approved product with ID:", productId);
       
+      // Find the product to be deleted for better user feedback
+      const productToDelete = approvedProducts.find(p => p.id === productId);
+      const productName = productToDelete ? `${productToDelete.brand} ${productToDelete.name}` : "Product";
+      
       // Perform optimistic UI update first
       setLocalProducts(prev => prev.filter(p => p.id !== productId));
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
@@ -434,8 +438,21 @@ const AdminPage = () => {
         await new Promise(resolve => setTimeout(resolve, 100));
         
         const deleteSuccess = await hookDeleteProduct(productId);
-        if (!deleteSuccess) {
-          console.warn("Product deletion reported failure - will refresh data anyway");
+        
+        if (deleteSuccess) {
+          // Show success toast only if we're sure it succeeded
+          toast({
+            title: "Product Deleted",
+            description: `${productName} has been successfully deleted.`,
+          });
+        } else {
+          // Only warn the user but don't try to revert the UI since the product might actually be gone
+          console.warn("Product deletion reported potential issues - will refresh data anyway");
+          toast({
+            title: "Deletion Status Unclear",
+            description: "The product may have been deleted. Refreshing data...",
+            variant: "warning"
+          });
         }
         
         // Always refresh data after deletion attempt
@@ -488,6 +505,10 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting pending product with ID:", productId);
       
+      // Find the product to be deleted for better user feedback
+      const productToDelete = pendingProducts.find(p => p.id === productId);
+      const productName = productToDelete ? `${productToDelete.brand} ${productToDelete.name}` : "Product";
+      
       // Perform optimistic UI update first
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
@@ -496,8 +517,21 @@ const AdminPage = () => {
         await new Promise(resolve => setTimeout(resolve, 100));
         
         const deleteSuccess = await hookDeleteProduct(productId);
-        if (!deleteSuccess) {
-          console.warn("Product deletion reported failure - will refresh data anyway");
+        
+        if (deleteSuccess) {
+          // Show success toast only if we're sure it succeeded
+          toast({
+            title: "Product Deleted",
+            description: `${productName} has been successfully deleted.`,
+          });
+        } else {
+          // Only warn the user but don't try to revert the UI since the product might actually be gone
+          console.warn("Product deletion reported potential issues - will refresh data anyway");
+          toast({
+            title: "Deletion Status Unclear",
+            description: "The product may have been deleted. Refreshing data...",
+            variant: "warning"
+          });
         }
         
         // Always refresh data after deletion attempt

@@ -245,30 +245,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
       } catch (localError) {
         console.error("Error cleaning up localStorage:", localError);
       }
-      
-      // Final notification based on deletion success
-      if (deleteSuccess) {
-        toast({
-          title: "Product Deleted",
-          description: "The product has been successfully deleted",
-        });
-      } else {
-        // If we reached here without setting success to true, all methods failed
-        toast({
-          title: "Deletion Failed",
-          description: "Could not delete the product. Please try again or contact support.",
-          variant: "destructive"
-        });
-      }
-      
+            
       return deleteSuccess;
     } catch (error) {
       console.error("Unexpected error during product deletion:", error);
-      toast({
-        title: "Deletion Error",
-        description: "An unexpected error occurred while deleting the product",
-        variant: "destructive"
-      });
       return false;
     }
   };
