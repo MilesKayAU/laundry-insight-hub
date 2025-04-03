@@ -379,17 +379,16 @@ const AdminPage = () => {
       setLocalProducts(prev => prev.filter(p => p.id !== productId));
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
+      const deletionPromise = hookDeleteProduct(productId);
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Delete operation timed out")), 10000); // 10 second timeout
+        setTimeout(() => reject(new Error("Delete operation timed out")), 10000);
       });
       
-      const deleteSuccess = await Promise.race([
-        hookDeleteProduct(productId),
-        timeoutPromise
-      ]).catch(error => {
-        console.error("Delete operation failed or timed out:", error);
-        return false;
-      });
+      const deleteSuccess = await Promise.race([deletionPromise, timeoutPromise])
+        .catch(error => {
+          console.error("Delete operation failed or timed out:", error);
+          return false;
+        });
       
       if (deleteSuccess) {
         console.log("Product deleted successfully:", productId);
@@ -399,11 +398,25 @@ const AdminPage = () => {
         });
         
         try {
-          invalidateProductCache(); 
-          await new Promise(resolve => setTimeout(resolve, 300));
-          forceProductRefresh();
-          await new Promise(resolve => setTimeout(resolve, 300));
-          await loadProducts();
+          invalidateProductCache();
+          
+          const refreshPromise = new Promise<void>((resolve) => {
+            setTimeout(() => {
+              forceProductRefresh();
+              resolve();
+            }, 300);
+          });
+          
+          await Promise.race([refreshPromise, timeoutPromise]);
+          
+          const loadPromise = new Promise<void>((resolve) => {
+            setTimeout(() => {
+              loadProducts().catch(e => console.error("Load products error:", e));
+              resolve();
+            }, 300);
+          });
+          
+          await Promise.race([loadPromise, timeoutPromise]);
         } catch (refreshError) {
           console.error("Error refreshing data after delete:", refreshError);
           toast({
@@ -455,17 +468,16 @@ const AdminPage = () => {
       
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
+      const deletionPromise = hookDeleteProduct(productId);
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Delete operation timed out")), 10000); // 10 second timeout
+        setTimeout(() => reject(new Error("Delete operation timed out")), 10000);
       });
       
-      const deleteSuccess = await Promise.race([
-        hookDeleteProduct(productId),
-        timeoutPromise
-      ]).catch(error => {
-        console.error("Delete operation failed or timed out:", error);
-        return false;
-      });
+      const deleteSuccess = await Promise.race([deletionPromise, timeoutPromise])
+        .catch(error => {
+          console.error("Delete operation failed or timed out:", error);
+          return false;
+        });
       
       if (deleteSuccess) {
         console.log("Pending product deleted successfully:", productId);
@@ -476,10 +488,24 @@ const AdminPage = () => {
         
         try {
           invalidateProductCache();
-          await new Promise(resolve => setTimeout(resolve, 300));
-          forceProductRefresh();
-          await new Promise(resolve => setTimeout(resolve, 300));
-          await loadProducts();
+          
+          const refreshPromise = new Promise<void>((resolve) => {
+            setTimeout(() => {
+              forceProductRefresh();
+              resolve();
+            }, 300);
+          });
+          
+          await Promise.race([refreshPromise, timeoutPromise]);
+          
+          const loadPromise = new Promise<void>((resolve) => {
+            setTimeout(() => {
+              loadProducts().catch(e => console.error("Load products error:", e));
+              resolve();
+            }, 300);
+          });
+          
+          await Promise.race([loadPromise, timeoutPromise]);
         } catch (refreshError) {
           console.error("Error refreshing data after delete:", refreshError);
           toast({

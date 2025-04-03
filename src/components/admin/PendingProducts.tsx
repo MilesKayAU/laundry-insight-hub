@@ -123,9 +123,11 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
   
   const handleApprove = (productId: string) => {
-    onApprove(productId);
+    const previousProducts = [...localProducts];
     
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+    
+    onApprove(productId);
     
     setTimeout(() => {
       handleForceRefresh();
@@ -133,9 +135,11 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
   
   const handleReject = (productId: string) => {
-    onReject(productId);
+    const previousProducts = [...localProducts];
     
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+    
+    onReject(productId);
     
     setTimeout(() => {
       handleForceRefresh();

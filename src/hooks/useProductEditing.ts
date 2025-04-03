@@ -186,114 +186,137 @@ export const useProductEditing = (onSuccess?: () => void) => {
     }
   };
 
-  // Improved product deletion functionality with better error handling and timeouts
+  // Completely rewritten product deletion functionality with guaranteed error handling
   const handleDeleteProduct = async (productId: string): Promise<boolean> => {
     console.log("Starting deletion process for product ID:", productId);
     
-    try {
-      // First delete from Supabase with timeout
-      let supabaseSuccess = false;
-      try {
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Supabase delete operation timed out")), 5000);
-        });
-        
-        const deletePromise = supabase
-          .from('product_submissions')
-          .delete()
-          .eq('id', productId)
-          .then(({ error }) => {
-            if (error) {
-              console.error("Error deleting product from Supabase:", error);
-              return false;
-            }
-            console.log(`Successfully deleted product ${productId} from Supabase`);
-            return true;
-          });
-        
-        // Fix for TS2322: Type 'unknown' is not assignable to type 'boolean'
-        // Use type assertion for the Promise.race result
-        supabaseSuccess = await Promise.race([deletePromise, timeoutPromise])
-          .catch(error => {
-            console.error("Supabase delete failed or timed out:", error);
-            return false;
-          }) as boolean;
-          
-        if (supabaseSuccess) {
-          invalidateProductCache();
-        }
-      } catch (dbError) {
-        console.error("Exception deleting product from Supabase:", dbError);
-        // Continue with local deletion even if Supabase fails
-      }
-
-      // Then delete from local storage with a separate try-catch
-      let localSuccess = false;
-      try {
-        localSuccess = deleteProductSubmission(productId);
-        console.log("Local storage deletion result:", localSuccess ? "success" : "failed");
-        
-        if (!localSuccess) {
-          // Fallback deletion method
-          try {
-            // Fix for TS2552: Cannot find name 'getProductSubmissions'
-            // Import the function through the existing products from localStorage
-            const productsString = localStorage.getItem('product_submissions') || localStorage.getItem('products') || '[]';
-            const allProducts = JSON.parse(productsString);
-            const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
-            localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
-            console.log("Product deleted through fallback method");
-            localSuccess = true;
-          } catch (fallbackError) {
-            console.error("Even fallback deletion failed:", fallbackError);
-          }
-        }
-      } catch (localError) {
-        console.error("Error deleting from localStorage:", localError);
-      }
-
-      const success = supabaseSuccess || localSuccess;
+    return new Promise((resolve) => {
+      // Create a timeout to guarantee the function resolves
+      const masterTimeout = setTimeout(() => {
+        console.error("Master timeout triggered - ensuring operation completes");
+        resolve(false);
+      }, 10000);
       
-      if (success) {
-        console.log("Successfully deleted product:", productId);
-        toast({
-          title: "Product Deleted",
-          description: "Product was successfully deleted",
-        });
+      // Inner async function with try-catch
+      const performDelete = async (): Promise<boolean> => {
+        // Track success flags
+        let supabaseSuccess = false;
+        let localSuccess = false;
+        
+        try {
+          // First try to delete from Supabase with timeout
+          try {
+            const deletePromise = supabase
+              .from('product_submissions')
+              .delete()
+              .eq('id', productId)
+              .then(({ error }) => {
+                if (error) {
+                  console.error("Error deleting product from Supabase:", error);
+                  return false;
+                }
+                console.log(`Successfully deleted product ${productId} from Supabase`);
+                return true;
+              });
+            
+            // Race the delete operation against a timeout
+            const timeoutPromise = new Promise<boolean>((_, reject) => {
+              setTimeout(() => reject(new Error("Supabase delete operation timed out")), 5000);
+            });
+            
+            supabaseSuccess = await Promise.race([deletePromise, timeoutPromise])
+              .catch(error => {
+                console.error("Supabase delete failed or timed out:", error);
+                return false;
+              }) as boolean;
+              
+            if (supabaseSuccess) {
+              console.log("Invalidating product cache after successful Supabase delete");
+              invalidateProductCache();
+            }
+          } catch (dbError) {
+            console.error("Exception deleting product from Supabase:", dbError);
+            // Continue with local deletion even if Supabase fails
+          }
 
-        // Trigger refresh after successful deletion
-        if (typeof onSuccess === 'function') {
-          setTimeout(() => {
+          // Then delete from local storage with a separate try-catch
+          try {
+            localSuccess = deleteProductSubmission(productId);
+            console.log("Local storage deletion result:", localSuccess ? "success" : "failed");
+            
+            if (!localSuccess) {
+              // Fallback deletion method if standard method fails
+              try {
+                const productsString = localStorage.getItem('product_submissions') || localStorage.getItem('products') || '[]';
+                const allProducts = JSON.parse(productsString);
+                const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
+                localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
+                console.log("Product deleted through fallback method");
+                localSuccess = true;
+              } catch (fallbackError) {
+                console.error("Even fallback deletion failed:", fallbackError);
+              }
+            }
+          } catch (localError) {
+            console.error("Error deleting from localStorage:", localError);
+          }
+
+          // Determine overall success
+          const success = supabaseSuccess || localSuccess;
+          
+          if (success) {
+            console.log("Successfully deleted product:", productId);
+            toast({
+              title: "Product Deleted",
+              description: "Product was successfully deleted",
+            });
+
+            // Schedule refresh but with guaranteed completion
             try {
               forceProductRefresh();
-              setTimeout(() => {
-                onSuccess();
-              }, 200);
+              if (typeof onSuccess === 'function') {
+                setTimeout(() => {
+                  try {
+                    onSuccess();
+                  } catch (callbackError) {
+                    console.error("Error in refresh callback:", callbackError);
+                  }
+                }, 200);
+              }
             } catch (refreshError) {
               console.error("Error during refresh after deletion:", refreshError);
             }
-          }, 200);
+          } else {
+            console.error("Both Supabase and local deletion failed for product:", productId);
+            toast({
+              title: "Delete Failed",
+              description: "Failed to delete product completely",
+              variant: "destructive"
+            });
+          }
+          
+          clearTimeout(masterTimeout);
+          resolve(success);
+        } catch (error) {
+          console.error("Uncaught error in handleDeleteProduct:", error);
+          toast({
+            title: "Error",
+            description: "An unexpected error occurred while deleting the product",
+            variant: "destructive"
+          });
+          
+          clearTimeout(masterTimeout);
+          resolve(false);
         }
-
-        return true;
-      } else {
-        console.error("Both Supabase and local deletion failed for product:", productId);
-        toast({
-          title: "Delete Failed",
-          description: "Failed to delete product from both database and local storage",
-          variant: "destructive"
-        });
-        return false;
-      }
-    } catch (error) {
-      console.error("Error in handleDeleteProduct:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while deleting the product",
-        variant: "destructive"
+      };
+      
+      // Start the delete operation
+      performDelete().catch((error) => {
+        console.error("Unhandled promise rejection in performDelete:", error);
+        clearTimeout(masterTimeout);
+        resolve(false);
       });
-      return false;
-    }
+    });
   };
 
   return {
