@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Search } from "lucide-react";
@@ -41,6 +42,7 @@ const fetchPvaFreeProducts = async () => {
     }
     
     console.info(`PvaFreePage: Fetched ${data?.length || 0} PVA-free products from Supabase`);
+    console.log("Raw Supabase data for PVA-free products:", data);
     
     if (!data || data.length === 0) {
       console.warn("PvaFreePage: No data returned from Supabase - check RLS policies and API keys");
@@ -107,7 +109,13 @@ const PvaFreePage = () => {
     
     const checkSupabase = async () => {
       try {
-        const { error } = await supabase.from('product_submissions').select('count').limit(1);
+        console.log("Checking Supabase connection...");
+        const { data, error } = await supabase
+          .from('product_submissions')
+          .select('count')
+          .eq('approved', true)
+          .limit(1);
+        
         if (error) {
           console.error("Supabase connection check failed:", error);
           toast({
@@ -116,7 +124,7 @@ const PvaFreePage = () => {
             variant: "destructive"
           });
         } else {
-          console.log("Supabase connection check: OK");
+          console.log("Supabase connection check: OK", data);
         }
       } catch (e) {
         console.error("Error checking Supabase connection:", e);

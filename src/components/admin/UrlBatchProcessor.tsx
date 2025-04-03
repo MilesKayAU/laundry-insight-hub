@@ -104,13 +104,33 @@ const UrlBatchProcessor = () => {
             }
           } else {
             console.warn(`No product data found for URL ${url}:`, data);
-            setResults(prev => prev.map(r => 
-              r.url === url ? { 
-                ...r, 
-                status: 'error', 
-                message: data?.message || 'No product data found' 
-              } : r
-            ));
+            
+            // Check if the product already exists but was just not added
+            if (data && data.status === 'error' && data.message && data.message.includes('Product already exists')) {
+              setResults(prev => prev.map(r => 
+                r.url === url ? { 
+                  ...r, 
+                  status: 'success', 
+                  message: data.message 
+                } : r
+              ));
+              
+              // Also notify if this is an already existing product
+              if (data.productData) {
+                toast({
+                  title: "Product already exists",
+                  description: `Found existing: ${data.productData.brand} - ${data.productData.name}`,
+                });
+              }
+            } else {
+              setResults(prev => prev.map(r => 
+                r.url === url ? { 
+                  ...r, 
+                  status: 'error', 
+                  message: data?.message || 'No product data found' 
+                } : r
+              ));
+            }
           }
         } catch (err) {
           console.error(`Exception processing URL ${url}:`, err);
@@ -128,9 +148,10 @@ const UrlBatchProcessor = () => {
         setProgress(newProgress);
       }
 
+      const successCount = results.filter(r => r.status === 'success').length;
       toast({
         title: "Processing complete",
-        description: `Processed ${urls.length} URLs with ${results.filter(r => r.status === 'success').length} successes.`,
+        description: `Processed ${urls.length} URLs with ${successCount} successes.`,
       });
 
       // Force reload of products to ensure UI is updated with new additions

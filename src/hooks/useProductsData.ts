@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -287,6 +288,9 @@ export const useProductsData = (selectedCountry: string) => {
           });
         } else {
           console.log("Successfully updated product in Supabase");
+          
+          // Force a refetch to ensure we have the latest data
+          refetch();
         }
       } catch (dbError) {
         console.error("Failed to update product in Supabase:", dbError);

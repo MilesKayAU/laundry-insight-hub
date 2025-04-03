@@ -1,4 +1,3 @@
-
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
@@ -109,7 +108,7 @@ Deno.serve(async (req) => {
     // Check if the product already exists (by brand and name)
     const { data: existingProducts, error: searchError } = await supabaseClient
       .from('product_submissions')
-      .select('id')
+      .select('id, approved')
       .eq('brand', productData.brand)
       .eq('name', productData.name);
       
@@ -120,6 +119,7 @@ Deno.serve(async (req) => {
     
     if (existingProducts && existingProducts.length > 0) {
       console.log(`Product already exists: ${productData.brand} - ${productData.name}`);
+      // Return the existing product data including its approval status
       return new Response(
         JSON.stringify({
           status: 'error',
@@ -127,6 +127,7 @@ Deno.serve(async (req) => {
           productData: {
             ...productData,
             id: existingProducts[0].id,
+            approved: existingProducts[0].approved // Keep the existing approval status
           },
         }),
         {
@@ -171,7 +172,8 @@ Deno.serve(async (req) => {
         message: `Added "${productData.brand} - ${productData.name}" to the database for review.`,
         productData: {
           ...productData,
-          id: productToInsert.id
+          id: productToInsert.id,
+          approved: false // Explicitly state this is not approved
         },
       }),
       {
