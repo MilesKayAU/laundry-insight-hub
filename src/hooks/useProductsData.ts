@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -119,13 +120,18 @@ export const useProductsData = (selectedCountry: string) => {
     setLoading(true);
     
     try {
-      // Only get local product submissions if we're not in live-only mode
-      const allData = liveDataOnly ? [] : getProductSubmissions();
+      // IMPORTANT: Only get local product submissions if we're not in live-only mode
+      let allData: ProductSubmission[] = [];
       
-      // Log the data for debugging
-      console.log(liveDataOnly 
-        ? "Live data only mode enabled - not loading local submissions" 
-        : `Retrieved ${allData.length} local product submissions`);
+      if (liveDataOnly) {
+        console.log("Live data only mode enabled - not loading local submissions");
+        // Force clear any localStorage data to ensure we're truly in live mode
+        localStorage.removeItem("product_submissions");
+      } else {
+        // Only fetch from localStorage when not in live data only mode
+        allData = getProductSubmissions();
+        console.log(`Retrieved ${allData.length} local product submissions`);
+      }
       
       setAllSubmissions(allData);
       
@@ -146,12 +152,17 @@ export const useProductsData = (selectedCountry: string) => {
       setLoading(false);
       setRefreshKey(prev => prev + 1);
       
-      toast({
-        title: "Data refreshed",
-        description: liveDataOnly 
-          ? "Loaded live data only from Supabase." 
-          : "The product database has been refreshed with both local and remote data.",
-      });
+      if (!liveDataOnly) {
+        toast({
+          title: "Data refreshed",
+          description: "The product database has been refreshed with both local and remote data."
+        });
+      } else {
+        toast({
+          title: "Live data refreshed",
+          description: "Loaded live data only from Supabase. No local data is being used."
+        });
+      }
     } catch (error) {
       console.error("Error refreshing data:", error);
       setLoading(false);

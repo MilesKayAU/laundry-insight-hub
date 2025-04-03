@@ -90,7 +90,7 @@ export const checkRlsStatus = async () => {
 export const getSupabaseClientInfo = () => {
   // Safely extract URL from environment variables
   const getUrl = () => {
-    // Access the URL from the client file instead of using a non-existent getUrl() method
+    // Access the URL from the client file directly
     try {
       const SUPABASE_URL = "https://wtxqdzcihxjaiosmffvm.supabase.co"; // From client.ts
       return SUPABASE_URL;
@@ -127,9 +127,15 @@ export const LIVE_DATA_MODE_KEY = 'laundry-hub-live-data-only';
  */
 export const setLiveDataOnlyMode = (enabled: boolean) => {
   if (enabled) {
+    // Clear localStorage product submissions to ensure no cached data
+    localStorage.removeItem("product_submissions");
+    
+    // Set the flag in sessionStorage
     sessionStorage.setItem(LIVE_DATA_MODE_KEY, 'true');
+    console.log("Live Data Only Mode ENABLED - cleared local product data");
   } else {
     sessionStorage.removeItem(LIVE_DATA_MODE_KEY);
+    console.log("Live Data Only Mode DISABLED");
   }
   
   // Force page reload to apply changes
@@ -140,6 +146,9 @@ export const setLiveDataOnlyMode = (enabled: boolean) => {
  * Check if the application is in live data only mode
  */
 export const isLiveDataOnlyMode = (): boolean => {
-  return sessionStorage.getItem(LIVE_DATA_MODE_KEY) === 'true';
+  const isEnabled = sessionStorage.getItem(LIVE_DATA_MODE_KEY) === 'true';
+  if (isEnabled) {
+    console.log("Live Data Only Mode is active - using only Supabase data");
+  }
+  return isEnabled;
 };
-

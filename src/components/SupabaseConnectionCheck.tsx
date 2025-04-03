@@ -59,6 +59,12 @@ const SupabaseConnectionCheck = () => {
   }, []);
 
   const handleLiveDataToggle = (checked: boolean) => {
+    // Force clear localStorage product data when enabling Live Data Only mode
+    if (checked && !liveDataOnly) {
+      console.log("Clearing localStorage product data and enabling Live Data Only Mode");
+      localStorage.removeItem("product_submissions");
+    }
+    
     setLiveDataOnly(checked);
     setLiveDataOnlyMode(checked);
   };

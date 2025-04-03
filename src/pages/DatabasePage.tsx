@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table, AlertTriangle, AlertCircle, Database } from "lucide-react";
+import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table, AlertTriangle, AlertCircle, Database, Trash2 } from "lucide-react";
 import { requestBrandOwnership } from "@/lib/bulkUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import DataCharts from "@/components/DataCharts";
@@ -23,7 +22,7 @@ import ProductOwnershipDialog from "@/components/database/ProductOwnershipDialog
 import { ProductSubmission } from "@/lib/textExtractor";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 import SupabaseConnectionCheck from "@/components/SupabaseConnectionCheck";
-import { isLiveDataOnlyMode } from "@/utils/supabaseUtils";
+import { isLiveDataOnlyMode, LIVE_DATA_MODE_KEY } from "@/utils/supabaseUtils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const availableCountries = [
@@ -153,6 +152,15 @@ const DatabasePage = () => {
     setShowDiagnostics(prev => !prev);
   };
 
+  const handleClearLocalData = () => {
+    localStorage.removeItem("product_submissions");
+    toast({
+      title: "Local data cleared",
+      description: "All locally stored product data has been removed. Refreshing data...",
+    });
+    handleRefreshData();
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-10 px-4 flex justify-center items-center">
@@ -192,9 +200,21 @@ const DatabasePage = () => {
         
         {isAuthenticated && (
           <div className="mt-6 text-center">
-            <Button variant="link" onClick={toggleDiagnostics}>
-              {showDiagnostics ? "Hide" : "Show"} Connection Diagnostics
-            </Button>
+            <div className="flex flex-col items-center gap-2">
+              <Button variant="link" onClick={toggleDiagnostics}>
+                {showDiagnostics ? "Hide" : "Show"} Connection Diagnostics
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleClearLocalData}
+                className="flex items-center gap-1"
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear Local Data Cache
+              </Button>
+            </div>
             
             {showDiagnostics && (
               <div className="mt-6">
@@ -259,14 +279,25 @@ const DatabasePage = () => {
                   Refresh Data
                 </Button>
                 {isAuthenticated && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleDiagnostics}
-                  >
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    Connection Diagnostics
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleDiagnostics}
+                      className="mr-2"
+                    >
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      {showDiagnostics ? "Hide" : "Show"} Diagnostics
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleClearLocalData}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear Cache
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -329,12 +360,11 @@ const DatabasePage = () => {
                 Search, filter and explore products to find PVA content information
               </CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={handleRefreshData}
-                className="mr-2"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh Data
@@ -343,7 +373,6 @@ const DatabasePage = () => {
                 variant="outline" 
                 size="sm"
                 onClick={resetCountryFilter}
-                className="mr-2"
               >
                 <Map className="h-4 w-4 mr-2" />
                 Change Region
@@ -365,14 +394,24 @@ const DatabasePage = () => {
                 Table View
               </Button>
               {isAuthenticated && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleDiagnostics}
-                >
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  {showDiagnostics ? "Hide" : "Show"} Diagnostics
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleDiagnostics}
+                  >
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    {showDiagnostics ? "Hide" : "Show"} Diagnostics
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleClearLocalData}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear Cache
+                  </Button>
+                </>
               )}
             </div>
           </div>
