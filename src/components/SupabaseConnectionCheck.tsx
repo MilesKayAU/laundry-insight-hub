@@ -2,8 +2,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { testSupabaseConnection, checkRlsStatus, getSupabaseClientInfo } from "@/utils/supabaseUtils";
-import { AlertTriangle, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { 
+  testSupabaseConnection, 
+  checkRlsStatus, 
+  getSupabaseClientInfo, 
+  setLiveDataOnlyMode,
+  isLiveDataOnlyMode
+} from "@/utils/supabaseUtils";
+import { AlertTriangle, CheckCircle, XCircle, RefreshCw, Database } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface ConnectionStatus {
   connected: boolean;
@@ -25,6 +33,7 @@ const SupabaseConnectionCheck = () => {
   const [rlsStatus, setRlsStatus] = useState<RlsStatus | null>(null);
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [liveDataOnly, setLiveDataOnly] = useState(isLiveDataOnlyMode());
 
   const checkConnection = async () => {
     setLoading(true);
@@ -49,6 +58,11 @@ const SupabaseConnectionCheck = () => {
     checkConnection();
   }, []);
 
+  const handleLiveDataToggle = (checked: boolean) => {
+    setLiveDataOnly(checked);
+    setLiveDataOnlyMode(checked);
+  };
+
   return (
     <Card className="max-w-lg mx-auto">
       <CardHeader>
@@ -61,6 +75,20 @@ const SupabaseConnectionCheck = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center justify-between space-x-2 rounded-lg border p-3 shadow-sm">
+          <div className="flex flex-col space-y-0.5">
+            <Label htmlFor="live-data-mode">Live Data Only Mode</Label>
+            <span className="text-xs text-muted-foreground">
+              When enabled, only loads data from Supabase (no local fallbacks)
+            </span>
+          </div>
+          <Switch 
+            id="live-data-mode" 
+            checked={liveDataOnly}
+            onCheckedChange={handleLiveDataToggle}
+          />
+        </div>
+
         <div className="space-y-2">
           <h3 className="text-sm font-medium">Client Configuration</h3>
           {clientInfo ? (

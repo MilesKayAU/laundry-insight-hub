@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { isLiveDataOnlyMode } from "@/utils/supabaseUtils";
 
 // Define custom typing for product submissions from Supabase
 type SupabaseProductSubmission = {
@@ -81,6 +82,7 @@ export const useProductsData = (selectedCountry: string) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
+  const liveDataOnly = isLiveDataOnlyMode();
 
   // Fetch product submissions from both local and Supabase
   const { data: supabaseProducts = [], isError, error, refetch } = useQuery({
@@ -117,11 +119,13 @@ export const useProductsData = (selectedCountry: string) => {
     setLoading(true);
     
     try {
-      // Get all product submissions with no filtering
-      const allData = getProductSubmissions();
+      // Only get local product submissions if we're not in live-only mode
+      const allData = liveDataOnly ? [] : getProductSubmissions();
       
       // Log the data for debugging
-      console.log("Retrieved local product submissions:", allData.length);
+      console.log(liveDataOnly 
+        ? "Live data only mode enabled - not loading local submissions" 
+        : `Retrieved ${allData.length} local product submissions`);
       
       setAllSubmissions(allData);
       
@@ -144,7 +148,9 @@ export const useProductsData = (selectedCountry: string) => {
       
       toast({
         title: "Data refreshed",
-        description: "The product database has been refreshed with the latest data.",
+        description: liveDataOnly 
+          ? "Loaded live data only from Supabase." 
+          : "The product database has been refreshed with both local and remote data.",
       });
     } catch (error) {
       console.error("Error refreshing data:", error);
@@ -157,13 +163,15 @@ export const useProductsData = (selectedCountry: string) => {
     }
   };
 
-  // Get all approved submissions from local data - explicitly check for approved===true
-  const approvedLocalSubmissions = allSubmissions.filter(submission => submission.approved === true);
-  console.info(`Found ${approvedLocalSubmissions.length} approved local submissions`);
-  
-  // Get all approved submissions from Supabase - ensure we have data
+  // Get approved submissions from Supabase - ensure we have data
   const approvedSupabaseSubmissions = supabaseProducts;
   console.info(`Found ${approvedSupabaseSubmissions.length} approved Supabase submissions`);
+  
+  // Get all approved submissions from local data - only if not in live-only mode
+  const approvedLocalSubmissions = liveDataOnly ? [] : allSubmissions.filter(submission => submission.approved === true);
+  console.info(liveDataOnly 
+    ? "Live data only mode - not using local submissions" 
+    : `Found ${approvedLocalSubmissions.length} approved local submissions`);
   
   // Combine all products that are approved only
   const allApprovedProducts = [
@@ -190,12 +198,14 @@ export const useProductsData = (selectedCountry: string) => {
   console.info(`Total combined products after country filtering: ${combinedApprovedProducts.length}`);
   
   // Get pending products (not approved)
-  const pendingProducts = allSubmissions.filter(submission => submission.approved !== true);
-  console.info(`Found ${pendingProducts.length} pending local submissions`);
+  const pendingProducts = liveDataOnly ? [] : allSubmissions.filter(submission => submission.approved !== true);
+  console.info(liveDataOnly 
+    ? "Live data only mode - not using pending local submissions"
+    : `Found ${pendingProducts.length} pending local submissions`);
   
   // Ensure admin users can see all products in admin views, but public views still only show approved products
   let productsToDisplay = combinedApprovedProducts;
-  if (isAuthenticated) {
+  if (isAuthenticated && !liveDataOnly) {
     console.info("User is authenticated. Showing all submissions for admin views.");
     // Only for admin routes or when working with admin-specific components
     const isAdminView = window.location.pathname.includes('/admin');
@@ -265,7 +275,8 @@ export const useProductsData = (selectedCountry: string) => {
     handleRefreshData,
     approvedLocalSubmissions,
     approvedSupabaseSubmissions,
-    updateProduct
+    updateProduct,
+    liveDataOnly
   };
 };
 

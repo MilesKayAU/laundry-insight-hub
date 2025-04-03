@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table, AlertCircle } from "lucide-react";
+import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table, AlertCircle, Database } from "lucide-react";
 import { requestBrandOwnership } from "@/lib/bulkUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import DataCharts from "@/components/DataCharts";
@@ -22,6 +22,8 @@ import ProductOwnershipDialog from "@/components/database/ProductOwnershipDialog
 import { ProductSubmission } from "@/lib/textExtractor";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
 import SupabaseConnectionCheck from "@/components/SupabaseConnectionCheck";
+import { isLiveDataOnlyMode } from "@/utils/supabaseUtils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const availableCountries = [
   "Global",
@@ -58,7 +60,8 @@ const DatabasePage = () => {
     handleRefreshData, 
     refreshKey, 
     approvedLocalSubmissions, 
-    approvedSupabaseSubmissions
+    approvedSupabaseSubmissions,
+    liveDataOnly
   } = useProductsData(selectedCountry);
   
   console.info(`DatabasePage: Found ${combinedApprovedProducts.length} products to display (${approvedLocalSubmissions?.length || 0} local, ${approvedSupabaseSubmissions?.length || 0} from Supabase)`);
@@ -169,6 +172,16 @@ const DatabasePage = () => {
           </p>
         </div>
         
+        {isLiveDataOnlyMode() && (
+          <Alert className="mb-6 border-amber-500 bg-amber-500/10">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertTitle>Live Data Only Mode Enabled</AlertTitle>
+            <AlertDescription>
+              Only showing data loaded directly from Supabase. No local or fallback data will be used.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <CountrySelector
           selectedCountry={selectedCountry}
           countries={availableCountries}
@@ -202,6 +215,16 @@ const DatabasePage = () => {
             Explore our database of laundry products and their PVA content
           </p>
         </div>
+        
+        {isLiveDataOnlyMode() && (
+          <Alert className="mb-6 border-amber-500 bg-amber-500/10">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertTitle>Live Data Only Mode Enabled</AlertTitle>
+            <AlertDescription>
+              Only showing data loaded directly from Supabase. No local or fallback data will be used.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <Card className="mb-10">
           <CardHeader>
@@ -257,7 +280,9 @@ const DatabasePage = () => {
             <div className="text-center py-12 bg-muted/50 rounded-lg mb-20">
               <h3 className="text-lg font-medium mb-2">No products found in the database</h3>
               <p className="text-muted-foreground mb-4">
-                We don't have any approved products in our database for this region yet.
+                {liveDataOnly 
+                  ? "No products found in the Supabase database. Live Data Only Mode is enabled." 
+                  : "We don't have any approved products in our database for this region yet."}
                 {isAuthenticated && " You're logged in as an admin, so you can add products."}
               </p>
               <Button variant="outline" asChild>
@@ -280,6 +305,16 @@ const DatabasePage = () => {
           Explore our database of laundry products and their PVA content
         </p>
       </div>
+      
+      {isLiveDataOnlyMode() && (
+        <Alert className="mb-6 border-amber-500 bg-amber-500/10">
+          <Database className="h-4 w-4 text-amber-500" />
+          <AlertTitle>Live Data Only Mode Enabled</AlertTitle>
+          <AlertDescription>
+            Only showing data loaded directly from Supabase. No local or fallback data will be used.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Card className="mb-10">
         <CardHeader>

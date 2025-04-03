@@ -115,3 +115,31 @@ export const getSupabaseClientInfo = () => {
     keyLength: hasApiKey() ? "Valid" : "Missing"
   };
 };
+
+/**
+ * Session storage key for the live data mode setting
+ */
+export const LIVE_DATA_MODE_KEY = 'laundry-hub-live-data-only';
+
+/**
+ * Set the application to use only live data from Supabase
+ * @param enabled Whether to enable live data only mode
+ */
+export const setLiveDataOnlyMode = (enabled: boolean) => {
+  if (enabled) {
+    sessionStorage.setItem(LIVE_DATA_MODE_KEY, 'true');
+  } else {
+    sessionStorage.removeItem(LIVE_DATA_MODE_KEY);
+  }
+  
+  // Force page reload to apply changes
+  window.location.reload();
+};
+
+/**
+ * Check if the application is in live data only mode
+ */
+export const isLiveDataOnlyMode = (): boolean => {
+  return sessionStorage.getItem(LIVE_DATA_MODE_KEY) === 'true';
+};
+
