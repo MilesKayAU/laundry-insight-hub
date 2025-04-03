@@ -1,49 +1,30 @@
 
-import React, { useState, useEffect } from 'react';
-import { Textarea } from "@/components/ui/textarea";
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CheckCircle2, Info } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, XCircle, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-interface ScanResult {
+interface ProcessingResult {
   url: string;
-  success: boolean;
-  productId?: string;
-  error?: string;
-  requiresReview?: boolean;
-  containsPva?: boolean;
-  productInfo?: {
-    name: string;
-    brand: string;
-    pvaPercentage: number | null;
-    pvaFound?: boolean;
-  };
+  status: 'pending' | 'success' | 'error';
+  message?: string;
 }
 
-const UrlBatchProcessor: React.FC = () => {
-  const [urlList, setUrlList] = useState<string>('');
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [results, setResults] = useState<ScanResult[]>([]);
-  const [progress, setProgress] = useState<number>(0);
-  const [processingError, setProcessingError] = useState<string>('');
+const UrlBatchProcessor = () => {
   const { toast } = useToast();
-  
-  // Clear error when changing URL list
-  useEffect(() => {
-    if (processingError) {
-      setProcessingError('');
-    }
-  }, [urlList]);
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProcessingError('');
-    
+  const [urlList, setUrlList] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [results, setResults] = useState<ProcessingResult[]>([]);
+  const [currentUrl, setCurrentUrl] = useState('');
+
+  const processUrls = async () => {
     if (!urlList.trim()) {
       toast({
         title: "No URLs provided",
@@ -52,254 +33,237 @@ const UrlBatchProcessor: React.FC = () => {
       });
       return;
     }
-    
-    // Parse URLs (simple split by newline and filter empty lines)
-    const urls = urlList
-      .split('\n')
-      .map(url => url.trim())
-      .filter(url => url.length > 0);
-    
-    if (urls.length === 0) {
-      toast({
-        title: "No valid URLs found",
-        description: "Please enter valid URLs, one per line.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsProcessing(true);
-    setProgress(0);
-    setResults([]);
-    
+
     try {
-      console.log("Calling scan-product-urls edge function with URLs:", urls);
+      setIsProcessing(true);
+      setResults([]);
+      setProgress(0);
+
+      // Split URLs and filter out empty lines
+      const urls = urlList.split('\n').filter(url => url.trim() !== '');
       
-      // Set initial progress
-      setProgress(10);
-      
-      // Call the Supabase Edge Function with better error handling
-      const { data, error } = await supabase.functions.invoke('scan-product-urls', {
-        body: { urls }
-      });
-      
-      // Update progress
-      setProgress(70);
-      
-      if (error) {
-        console.error("Error invoking scan-product-urls function:", error);
-        setProcessingError("Failed to connect to the product scanning service. Please check your network connection and try again.");
+      if (urls.length === 0) {
         toast({
-          title: "Processing Failed",
-          description: "Failed to connect to the product scanning service. Please check your network connection and try again.",
+          title: "No valid URLs",
+          description: "No valid URLs were found in the input.",
           variant: "destructive"
         });
         setIsProcessing(false);
-        setProgress(0);
         return;
       }
-      
-      if (!data) {
-        console.error("No data returned from scan-product-urls function");
-        setProcessingError("The server returned an empty response. Please try again later.");
-        toast({
-          title: "Processing Failed",
-          description: "The server returned an empty response. Please try again later.",
-          variant: "destructive"
-        });
-        setIsProcessing(false);
-        setProgress(0);
-        return;
-      }
-      
-      console.log("Raw response from edge function:", data);
-      
-      if (!data.success) {
-        console.error("Processing failed:", data.error);
-        setProcessingError(data.error || "Failed to process URLs. Please try again.");
-        toast({
-          title: "Processing Failed",
-          description: data.error || "Failed to process URLs. Please try again.",
-          variant: "destructive"
-        });
-        setIsProcessing(false);
-        setProgress(0);
-        return;
-      }
-      
-      console.log("Processing results:", data.results);
-      
-      // Check if results array exists and has the expected format
-      if (!Array.isArray(data.results)) {
-        console.error("Invalid results format:", data.results);
-        setProcessingError("The server returned an invalid response format. Please try again.");
-        toast({
-          title: "Processing Failed",
-          description: "The server returned an invalid response format. Please try again.",
-          variant: "destructive"
-        });
-        setIsProcessing(false);
-        setProgress(0);
-        return;
-      }
-      
-      setResults(data.results || []);
-      
-      // Manually reload products to ensure the pending tab is updated
-      // Add a slight delay to allow server processing to complete
-      setTimeout(() => {
-        // Dispatch an event to signal that products need to be reloaded
-        window.dispatchEvent(new CustomEvent('reload-products'));
-        
-        setProgress(100);
-        
-        const successCount = data.results.filter((r: ScanResult) => r.success).length;
-        const reviewCount = data.results.filter((r: ScanResult) => r.success && (r.requiresReview || r.containsPva)).length;
-        
-        toast({
-          title: "Processing Complete",
-          description: `Successfully processed ${successCount} out of ${urls.length} URLs. ${reviewCount} products added to the pending queue.`,
-          variant: "default"
-        });
-        
-        // Add an additional message specifically about pending queue
-        if (successCount > 0) {
-          setTimeout(() => {
-            toast({
-              title: "Products Added to Pending Queue",
-              description: "Please switch to the Pending Products tab to review the new submissions.",
-              variant: "default"
-            });
-          }, 1000);
-        }
-      }, 1500);
-      
-    } catch (error) {
-      console.error("Error processing URLs:", error);
-      setProcessingError("An unexpected error occurred. Please try again.");
+
       toast({
-        title: "Processing Failed",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Processing started",
+        description: `Processing ${urls.length} URLs. This might take a while...`,
+      });
+
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i].trim();
+        setCurrentUrl(url);
+        
+        // Add to results as pending
+        setResults(prev => [
+          ...prev, 
+          { url, status: 'pending' }
+        ]);
+
+        try {
+          // Call the Supabase Edge function
+          const { data, error } = await supabase.functions.invoke('scan-product-urls', {
+            body: { url },
+          });
+
+          if (error) {
+            console.error(`Error processing URL ${url}:`, error);
+            setResults(prev => prev.map(r => 
+              r.url === url ? { 
+                ...r, 
+                status: 'error', 
+                message: `Failed to scan: ${error.message || 'Unknown error'}` 
+              } : r
+            ));
+          } else if (data && data.status === 'success') {
+            console.log(`Successfully processed URL ${url}:`, data);
+            setResults(prev => prev.map(r => 
+              r.url === url ? { 
+                ...r, 
+                status: 'success', 
+                message: data.message || 'URL successfully processed'
+              } : r
+            ));
+
+            // Display what was added
+            if (data.productData) {
+              toast({
+                title: "Product detected",
+                description: `Found: ${data.productData.brand} - ${data.productData.name}`,
+              });
+              
+              // Force reload of products
+              window.dispatchEvent(new Event('reload-products'));
+            }
+          } else {
+            console.warn(`No product data found for URL ${url}:`, data);
+            setResults(prev => prev.map(r => 
+              r.url === url ? { 
+                ...r, 
+                status: 'error', 
+                message: data?.message || 'No product data found' 
+              } : r
+            ));
+          }
+        } catch (err) {
+          console.error(`Exception processing URL ${url}:`, err);
+          setResults(prev => prev.map(r => 
+            r.url === url ? { 
+              ...r, 
+              status: 'error', 
+              message: `Exception: ${err instanceof Error ? err.message : 'Unknown error'}` 
+            } : r
+          ));
+        }
+
+        // Update progress
+        const newProgress = Math.round(((i + 1) / urls.length) * 100);
+        setProgress(newProgress);
+      }
+
+      toast({
+        title: "Processing complete",
+        description: `Processed ${urls.length} URLs with ${results.filter(r => r.status === 'success').length} successes.`,
+      });
+
+      // Force reload of products to ensure UI is updated with new additions
+      window.dispatchEvent(new Event('reload-products'));
+    } catch (error) {
+      console.error("Error in batch processing:", error);
+      toast({
+        title: "Processing error",
+        description: `An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
-      setProgress(0);
     } finally {
       setIsProcessing(false);
+      setCurrentUrl('');
     }
   };
-  
-  const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setUrlList(e.target.value);
+
+  const getStatusIcon = (status: 'pending' | 'success' | 'error') => {
+    switch (status) {
+      case 'pending':
+        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+    }
   };
-  
+
+  const getStatusColor = (status: 'pending' | 'success' | 'error') => {
+    switch (status) {
+      case 'pending':
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case 'success':
+        return "bg-green-100 text-green-800 border-green-200";
+      case 'error':
+        return "bg-red-100 text-red-800 border-red-200";
+    }
+  };
+
+  const openUrl = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Batch Process Product URLs</CardTitle>
-        <CardDescription>
-          Paste a list of product URLs (one per line) to automatically extract PVA information and add them to the pending queue.
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
-            placeholder="https://example.com/product1&#10;https://example.com/product2&#10;https://example.com/product3"
-            value={urlList}
-            onChange={handleTextAreaChange}
-            className="min-h-[200px] font-mono text-sm"
-            disabled={isProcessing}
-          />
-          
-          {isProcessing && (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>URL Batch Processor</CardTitle>
+          <CardDescription>
+            Enter a list of product URLs, one per line, to automatically scan and add them to the database.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Processing URLs...</span>
-                <span className="text-sm font-medium">{progress}%</span>
-              </div>
-              <Progress value={progress} className="h-2" />
+              <Label htmlFor="url-list">Product URLs</Label>
+              <Textarea
+                id="url-list"
+                placeholder="https://example.com/product-1&#10;https://example.com/product-2&#10;..."
+                value={urlList}
+                onChange={(e) => setUrlList(e.target.value)}
+                disabled={isProcessing}
+                rows={10}
+              />
             </div>
-          )}
-          
-          {processingError && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Processing Failed</AlertTitle>
-              <AlertDescription>{processingError}</AlertDescription>
-            </Alert>
-          )}
-          
-          <div className="flex justify-end">
-            <Button 
-              type="submit" 
-              disabled={isProcessing || !urlList.trim()}
-              className="w-full sm:w-auto"
-            >
-              {isProcessing ? (
-                <>
-                  <Spinner size="sm" color="default" className="mr-2" />
-                  Processing...
-                </>
-              ) : (
-                "Process URLs"
-              )}
-            </Button>
+
+            {isProcessing && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Processing...</span>
+                  <span>{progress}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+                <p className="text-sm text-muted-foreground">{currentUrl}</p>
+              </div>
+            )}
+
+            {results.length > 0 && (
+              <div className="space-y-2 mt-4">
+                <h3 className="font-medium">Results</h3>
+                <div className="max-h-60 overflow-y-auto border rounded-md p-2">
+                  {results.map((result, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-start gap-2 p-2 border-b last:border-b-0"
+                    >
+                      <div className="mt-1">{getStatusIcon(result.status)}</div>
+                      <div className="flex-grow">
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className={getStatusColor(result.status)}>
+                            {result.status}
+                          </Badge>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5"
+                            onClick={() => openUrl(result.url)}
+                            title="Open URL"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <p className="text-sm break-all">{result.url}</p>
+                        {result.message && (
+                          <p className="text-xs text-muted-foreground">{result.message}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex items-center gap-2 pt-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                  <p className="text-sm text-muted-foreground">
+                    All products added from URL scanning start as pending items. Review them in the Pending Products tab before approving.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-        </form>
-        
-        {results.length > 0 && (
-            <div className="mt-6 space-y-4">
-              <h3 className="text-lg font-medium">Results</h3>
-              
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                {results.map((result, index) => (
-                  <Alert 
-                    key={index} 
-                    variant={result.success ? "default" : "destructive"}
-                    className={result.success 
-                      ? (result.requiresReview ? "bg-yellow-50 border-yellow-200" : "bg-green-50 border-green-200")
-                      : "bg-red-50 border-red-200"
-                    }
-                  >
-                    {result.success ? (
-                      result.requiresReview 
-                        ? <Info className="h-4 w-4 text-yellow-600" /> 
-                        : <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                    )}
-                    <AlertTitle className="text-sm font-semibold">
-                      {result.url}
-                    </AlertTitle>
-                    <AlertDescription className="text-xs mt-1">
-                      {result.success ? (
-                        <span>
-                          Added {result.productInfo?.brand} {result.productInfo?.name}
-                          {result.requiresReview 
-                            ? " (Needs manual verification)" 
-                            : result.productInfo?.pvaPercentage !== null 
-                              ? ` with ${result.productInfo?.pvaPercentage}% PVA` 
-                              : " (No PVA percentage available)"
-                          }
-                        </span>
-                      ) : (
-                        <span className="text-red-600">{result.error || "Failed to process URL"}</span>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                ))}
-              </div>
-            </div>
-          )}
-      </CardContent>
-      
-      <CardFooter className="flex flex-col items-start text-sm text-muted-foreground">
-        <p>
-          Note: All products will be added to the pending queue and need admin approval before appearing in the database.
-          Products where PVA content could not be determined will be flagged for manual review.
-        </p>
-      </CardFooter>
-    </Card>
+        </CardContent>
+        <CardFooter>
+          <Button 
+            onClick={processUrls} 
+            disabled={isProcessing || !urlList.trim()}
+            className="w-full"
+          >
+            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isProcessing ? 'Processing...' : 'Process URLs'}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 };
 

@@ -1,293 +1,369 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { v4 as uuidv4 } from "https://esm.sh/uuid@9.0.0";
+// Follow this setup guide to integrate the Deno language server with your editor:
+// https://deno.land/manual/getting_started/setup_your_environment
+// This enables autocomplete, go to definition, etc.
 
-// Define corsHeaders to enable CORS requests
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.5';
+import { corsHeaders } from '../_shared/cors.ts';
+import { v4 as uuid } from 'https://esm.sh/uuid@9.0.0';
 
-interface UrlScanRequest {
-  urls: string[];
-  userId?: string;
-}
+console.log("Starting scan-product-urls function");
 
-interface UrlScanResult {
+interface RequestData {
   url: string;
-  success: boolean;
-  productId?: string;
-  containsPva: boolean;
-  detectedTerms: string[];
-  extractedIngredients: string | null;
-  extractedPvaPercentage: number | null;
-  message: string;
-  needsManualVerification?: boolean;
-  error?: string;
-  productInfo?: {
-    name: string;
-    brand: string;
-    pvaPercentage: number | null;
-    pvaFound?: boolean;
-  };
 }
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-      status: 204,
-    });
+interface ProductData {
+  id: string;
+  name: string;
+  brand: string;
+  type: string;
+  description?: string;
+  pvaStatus?: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
+  pvaPercentage?: number | null;
+  country?: string;
+  websiteUrl: string;
+  videoUrl?: string;
+  imageUrl?: string;
+  approved: boolean;
+}
+
+Deno.serve(async (req) => {
+  console.log(`Function invoked: ${req.url}`);
+  
+  // Handle CORS for preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
   }
   
   try {
-    // Create a Supabase client
-    const authorization = req.headers.get("Authorization");
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authorization! } } }
-    );
+    // Get URL from request body
+    const requestData: RequestData = await req.json();
+    const url = requestData.url;
     
-    // Parse the request body
-    const requestData: UrlScanRequest = await req.json();
-    const { urls, userId } = requestData;
+    if (!url || typeof url !== 'string') {
+      throw new Error('Valid URL is required');
+    }
     
-    console.log(`Processing ${urls.length} URLs`);
+    console.log(`Processing URL: ${url}`);
     
-    if (!Array.isArray(urls) || urls.length === 0) {
+    // Fetch the URL content
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Only process HTML content
+    if (!contentType.includes('text/html')) {
+      console.log(`Skipping non-HTML content: ${contentType}`);
       return new Response(
         JSON.stringify({ 
-          success: false,
-          error: "Invalid request: 'urls' must be a non-empty array of strings" 
-        }), 
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" }, 
-          status: 400 
+          status: 'error',
+          message: 'Not an HTML page. Only HTML pages are supported.'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
         }
       );
     }
-
-    // Process each URL
-    const results: UrlScanResult[] = [];
-    const productIds: string[] = [];
     
-    for (const url of urls) {
-      try {
-        const scanResult = await scanUrl(url);
-        results.push(scanResult);
-        
-        // For URLs that need further verification or are detected to have PVA,
-        // create a product submission in the database
-        if (scanResult.success && (scanResult.needsManualVerification || scanResult.containsPva)) {
-          try {
-            // Always set initial approved state to false for all new products from URL processor
-            const productId = await createProductSubmission(supabase, scanResult, userId, false);
-            if (productId) {
-              // Add the product ID to the result
-              scanResult.productId = productId;
-              productIds.push(productId);
-              console.log(`Created product submission with ID: ${productId}`);
-            }
-          } catch (err) {
-            console.error(`Error creating product submission for URL ${url}:`, err);
-            // Don't mark the whole process as failed if one product submission fails
-            scanResult.error = `Product added but database storage failed: ${err.message}`;
-          }
+    const html = await response.text();
+    console.log(`Fetched ${html.length} bytes of HTML`);
+    
+    // Extract product info from HTML
+    const productData = extractProductData(html, url);
+    
+    // Only continue if we found a product
+    if (!productData) {
+      console.log("No product data could be extracted from the URL");
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'Could not extract product information from the URL'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
         }
-      } catch (err) {
-        console.error(`Error processing URL ${url}:`, err);
-        results.push({
-          url,
-          success: false,
-          containsPva: false,
-          detectedTerms: [],
-          extractedIngredients: null,
-          extractedPvaPercentage: null,
-          message: `Failed to process URL: ${err.message}`,
-          error: err.message
-        });
-      }
+      );
     }
     
-    // Return the results
+    console.log("Extracted product data:", productData);
+    
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+      { auth: { persistSession: false } }
+    );
+    
+    // Check if the product already exists (by brand and name)
+    const { data: existingProducts, error: searchError } = await supabaseClient
+      .from('product_submissions')
+      .select('id')
+      .eq('brand', productData.brand)
+      .eq('name', productData.name);
+      
+    if (searchError) {
+      console.error('Error checking for existing product:', searchError);
+      throw new Error(`Database query failed: ${searchError.message}`);
+    }
+    
+    if (existingProducts && existingProducts.length > 0) {
+      console.log(`Product already exists: ${productData.brand} - ${productData.name}`);
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: `Product already exists: ${productData.brand} - ${productData.name}`,
+          productData: {
+            ...productData,
+            id: existingProducts[0].id,
+          },
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+    
+    // Insert the product into the database - ALWAYS start as not approved
+    const productToInsert = {
+      id: uuid(),
+      name: productData.name,
+      brand: productData.brand,
+      type: productData.type || 'Laundry Product',
+      description: productData.description || '',
+      pvastatus: productData.pvaStatus || 'needs-verification',
+      pvapercentage: productData.pvaPercentage || null,
+      approved: false, // Always start as not approved, requiring admin review
+      country: productData.country || 'Global',
+      websiteurl: url,
+      videourl: productData.videoUrl || '',
+      imageurl: productData.imageUrl || '',
+      createdat: new Date().toISOString(),
+      updatedat: new Date().toISOString()
+    };
+    
+    const { data, error } = await supabaseClient
+      .from('product_submissions')
+      .insert([productToInsert]);
+    
+    if (error) {
+      console.error('Error inserting product:', error);
+      throw new Error(`Database insertion failed: ${error.message}`);
+    }
+    
+    console.log(`Product inserted successfully: ${productData.brand} - ${productData.name}`);
+    
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        results, 
-        productIds,
-        message: `Processed ${urls.length} URLs with ${results.filter(r => r.success).length} successes and ${results.filter(r => !r.success).length} failures`
+      JSON.stringify({
+        status: 'success',
+        message: `Added "${productData.brand} - ${productData.name}" to the database for review.`,
+        productData: {
+          ...productData,
+          id: productToInsert.id
+        },
       }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
       }
     );
     
   } catch (error) {
-    console.error("Error processing request:", error);
+    console.error('Error processing URL:', error);
     
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: `Server error: ${error.message}` 
+      JSON.stringify({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'An unknown error occurred',
       }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
       }
     );
   }
 });
 
-// Scan a URL for PVA content
-async function scanUrl(url: string): Promise<UrlScanResult> {
-  try {
-    console.log(`Scanning URL: ${url}`);
-    
-    if (!url.startsWith('http')) {
-      url = 'https://' + url;
-    }
-    
-    // Simulate scanning the URL
-    // In a production environment, this would make an HTTP request and analyze the content
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-    
-    // Extract domain for brand name
-    const urlObj = new URL(url);
-    let domain = urlObj.hostname.replace(/www\./i, '');
-    
-    // Extract brand name and product name from domain
-    let brandName = domain.split('.')[0];
-    // Capitalize first letter of each word in brand name
-    brandName = brandName.split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    
-    // Check if URL contains specific patterns associated with PVA
-    const pvaPatterns = [
-      "pva", "pvoh", "polyvinyl alcohol", "polyvinylalcohol", "polyvinyl", 
-      "poly vinyl alcohol", "polyethenol", "vinyl alcohol polymer",
-      "water-soluble film", "water soluble film", "dissolvable film",
-      "25213-24-5", "9002-89-5" // CAS numbers for PVA
-    ];
-    
-    // Convert URL to lowercase for case-insensitive matching
-    const urlLower = url.toLowerCase();
-    
-    // Check for PVA patterns in the URL
-    let containsPva = pvaPatterns.some(pattern => 
-      urlLower.includes(pattern.toLowerCase().replace(/\s+/g, '')) || 
-      urlLower.includes(pattern.toLowerCase())
-    );
-    
-    // Special case for Tru Earth which we know contains PVA
-    if (urlLower.includes("tru.earth") || urlLower.includes("truearth")) {
-      containsPva = true;
-    }
-    
-    // Extract detected terms
-    const detectedTerms = pvaPatterns.filter(pattern => 
-      urlLower.includes(pattern.toLowerCase().replace(/\s+/g, '')) || 
-      urlLower.includes(pattern.toLowerCase())
-    );
-    
-    if (urlLower.includes("tru.earth") && !detectedTerms.includes("polyvinyl alcohol")) {
-      detectedTerms.push("polyvinyl alcohol");
-      detectedTerms.push("25213-24-5");
-    }
-    
-    // Generate a more specific product name based on URL path segments
-    const pathSegments = urlObj.pathname.split('/').filter(segment => segment.length > 0);
-    let productName = pathSegments.length > 0 
-      ? pathSegments[pathSegments.length - 1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-      : `Detergent Product`;
-      
-    // Clean up product name
-    productName = productName.replace(/\.(html|php|aspx|htm)$/i, '');
-    
-    // If product name is still empty or too generic, create a more descriptive one
-    if (productName.length < 3 || productName.toLowerCase() === 'index') {
-      const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      productName = `${brandName} Detergent ${randomSuffix}`;
-    }
-    
-    // Determine PVA percentage
-    const pvaPercentage = containsPva ? Math.floor(Math.random() * 30) + 10 : null;
-    
-    return {
-      url,
-      success: true,
-      containsPva,
-      detectedTerms,
-      extractedIngredients: containsPva 
-        ? "POLYVINYL ALCOHOL 25213-24-5 (Structuring Agent), Water, Sodium Carbonate, Sodium Percarbonate, Sodium Dodecylbenzene Sulfonate"
-        : null,
-      extractedPvaPercentage: pvaPercentage,
-      message: containsPva 
-        ? "PVA detected in the product. Manual verification recommended." 
-        : "No PVA detected, but manual verification recommended.",
-      needsManualVerification: true,
-      productInfo: {
-        name: productName,
-        brand: brandName,
-        pvaPercentage: pvaPercentage,
-        pvaFound: containsPva
-      }
-    };
-    
-  } catch (error) {
-    console.error(`Error scanning URL ${url}:`, error);
-    throw error;
-  }
-}
-
-// Create a product submission in the database
-async function createProductSubmission(supabase: any, scanResult: UrlScanResult, userId?: string, approved = false) {
-  try {
-    // Extract domain for brand name if not already available
-    const brandName = scanResult.productInfo?.brand || new URL(scanResult.url).hostname.split('.')[0];
-    
-    // Use product name from scan result or generate one
-    const productName = scanResult.productInfo?.name || `Product ${Date.now().toString().slice(-6)}`;
-    
-    // Create a product submission record
-    const productId = uuidv4();
-    const { error } = await supabase.from('product_submissions').insert({
-      id: productId,
-      brand: brandName,
-      name: productName,
-      type: urlHasLaundryIndicators(scanResult.url) ? 'Laundry Detergent' : 'Detergent',
-      description: `A product that may contain PVA. URL: ${scanResult.url}`,
-      pvastatus: scanResult.containsPva ? 'contains' : 'needs-verification',
-      pvapercentage: scanResult.extractedPvaPercentage || null,
-      approved: approved, // Initially not approved until admin reviews
-      country: 'Global', // Default country
-      websiteurl: scanResult.url,
-      owner_id: userId || null,
-      createdat: new Date().toISOString(),
-      updatedat: new Date().toISOString()
-    });
-    
-    if (error) {
-      console.error("Error creating product submission:", error);
-      throw error;
-    }
-    
-    return productId;
-    
-  } catch (error) {
-    console.error("Error creating product submission:", error);
-    throw error;
-  }
-}
-
-// Check if URL has laundry indicators
-function urlHasLaundryIndicators(url: string): boolean {
-  const laundryTerms = ['laundry', 'wash', 'detergent', 'pod', 'sheet', 'strip', 'cleaning'];
-  const urlLower = url.toLowerCase();
+function extractProductData(html: string, url: string): ProductData | null {
+  // Convert HTML to lowercase for case-insensitive matching
+  const lowerHtml = html.toLowerCase();
   
-  return laundryTerms.some(term => urlLower.includes(term));
+  // Initialize product data
+  const productData: Partial<ProductData> = {
+    id: uuid(),
+    websiteUrl: url,
+    approved: false // Always start as unapproved
+  };
+  
+  // Extract title from HTML
+  const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+  
+  console.log("Page title:", title);
+  
+  // Extract content from meta tags
+  const metaTags = html.match(/<meta[^>]+>/g) || [];
+  const metaData: Record<string, string> = {};
+  
+  metaTags.forEach(tag => {
+    const nameMatch = tag.match(/name=["']([^"']*)["']/i);
+    const propertyMatch = tag.match(/property=["']([^"']*)["']/i);
+    const contentMatch = tag.match(/content=["']([^"']*)["']/i);
+    
+    if (contentMatch) {
+      const name = nameMatch ? nameMatch[1].toLowerCase() : 
+                  propertyMatch ? propertyMatch[1].toLowerCase() : '';
+      
+      if (name) {
+        metaData[name] = contentMatch[1];
+      }
+    }
+  });
+  
+  console.log("Meta data:", metaData);
+  
+  // Try to extract product name and brand from meta tags
+  if (metaData['og:title']) {
+    const parts = metaData['og:title'].split('-').map(p => p.trim());
+    if (parts.length > 1) {
+      productData.brand = parts[0];
+      productData.name = parts.slice(1).join(' ');
+    } else {
+      productData.name = metaData['og:title'];
+    }
+  } else if (title) {
+    // Split title by common separators
+    const parts = title.split(/\s*[|\-–:]\s*/).map(p => p.trim()).filter(Boolean);
+    
+    if (parts.length > 1) {
+      // Assume first part is brand, rest is product name
+      productData.brand = parts[0];
+      productData.name = parts.slice(1).join(' ');
+    } else {
+      productData.name = title;
+    }
+  }
+  
+  // Extract description
+  if (metaData['og:description'] || metaData['description']) {
+    productData.description = metaData['og:description'] || metaData['description'];
+  }
+  
+  // Extract image if available
+  if (metaData['og:image']) {
+    productData.imageUrl = metaData['og:image'];
+    
+    // Ensure the image URL is absolute
+    if (!productData.imageUrl.startsWith('http')) {
+      const baseUrl = new URL(url).origin;
+      productData.imageUrl = new URL(productData.imageUrl, baseUrl).href;
+    }
+  }
+  
+  // Try to identify if it's a laundry product
+  const isLaundryRelated = 
+    lowerHtml.includes('laundry') || 
+    lowerHtml.includes('detergent') || 
+    lowerHtml.includes('washing') ||
+    lowerHtml.includes('clean clothes') ||
+    lowerHtml.includes('pods') ||
+    lowerHtml.includes('sheets') ||
+    lowerHtml.includes('fabric');
+  
+  // Try to determine product type
+  if (lowerHtml.includes('pod') && isLaundryRelated) {
+    productData.type = 'Laundry Pods';
+  } else if (lowerHtml.includes('sheet') && isLaundryRelated) {
+    productData.type = 'Laundry Sheets';
+  } else if (lowerHtml.includes('detergent') && isLaundryRelated) {
+    productData.type = 'Laundry Detergent';
+  } else if (isLaundryRelated) {
+    productData.type = 'Laundry Product';
+  } else {
+    productData.type = 'Other';
+  }
+  
+  // Try to determine PVA status if possible
+  if (lowerHtml.includes('polyvinyl alcohol') || 
+      lowerHtml.includes('pva ') || 
+      lowerHtml.includes(' pva') ||
+      lowerHtml.includes('pva-')) {
+    
+    // If explicitly mentions "pva free" or "no pva"
+    if (lowerHtml.includes('pva free') || 
+        lowerHtml.includes('pva-free') || 
+        lowerHtml.includes('free of pva') ||
+        lowerHtml.includes('without pva') ||
+        lowerHtml.includes('no pva')) {
+      productData.pvaStatus = 'verified-free';
+      productData.pvaPercentage = 0;
+    } else {
+      // If it mentions PVA but not explicitly free
+      productData.pvaStatus = 'contains';
+      
+      // Try to find percentage
+      const percentageMatch = lowerHtml.match(/(\d+(?:\.\d+)?)%\s*(?:of\s*)?pva/i) || 
+                               lowerHtml.match(/pva\s*(?:content|concentration)?\s*(?:of|:)?\s*(\d+(?:\.\d+)?)%/i);
+      
+      if (percentageMatch) {
+        productData.pvaPercentage = parseFloat(percentageMatch[1]);
+      }
+    }
+  } else {
+    productData.pvaStatus = 'needs-verification';
+  }
+  
+  // If we couldn't extract a brand or name, the extraction failed
+  if (!productData.brand || !productData.name) {
+    // Try one more generic approach before giving up
+    const browserTitle = title.replace(/^\s+|\s+$/g, '');
+    
+    if (browserTitle.length > 0) {
+      // Split by first space as a last resort
+      const parts = browserTitle.split(' ');
+      if (parts.length > 1) {
+        productData.brand = parts[0];
+        productData.name = parts.slice(1).join(' ');
+      } else {
+        productData.name = browserTitle;
+        productData.brand = new URL(url).hostname.replace('www.', '').split('.')[0];
+      }
+    } else {
+      return null;
+    }
+  }
+  
+  // Ensure we have all required fields
+  if (!productData.brand) {
+    // Extract domain as brand if we couldn't find one
+    productData.brand = new URL(url).hostname.replace('www.', '').split('.')[0];
+    // Capitalize first letter
+    productData.brand = productData.brand.charAt(0).toUpperCase() + productData.brand.slice(1);
+  }
+  
+  // Ensure name doesn't contain the brand name at the beginning to avoid redundancy
+  if (productData.name && productData.brand && productData.name.toLowerCase().startsWith(productData.brand.toLowerCase())) {
+    productData.name = productData.name.substring(productData.brand.length).replace(/^\s*[-:]\s*/, '').trim();
+  }
+  
+  return productData as ProductData;
 }
+
+// Setup a shared CORS headers file in _shared/cors.ts
+// export const corsHeaders = {
+//   "Access-Control-Allow-Origin": "*",
+//   "Access-Control-Allow-Methods": "POST, OPTIONS",
+//   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+// };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -132,8 +131,6 @@ export const useProductsData = (selectedCountry: string) => {
       
       if (liveDataOnly) {
         console.log("Live data only mode enabled - not loading local submissions");
-        // Force clear any localStorage data to ensure we're truly in live mode
-        localStorage.removeItem("product_submissions");
       } else {
         // Only fetch from localStorage when not in live data only mode
         allData = getProductSubmissions();
@@ -160,15 +157,9 @@ export const useProductsData = (selectedCountry: string) => {
       setRefreshKey(prev => prev + 1);
       
       if (!liveDataOnly) {
-        toast({
-          title: "Data refreshed",
-          description: "The product database has been refreshed with both local and remote data."
-        });
+        console.log("Data refreshed with both local and remote data");
       } else {
-        toast({
-          title: "Live data refreshed",
-          description: "Loaded live data only from Supabase. No local data is being used."
-        });
+        console.log("Live data refreshed from Supabase only. No local data is being used.");
       }
     } catch (error) {
       console.error("Error refreshing data:", error);
@@ -232,10 +223,16 @@ export const useProductsData = (selectedCountry: string) => {
   console.info(`Total combined products after country filtering: ${combinedApprovedProducts.length}`);
   
   // Get pending products (not approved)
-  const pendingProducts = liveDataOnly ? [] : allSubmissions.filter(submission => submission.approved !== true);
-  console.info(liveDataOnly 
-    ? "Live data only mode - not using pending local submissions"
-    : `Found ${pendingProducts.length} pending local submissions`);
+  // If in admin view, show all products that are not approved
+  // If in public view, show only approved products that are also not pending verification
+  const pendingProducts = isAdminView
+    ? (liveDataOnly 
+        ? supabaseProducts.filter(product => product.approved !== true)
+        : [...allSubmissions.filter(submission => submission.approved !== true),
+           ...supabaseProducts.filter(product => product.approved !== true)])
+    : [];
+    
+  console.info(`Found ${pendingProducts.length} pending submissions for current view`);
   
   // Start with the filtered products as the baseline for display
   let productsToDisplay = combinedApprovedProducts;

@@ -76,6 +76,7 @@ const fetchPvaFreeProducts = async () => {
     // Return combined products
     const combinedProducts = [...transformedProducts, ...localProducts];
     console.log("PvaFreePage: Total combined PVA-free products:", combinedProducts.length);
+    console.log("PvaFreePage: Product details:", combinedProducts);
     
     return combinedProducts;
   } catch (error) {
@@ -89,7 +90,7 @@ const PvaFreePage = () => {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   
-  const { data: pvaFreeProducts = [], isLoading, isError, error } = useQuery({
+  const { data: pvaFreeProducts = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['pvaFreeProducts'],
     queryFn: fetchPvaFreeProducts,
     staleTime: 1 * 60 * 1000,
@@ -100,6 +101,9 @@ const PvaFreePage = () => {
   useEffect(() => {
     console.log("PVA Free Products loaded:", pvaFreeProducts.length);
     console.log("Products data:", pvaFreeProducts);
+    
+    // Force refresh of data when the component mounts
+    refetch();
     
     const checkSupabase = async () => {
       try {
@@ -120,7 +124,15 @@ const PvaFreePage = () => {
     };
     
     checkSupabase();
-  }, [pvaFreeProducts, toast]);
+    
+    // Set up periodic refresh
+    const intervalId = setInterval(() => {
+      console.log("Periodic refresh of PVA-free products...");
+      refetch();
+    }, 30000); // Every 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [refetch, toast]);
 
   const filteredProducts = pvaFreeProducts.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
