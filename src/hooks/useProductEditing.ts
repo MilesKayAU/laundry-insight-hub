@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission, deleteProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
@@ -195,10 +194,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
       const masterTimeout = setTimeout(() => {
         console.error("Master timeout triggered - ensuring operation completes");
         resolve(false);
-      }, 10000);
+      }, 7000);
       
       // Inner async function with try-catch
-      const performDelete = async (): Promise<boolean> => {
+      const performDelete = async (): Promise<void> => {
         // Track success flags
         let supabaseSuccess = false;
         let localSuccess = false;
@@ -228,7 +227,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
               .catch(error => {
                 console.error("Supabase delete failed or timed out:", error);
                 return false;
-              }) as boolean;
+              });
               
             if (supabaseSuccess) {
               console.log("Invalidating product cache after successful Supabase delete");
@@ -247,9 +246,9 @@ export const useProductEditing = (onSuccess?: () => void) => {
             if (!localSuccess) {
               // Fallback deletion method if standard method fails
               try {
-                const productsString = localStorage.getItem('product_submissions') || localStorage.getItem('products') || '[]';
+                const productsString = localStorage.getItem('product_submissions') || '[]';
                 const allProducts = JSON.parse(productsString);
-                const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
+                const filteredProducts = allProducts.filter((p: any) => p.id !== productId);
                 localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
                 console.log("Product deleted through fallback method");
                 localSuccess = true;
@@ -264,55 +263,17 @@ export const useProductEditing = (onSuccess?: () => void) => {
           // Determine overall success
           const success = supabaseSuccess || localSuccess;
           
-          if (success) {
-            console.log("Successfully deleted product:", productId);
-            toast({
-              title: "Product Deleted",
-              description: "Product was successfully deleted",
-            });
-
-            // Schedule refresh but with guaranteed completion
-            try {
-              forceProductRefresh();
-              if (typeof onSuccess === 'function') {
-                setTimeout(() => {
-                  try {
-                    onSuccess();
-                  } catch (callbackError) {
-                    console.error("Error in refresh callback:", callbackError);
-                  }
-                }, 200);
-              }
-            } catch (refreshError) {
-              console.error("Error during refresh after deletion:", refreshError);
-            }
-          } else {
-            console.error("Both Supabase and local deletion failed for product:", productId);
-            toast({
-              title: "Delete Failed",
-              description: "Failed to delete product completely",
-              variant: "destructive"
-            });
-          }
-          
           clearTimeout(masterTimeout);
           resolve(success);
         } catch (error) {
           console.error("Uncaught error in handleDeleteProduct:", error);
-          toast({
-            title: "Error",
-            description: "An unexpected error occurred while deleting the product",
-            variant: "destructive"
-          });
-          
           clearTimeout(masterTimeout);
           resolve(false);
         }
       };
       
       // Start the delete operation
-      performDelete().catch((error) => {
-        console.error("Unhandled promise rejection in performDelete:", error);
+      performDelete().catch(() => {
         clearTimeout(masterTimeout);
         resolve(false);
       });

@@ -123,11 +123,31 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
   
   const handleApprove = (productId: string) => {
+    if (deletingProductId !== null) {
+      toast({
+        title: "Action in Progress",
+        description: "Please wait for the current operation to complete.",
+        variant: "warning"
+      });
+      return;
+    }
+    
     const previousProducts = [...localProducts];
     
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
-    onApprove(productId);
+    try {
+      onApprove(productId);
+    } catch (error) {
+      console.error("Error during approval:", error);
+      setLocalProducts(previousProducts);
+      
+      toast({
+        title: "Approval Failed",
+        description: "Failed to approve the product. Please try again.",
+        variant: "destructive"
+      });
+    }
     
     setTimeout(() => {
       handleForceRefresh();
@@ -135,11 +155,31 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   };
   
   const handleReject = (productId: string) => {
+    if (deletingProductId !== null) {
+      toast({
+        title: "Action in Progress",
+        description: "Please wait for the current operation to complete.",
+        variant: "warning"
+      });
+      return;
+    }
+    
     const previousProducts = [...localProducts];
     
     setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
     
-    onReject(productId);
+    try {
+      onReject(productId);
+    } catch (error) {
+      console.error("Error during rejection:", error);
+      setLocalProducts(previousProducts);
+      
+      toast({
+        title: "Rejection Failed",
+        description: "Failed to reject the product. Please try again.",
+        variant: "destructive"
+      });
+    }
     
     setTimeout(() => {
       handleForceRefresh();
