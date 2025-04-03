@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission, deleteProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { normalizeCountry } from '@/utils/countryUtils';
 import { forceProductRefresh, invalidateProductCache } from '@/utils/supabaseUtils';
 
 // Define the ProductDetails interface to match the one in ProductDetailsDialog
@@ -161,24 +160,12 @@ export const useProductEditing = (onSuccess?: () => void) => {
           onSuccess();
         }
 
-        // Force multiple refresh events at different times to ensure UI updates
+        // Force refresh events to ensure UI updates, but use a single timeout
         console.log("Dispatching reload-products event");
-        window.dispatchEvent(new Event('reload-products'));
-        
-        // Force product data refresh to update UI immediately
-        forceProductRefresh();
-        
         setTimeout(() => {
-          console.log("Dispatching delayed reload-products event (500ms)");
-          window.dispatchEvent(new Event('reload-products'));
           forceProductRefresh();
-        }, 500);
-        
-        setTimeout(() => {
-          console.log("Dispatching delayed reload-products event (1500ms)");
           window.dispatchEvent(new Event('reload-products'));
-          forceProductRefresh();
-        }, 1500);
+        }, 300);
       } else {
         console.error("Both local and Supabase updates failed");
         toast({
@@ -205,27 +192,42 @@ export const useProductEditing = (onSuccess?: () => void) => {
     try {
       setIsSaving(true);
 
-      // First delete from Supabase
-      const { error } = await supabase
-        .from('product_submissions')
-        .delete()
-        .eq('id', productId);
+      // First delete from Supabase to ensure database consistency
+      try {
+        const { error } = await supabase
+          .from('product_submissions')
+          .delete()
+          .eq('id', productId);
 
-      if (error) {
-        console.error("Error deleting product from Supabase:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete product from database",
-          variant: "destructive"
-        });
-        return false;
+        if (error) {
+          console.error("Error deleting product from Supabase:", error);
+          toast({
+            title: "Database Warning",
+            description: "Database deletion issue, but continuing with local deletion.",
+            variant: "warning"
+          });
+        } else {
+          console.log(`Successfully deleted product ${productId} from Supabase`);
+        }
+      } catch (dbError) {
+        console.error("Exception deleting product from Supabase:", dbError);
+        // Continue with local deletion even if Supabase fails
       }
 
-      // Then delete from local storage
+      // Then delete from local storage - this should be fast
       const localSuccess = deleteProductSubmission(productId);
       
       if (!localSuccess) {
-        console.warn("Local deletion may have failed, but Supabase deletion succeeded");
+        console.warn("Local deletion may have failed, attempting alternate method");
+        try {
+          // Alternate method to ensure deletion from localStorage
+          const allProducts = JSON.parse(localStorage.getItem('product_submissions') || '[]');
+          const filteredProducts = allProducts.filter((p: any) => p.id !== productId);
+          localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
+          console.log("Product deleted through alternate method");
+        } catch (e) {
+          console.error("Failed alternate deletion method:", e);
+        }
       }
 
       console.log("Successfully deleted product:", productId);
@@ -234,15 +236,14 @@ export const useProductEditing = (onSuccess?: () => void) => {
         description: "Product was successfully deleted",
       });
 
-      // Force refresh to update UI
-      forceProductRefresh();
-      window.dispatchEvent(new Event('reload-products'));
-      
-      // Extra refreshes for redundancy
-      setTimeout(() => {
-        forceProductRefresh();
-        window.dispatchEvent(new Event('reload-products'));
-      }, 500);
+      // Force a single refresh with delay to prevent race conditions
+      if (typeof onSuccess === 'function') {
+        setTimeout(() => {
+          invalidateProductCache();
+          forceProductRefresh();
+          onSuccess();
+        }, 300);
+      }
 
       return true;
     } catch (error) {

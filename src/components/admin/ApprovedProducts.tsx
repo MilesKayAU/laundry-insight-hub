@@ -169,6 +169,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
   
   const handleDelete = (productId: string) => {
     if (onDelete && productId !== deletingProductId) {
+      // Only allow deletion if there isn't already a delete in progress
       onDelete(productId);
     }
   };
@@ -280,7 +281,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                   </TableHeader>
                   <TableBody>
                     {sortedProducts.map((product) => (
-                      <TableRow key={product.id}>
+                      <TableRow key={product.id} className={deletingProductId === product.id ? "opacity-50" : ""}>
                         <TableCell className="text-[115%] font-medium">
                           {product.brand}
                         </TableCell>
@@ -309,6 +310,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                               variant="ghost" 
                               size="icon"
                               onClick={() => onViewDetails(product)}
+                              disabled={deletingProductId === product.id}
                               title="Edit Details"
                               className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                             >
@@ -320,7 +322,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                                   variant="ghost" 
                                   size="icon"
                                   onClick={() => handleVerifyProduct(product)}
-                                  disabled={verifyingProductId === product.id}
+                                  disabled={verifyingProductId === product.id || deletingProductId === product.id}
                                   title="Verify Product URL"
                                   className="text-green-500 hover:text-green-700 hover:bg-green-50"
                                 >
@@ -334,6 +336,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                                     setManualVerificationProduct(product);
                                     setShowManualVerificationDialog(true);
                                   }}
+                                  disabled={deletingProductId === product.id}
                                   title="Manual Verification"
                                   className="text-orange-500 hover:text-orange-700 hover:bg-orange-50"
                                 >
@@ -345,6 +348,7 @@ const ApprovedProducts: React.FC<ApprovedProductsProps> = ({
                               variant="ghost" 
                               size="icon"
                               onClick={() => handleDelete(product.id)}
+                              disabled={deletingProductId !== null}
                               className="text-red-500 hover:text-red-700 hover:bg-red-50"
                               title="Delete"
                             >
