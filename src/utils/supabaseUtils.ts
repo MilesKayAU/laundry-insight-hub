@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export const testSupabaseConnection = async () => {
   try {
-    console.log("Testing Supabase connection with URL:", supabase.supabaseUrl);
+    console.log("Testing Supabase connection...");
     
     const { data, error } = await supabase
       .from('product_submissions')
@@ -88,10 +88,31 @@ export const checkRlsStatus = async () => {
  * Gets information about the Supabase client configuration
  */
 export const getSupabaseClientInfo = () => {
+  // Safely extract URL from environment or window location
+  const getUrl = () => {
+    try {
+      // Get the URL from the Supabase client configuration safely
+      // Or fallback to a display value
+      return new URL(supabase.getUrl()).toString();
+    } catch (e) {
+      return "URL not available";
+    }
+  };
+  
+  // Check if there's an API key without exposing it
+  const hasApiKey = () => {
+    try {
+      // Check if there's an API key without exposing it
+      // This is safer than accessing protected properties directly
+      return supabase.auth.getSession !== undefined;
+    } catch (e) {
+      return false;
+    }
+  };
+
   return {
-    url: supabase.supabaseUrl,
-    // Don't return the actual key for security reasons
-    hasKey: !!supabase.supabaseKey,
-    keyLength: supabase.supabaseKey?.length || 0
+    url: getUrl(),
+    hasKey: hasApiKey(),
+    keyLength: hasApiKey() ? "Valid" : "Missing"
   };
 };

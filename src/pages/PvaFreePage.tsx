@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Search } from "lucide-react";
@@ -27,7 +26,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const fetchPvaFreeProducts = async () => {
   try {
-    console.log("PvaFreePage: Fetching from Supabase with URL:", supabase.supabaseUrl);
+    console.log("PvaFreePage: Fetching from Supabase...");
     
     // Query products from Supabase
     const { data, error } = await supabase
@@ -98,12 +97,10 @@ const PvaFreePage = () => {
     retry: 1,
   });
 
-  // Add debugging to see what products we're getting
   useEffect(() => {
     console.log("PVA Free Products loaded:", pvaFreeProducts.length);
     console.log("Products data:", pvaFreeProducts);
     
-    // Check Supabase connection
     const checkSupabase = async () => {
       try {
         const { error } = await supabase.from('product_submissions').select('count').limit(1);

@@ -28,7 +28,7 @@ type SupabaseProductSubmission = {
 
 // Function to fetch products from Supabase
 const fetchProductsFromSupabase = async () => {
-  console.log("Fetching products from Supabase with URL:", supabase.supabaseUrl);
+  console.log("Fetching products from Supabase...");
   try {
     // Use explicit typing and handle authentication
     const { data, error } = await supabase

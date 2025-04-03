@@ -12,7 +12,7 @@ interface ConnectionStatus {
 }
 
 interface RlsStatus {
-  blocking: boolean | 'maybe' | 'unknown';
+  blocking: boolean | 'maybe' | 'unknown' | string;
   message: string;
 }
 
