@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -34,15 +33,18 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   const { toast } = useToast();
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [localProducts, setLocalProducts] = useState<ProductSubmission[]>([]);
   
-  // Log how many pending products we have for debugging
+  useEffect(() => {
+    setLocalProducts(products);
+  }, [products]);
+  
   console.log(`PendingProducts component received ${products.length} pending products`);
   
-  // Force refresh every few minutes to ensure data is current
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       handleForceRefresh();
-    }, 1 * 60 * 1000); // Every 1 minute
+    }, 30 * 1000); // Every 30 seconds
     
     return () => clearInterval(refreshInterval);
   }, []);
@@ -51,7 +53,6 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     setRefreshing(true);
     forceProductRefresh();
     
-    // Dispatch a custom event to trigger a reload
     window.dispatchEvent(new Event('reload-products'));
     
     setTimeout(() => {
@@ -63,17 +64,14 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     console.log("Edit button clicked for product:", product.name);
     setEditingProductId(product.id);
     
-    // Ensure product has a default type if missing
     if (!product.type) {
       product.type = 'Detergent';
     }
     
-    // Ensure product has a default description if missing
     if (!product.description) {
       product.description = 'This product may contain PVA according to customers - please verify';
     }
     
-    // Ensure product is properly defined before passing to parent component
     if (product && product.id) {
       console.log("Calling onViewDetails with product:", product);
       onViewDetails(product);
@@ -109,6 +107,16 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
     }
   };
   
+  const handleApprove = (productId: string) => {
+    onApprove(productId);
+    setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+  };
+  
+  const handleReject = (productId: string) => {
+    onReject(productId);
+    setLocalProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+  };
+  
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -130,7 +138,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
         </Button>
       </CardHeader>
       <CardContent>
-        {products.length > 0 ? (
+        {localProducts.length > 0 ? (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -145,7 +153,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
+                {localProducts.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell className="text-[115%] font-medium">{product.brand}</TableCell>
                     <TableCell>{product.name}</TableCell>
@@ -204,7 +212,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => onApprove(product.id)}
+                          onClick={() => handleApprove(product.id)}
                           className="text-green-500 hover:text-green-700 hover:bg-green-50"
                           title="Approve"
                         >
@@ -214,7 +222,7 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => onReject(product.id)}
+                          onClick={() => handleReject(product.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
                           title="Reject"
                         >

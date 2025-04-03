@@ -157,13 +157,17 @@ export const useProductEditing = (onSuccess?: () => void) => {
           onSuccess();
         }
 
-        // Force a refresh by dispatching a reload event
+        // Force a refresh by dispatching multiple reload events with delays
         window.dispatchEvent(new Event('reload-products'));
         
-        // Additional refresh to ensure UI updates
+        // Additional refreshes to ensure UI updates
         setTimeout(() => {
           window.dispatchEvent(new Event('reload-products'));
         }, 500);
+        
+        setTimeout(() => {
+          window.dispatchEvent(new Event('reload-products'));
+        }, 1500);
       } else {
         toast({
           title: "Update Failed",

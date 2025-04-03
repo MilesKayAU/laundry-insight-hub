@@ -62,7 +62,8 @@ serve(async (req) => {
       pvaPercentage: null,
       country: 'Global',
       websiteUrl: url,
-      approved: false, // Always set to false for new products so they appear in pending
+      // Important: Set approved to false for batch added products
+      approved: false,
       timestamp: new Date().toISOString()
     };
     
