@@ -27,6 +27,8 @@ import { useQuery } from "@tanstack/react-query";
 
 const fetchPvaFreeProducts = async () => {
   try {
+    console.log("PvaFreePage: Fetching from Supabase with URL:", supabase.supabaseUrl);
+    
     // Query products from Supabase
     const { data, error } = await supabase
       .from('product_submissions')
@@ -40,6 +42,10 @@ const fetchPvaFreeProducts = async () => {
     }
     
     console.info(`PvaFreePage: Fetched ${data?.length || 0} PVA-free products from Supabase`);
+    
+    if (!data || data.length === 0) {
+      console.warn("PvaFreePage: No data returned from Supabase - check RLS policies and API keys");
+    }
     
     const transformedProducts = (data || []).map(item => ({
       id: item.id,
@@ -69,7 +75,10 @@ const fetchPvaFreeProducts = async () => {
     console.info(`PvaFreePage: Found ${localProducts.length} PVA-free submissions from local storage`);
     
     // Return combined products
-    return [...transformedProducts, ...localProducts];
+    const combinedProducts = [...transformedProducts, ...localProducts];
+    console.log("PvaFreePage: Total combined PVA-free products:", combinedProducts.length);
+    
+    return combinedProducts;
   } catch (error) {
     console.error("Exception fetching PVA-free products:", error);
     return [];
@@ -81,18 +90,40 @@ const PvaFreePage = () => {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   
-  const { data: pvaFreeProducts = [], isLoading } = useQuery({
+  const { data: pvaFreeProducts = [], isLoading, isError, error } = useQuery({
     queryKey: ['pvaFreeProducts'],
     queryFn: fetchPvaFreeProducts,
     staleTime: 1 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   // Add debugging to see what products we're getting
   useEffect(() => {
     console.log("PVA Free Products loaded:", pvaFreeProducts.length);
     console.log("Products data:", pvaFreeProducts);
-  }, [pvaFreeProducts]);
+    
+    // Check Supabase connection
+    const checkSupabase = async () => {
+      try {
+        const { error } = await supabase.from('product_submissions').select('count').limit(1);
+        if (error) {
+          console.error("Supabase connection check failed:", error);
+          toast({
+            title: "Database Connection Issue",
+            description: "Failed to connect to product database. Check console for details.",
+            variant: "destructive"
+          });
+        } else {
+          console.log("Supabase connection check: OK");
+        }
+      } catch (e) {
+        console.error("Error checking Supabase connection:", e);
+      }
+    };
+    
+    checkSupabase();
+  }, [pvaFreeProducts, toast]);
 
   const filteredProducts = pvaFreeProducts.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -106,6 +137,24 @@ const PvaFreePage = () => {
             product.type.toLowerCase().includes('laundry sheet') || 
             product.type.toLowerCase().includes('laundry pod'));
   };
+
+  if (isError) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="text-center">
+          <p className="text-red-500 font-medium">Error loading product data</p>
+          <p className="text-muted-foreground mt-2">{error?.message || "An unknown error occurred"}</p>
+          <Button 
+            variant="outline"
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading && pvaFreeProducts.length === 0) {
     return (
@@ -142,6 +191,7 @@ const PvaFreePage = () => {
           <h3 className="text-lg font-medium mb-2">No PVA-free products found</h3>
           <p className="text-muted-foreground mb-4">
             We don't have any verified PVA-free products in our database yet.
+            {isAuthenticated && " You're logged in, so you can add products."}
           </p>
           <Button variant="outline" asChild>
             <Link to="/contribute">

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table } from "lucide-react";
+import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table, AlertCircle } from "lucide-react";
 import { requestBrandOwnership } from "@/lib/bulkUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import DataCharts from "@/components/DataCharts";
@@ -21,6 +21,7 @@ import FilterControls from "@/components/database/FilterControls";
 import ProductOwnershipDialog from "@/components/database/ProductOwnershipDialog";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { isProductSubmission } from "@/components/database/ProductStatusBadges";
+import SupabaseConnectionCheck from "@/components/SupabaseConnectionCheck";
 
 const availableCountries = [
   "Global",
@@ -49,6 +50,7 @@ const DatabasePage = () => {
   
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   
   const { 
     combinedApprovedProducts, 
@@ -143,6 +145,10 @@ const DatabasePage = () => {
     setIsDialogOpen(true);
   };
 
+  const toggleDiagnostics = () => {
+    setShowDiagnostics(prev => !prev);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-10 px-4 flex justify-center items-center">
@@ -169,6 +175,20 @@ const DatabasePage = () => {
           onCountrySelect={handleCountrySelect}
           onSubmit={handleViewProducts}
         />
+        
+        {isAuthenticated && (
+          <div className="mt-6 text-center">
+            <Button variant="link" onClick={toggleDiagnostics}>
+              {showDiagnostics ? "Hide" : "Show"} Connection Diagnostics
+            </Button>
+            
+            {showDiagnostics && (
+              <div className="mt-6">
+                <SupabaseConnectionCheck />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -214,10 +234,26 @@ const DatabasePage = () => {
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh Data
                 </Button>
+                {isAuthenticated && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleDiagnostics}
+                  >
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Connection Diagnostics
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent>
+            {showDiagnostics && isAuthenticated && (
+              <div className="mb-6">
+                <SupabaseConnectionCheck />
+              </div>
+            )}
+            
             <div className="text-center py-12 bg-muted/50 rounded-lg mb-20">
               <h3 className="text-lg font-medium mb-2">No products found in the database</h3>
               <p className="text-muted-foreground mb-4">
@@ -292,10 +328,26 @@ const DatabasePage = () => {
                 <Table className="h-4 w-4 mr-2" />
                 Table View
               </Button>
+              {isAuthenticated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleDiagnostics}
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  {showDiagnostics ? "Hide" : "Show"} Diagnostics
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {showDiagnostics && isAuthenticated && (
+            <div className="mb-6">
+              <SupabaseConnectionCheck />
+            </div>
+          )}
+          
           <FilterControls
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}

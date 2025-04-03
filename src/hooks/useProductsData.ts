@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getProductSubmissions, ProductSubmission, updateProductSubmission } from "@/lib/textExtractor";
 import { normalizeCountry } from "@/utils/countryUtils";
@@ -29,7 +28,7 @@ type SupabaseProductSubmission = {
 
 // Function to fetch products from Supabase
 const fetchProductsFromSupabase = async () => {
-  console.log("Fetching products from Supabase...");
+  console.log("Fetching products from Supabase with URL:", supabase.supabaseUrl);
   try {
     // Use explicit typing and handle authentication
     const { data, error } = await supabase
@@ -39,13 +38,16 @@ const fetchProductsFromSupabase = async () => {
     
     if (error) {
       console.error("Error fetching products from Supabase:", error);
-      return [];
+      throw new Error(`Supabase query error: ${error.message}`);
     }
     
     console.log(`Fetched ${data?.length || 0} products from Supabase`);
     
     // Handle the case when data is null
-    if (!data) return [];
+    if (!data) {
+      console.warn("No data returned from Supabase - check RLS policies and API keys");
+      return [];
+    }
     
     // Transform the Supabase data to match our ProductSubmission type
     const transformedData = data.map(item => ({
@@ -69,7 +71,7 @@ const fetchProductsFromSupabase = async () => {
     return transformedData;
   } catch (error) {
     console.error("Exception fetching products from Supabase:", error);
-    return [];
+    throw error; // Rethrow to let React Query handle the error state
   }
 };
 
@@ -81,13 +83,25 @@ export const useProductsData = (selectedCountry: string) => {
   const { isAuthenticated } = useAuth();
 
   // Fetch product submissions from both local and Supabase
-  const { data: supabaseProducts = [], refetch } = useQuery({
+  const { data: supabaseProducts = [], isError, error, refetch } = useQuery({
     queryKey: ['supabaseProducts', refreshKey],
     queryFn: fetchProductsFromSupabase,
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
     enabled: true, // Always fetch on mount
   });
+
+  useEffect(() => {
+    if (isError && error) {
+      console.error("Error fetching Supabase data:", error);
+      toast({
+        title: "Database Connection Error",
+        description: "Failed to connect to product database. Please check your connection and try again.",
+        variant: "destructive"
+      });
+    }
+  }, [isError, error, toast]);
 
   useEffect(() => {
     handleRefreshData();
@@ -113,6 +127,17 @@ export const useProductsData = (selectedCountry: string) => {
       
       // Trigger Supabase refetch
       await refetch();
+      
+      // Check Supabase connection
+      const { error: checkError } = await supabase.from('product_submissions').select('count').limit(1);
+      if (checkError) {
+        console.error("Supabase connection check failed:", checkError);
+        toast({
+          title: "Database Connection Issue",
+          description: "Failed to connect to product database. Check network connection or API keys.",
+          variant: "destructive"
+        });
+      }
       
       setLoading(false);
       setRefreshKey(prev => prev + 1);
