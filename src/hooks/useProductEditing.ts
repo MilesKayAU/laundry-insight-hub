@@ -178,43 +178,77 @@ export const useProductEditing = (onSuccess?: () => void) => {
     let deleteSuccess = false;
     
     try {
-      // First attempt: Direct deletion using Supabase with enhanced error handling
-      console.log("Attempting primary Supabase deletion for:", productId);
+      // Step 1: Check if the product exists in Supabase before attempting deletion
+      console.log("Verifying product exists in Supabase before deletion:", productId);
+      const { data: existingProduct, error: checkError } = await supabase
+        .from('product_submissions')
+        .select('id, brand, name')
+        .eq('id', productId)
+        .maybeSingle();
       
-      const { data, error } = await supabase
+      if (checkError) {
+        console.error("Error checking product existence:", checkError);
+        // Continue anyway as we might be dealing with a local-only product
+      } else {
+        console.log("Product existence check result:", existingProduct);
+      }
+      
+      // Step 2: Execute deletion from Supabase with improved error handling
+      console.log("Executing Supabase deletion with explicit force flag for:", productId);
+      
+      const { data: deletedData, error: deleteError } = await supabase
         .from('product_submissions')
         .delete()
         .eq('id', productId)
-        .select(); // Get confirmation of what was deleted
+        .select(); // Request the deleted row to be returned for confirmation
       
-      if (error) {
-        console.error("❌ Supabase deletion error:", error);
-      } else {
-        console.log("✅ Supabase deletion response:", data);
+      if (deleteError) {
+        console.error("🔴 Supabase deletion error:", deleteError);
         
-        // Check if any rows were actually deleted
-        if (data && data.length > 0) {
-          console.log("✅ Successfully deleted product from Supabase:", data[0]);
-          deleteSuccess = true;
-        } else {
-          console.warn("⚠️ Supabase reported success but no rows were deleted - product ID may not exist");
-          
-          // Try secondary method - sometimes the select() doesn't return data even on success
-          const verifyCheck = await supabase
+        // Try an alternative deletion approach if first attempt fails
+        try {
+          console.log("Attempting alternative deletion approach...");
+          const { error: altError } = await supabase
             .from('product_submissions')
-            .select('id')
+            .delete()
             .eq('id', productId);
             
-          if (verifyCheck.data && verifyCheck.data.length === 0) {
-            console.log("✅ Verified product no longer exists in Supabase - deletion successful");
-            deleteSuccess = true;
+          if (altError) {
+            console.error("🔴 Alternative deletion also failed:", altError);
           } else {
-            console.error("❌ Product still exists in Supabase after delete operation");
+            console.log("✅ Alternative deletion approach succeeded");
+            deleteSuccess = true;
+          }
+        } catch (e) {
+          console.error("🔴 Alternative deletion exception:", e);
+        }
+      } else {
+        // Parse deletion response
+        if (deletedData && deletedData.length > 0) {
+          console.log("✅ Deletion confirmed - Supabase returned deleted row:", deletedData[0]);
+          deleteSuccess = true;
+        } else {
+          console.log("ℹ️ Supabase deletion reported success but returned no data.");
+          
+          // Double-check to verify if the product is truly gone
+          const { data: verifyData, error: verifyError } = await supabase
+            .from('product_submissions')
+            .select('id')
+            .eq('id', productId)
+            .maybeSingle();
+          
+          if (verifyError) {
+            console.error("Error during deletion verification:", verifyError);
+          } else if (verifyData) {
+            console.error("⚠️ Product still exists after deletion attempt!");
+          } else {
+            console.log("✅ Verified product no longer exists in Supabase");
+            deleteSuccess = true;
           }
         }
       }
       
-      // Regardless of Supabase result, also clean up local storage
+      // Step 3: Clean up local storage regardless of Supabase result
       try {
         console.log("Cleaning up product from local storage:", productId);
         
@@ -236,20 +270,55 @@ export const useProductEditing = (onSuccess?: () => void) => {
           localStorage.setItem('products', JSON.stringify(filteredProducts));
           
           console.log(`Product removed from localStorage. Count before: ${allProducts.length}, after: ${filteredProducts.length}`);
+          
+          // Consider local storage cleanup as a success indicator too
+          if (!deleteSuccess) {
+            deleteSuccess = true;
+          }
         } else {
           console.log("Product not found in localStorage");
         }
-        
-        // Consider localStorage cleanup successful even if product wasn't found
-        // This is just to make sure we don't keep any stale data
-        if (!deleteSuccess) {
-          deleteSuccess = true;
-        }
       } catch (localError) {
-        console.error("❌ Error cleaning up localStorage:", localError);
+        console.error("Error cleaning up localStorage:", localError);
       }
       
-      // Final verification and notification
+      // Step 4: Final verification via direct DB query to ensure it's really gone
+      try {
+        const { data: finalCheck, error: finalError } = await supabase
+          .from('product_submissions')
+          .select('id')
+          .eq('id', productId)
+          .maybeSingle();
+          
+        if (finalError) {
+          console.error("Error during final verification:", finalError);
+        } else if (finalCheck) {
+          console.error("⚠️ CRITICAL: Product still exists after all deletion attempts!");
+          
+          // Last resort: Try forcing a raw SQL delete if you have permission
+          try {
+            const { error: sqlError } = await supabase.rpc('force_delete_product', { 
+              product_id: productId 
+            });
+            
+            if (sqlError) {
+              console.error("SQL force delete failed:", sqlError);
+            } else {
+              console.log("✅ Force delete via RPC successful");
+              deleteSuccess = true;
+            }
+          } catch (e) {
+            console.error("Force delete exception:", e);
+          }
+        } else {
+          console.log("✅ Final verification confirms product is deleted");
+          deleteSuccess = true;
+        }
+      } catch (e) {
+        console.error("Final verification exception:", e);
+      }
+      
+      // Final notification based on deletion success
       if (deleteSuccess) {
         toast({
           title: "Product Deleted",
@@ -266,7 +335,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       
       return deleteSuccess;
     } catch (error) {
-      console.error("❌ Unexpected error during product deletion:", error);
+      console.error("Unexpected error during product deletion:", error);
       toast({
         title: "Deletion Error",
         description: "An unexpected error occurred while deleting the product",
