@@ -10,6 +10,24 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 
+// Expanded PVA patterns including CAS numbers
+const PVA_PATTERNS = [
+  "pva",
+  "pvoh", 
+  "polyvinyl alcohol",
+  "poly vinyl alcohol", 
+  "poly(vinyl alcohol)",
+  "polyethenol",
+  "vinyl alcohol polymer",
+  "ethenol homopolymer",
+  "25213-24-5", // CAS number for PVA
+  "9002-89-5",  // Another CAS number for PVA
+  "polyvinyl acetate", // Related polymer
+  "vinnapas", // Commercial name
+  "mowiol",   // Commercial name
+  "elvanol"   // Commercial name
+];
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -67,7 +85,7 @@ serve(async (req) => {
               brand: productInfo.brand,
               type: productInfo.type || 'Unknown',
               description: productInfo.description || '',
-              pvastatus: 'needs-verification', // Always needs verification
+              pvastatus: productInfo.pvaFound ? 'contains' : 'needs-verification',
               pvapercentage: productInfo.pvaPercentage || null,
               approved: false, // IMPORTANT: Always set to false to require admin approval
               country: productInfo.country || 'Global',
@@ -75,7 +93,6 @@ serve(async (req) => {
               imageurl: productInfo.imageUrl || null,
               createdat: new Date().toISOString(),
               updatedat: new Date().toISOString(),
-              submittedAt: new Date().toISOString() // Add this field to match local storage format
             });
           
           if (error) {
@@ -87,34 +104,6 @@ serve(async (req) => {
             };
           }
           
-          // Also store in local storage to ensure it appears in the pending list
-          try {
-            // Store the product in local storage as well
-            const localProducts = localStorage.getItem('products');
-            const products = localProducts ? JSON.parse(localProducts) : [];
-            
-            products.push({
-              id,
-              name: productInfo.name,
-              brand: productInfo.brand,
-              type: productInfo.type || 'Unknown',
-              description: productInfo.description || '',
-              pvaStatus: 'needs-verification',
-              pvaPercentage: productInfo.pvaPercentage || null,
-              approved: false,
-              country: productInfo.country || 'Global',
-              websiteUrl: url,
-              imageUrl: productInfo.imageUrl || null,
-              submittedAt: new Date().toISOString(),
-              timestamp: Date.now()
-            });
-            
-            localStorage.setItem('products', JSON.stringify(products));
-          } catch (localStorageError) {
-            console.log("Local storage not available in edge function context, skipping");
-            // This will fail in the edge function environment - we'll handle this on the frontend
-          }
-
           console.log(`Successfully processed URL: ${url}`);
           return { 
             url, 
@@ -155,29 +144,122 @@ serve(async (req) => {
   }
 });
 
-// Simulate URL scanning - this function would be replaced with actual web scraping logic
+// Improved URL scanning with better PVA detection
 async function simulateUrlScan(url: string) {
   // Extract domain from URL for simulated brand name
   let domain = '';
+  let brand = '';
   try {
-    domain = new URL(url).hostname.replace('www.', '').split('.')[0];
-    // Capitalize first letter of domain for brand name
-    domain = domain.charAt(0).toUpperCase() + domain.slice(1);
+    const urlObj = new URL(url);
+    domain = urlObj.hostname.replace('www.', '');
+    
+    // Extract brand more intelligently
+    const domainParts = domain.split('.');
+    if (domainParts.length >= 2) {
+      // Use the second-level domain as the brand name
+      brand = domainParts[domainParts.length - 2];
+      // Handle special cases like co.uk, com.au
+      if (brand === 'co' || brand === 'com') {
+        brand = domainParts[domainParts.length - 3] || brand;
+      }
+    } else {
+      brand = domain;
+    }
+    
+    // Clean up and capitalize brand name
+    brand = brand.charAt(0).toUpperCase() + brand.slice(1);
+    
+    // Try to extract brand from path if it looks like a brand site
+    const pathParts = urlObj.pathname.split('/');
+    if (pathParts.length > 1) {
+      const possibleBrands = pathParts.filter(part => 
+        part.length > 2 && !part.includes('.') && part !== 'products' && part !== 'product'
+      );
+      if (possibleBrands.length > 0) {
+        // Use the first meaningful part of the path
+        const pathBrand = possibleBrands[0];
+        if (pathBrand && pathBrand.length < 20) {
+          brand = pathBrand.charAt(0).toUpperCase() + pathBrand.slice(1);
+        }
+      }
+    }
   } catch (e) {
     domain = 'Unknown';
+    brand = 'Unknown';
   }
   
-  // Generate random data for simulation
+  // Generate random data for simulation or extract from URL if possible
   const productTypes = ['Detergent', 'Dishwasher Pod', 'Laundry Pod', 'Cleaning Sheet', 'Dish Soap'];
   const randomType = productTypes[Math.floor(Math.random() * productTypes.length)];
-  const hasPva = Math.random() > 0.3; // 70% chance of containing PVA
-  const pvaPercentage = hasPva ? Math.floor(Math.random() * 30) + 5 : null;
+  
+  // Enhanced PVA detection logic
+  let hasPva = false;
+  let pvaPercentage = null;
+  
+  // Check URL content for PVA indicators (in a real implementation, this would be done by scraping)
+  const urlLower = url.toLowerCase();
+  
+  // Simulate finding PVA in the URL or page content
+  for (const pattern of PVA_PATTERNS) {
+    if (urlLower.includes(pattern.toLowerCase())) {
+      hasPva = true;
+      break;
+    }
+  }
+  
+  // Specific check for "POLYVINYL ALCOHOL 25213-24-5" pattern as in the example
+  if (urlLower.includes("polyvinyl") && urlLower.includes("alcohol") && 
+      (urlLower.includes("25213-24-5") || urlLower.includes("9002-89-5"))) {
+    hasPva = true;
+    // Try to extract percentage near the CAS number
+    const percentMatch = url.match(/(\d+(?:\.\d+)?)%\s*(?:polyvinyl|pva)/i) || 
+                        url.match(/(?:polyvinyl|pva)\s*(\d+(?:\.\d+)?)%/i);
+    if (percentMatch) {
+      pvaPercentage = parseFloat(percentMatch[1]);
+    } else {
+      // Default percentage when we detect PVA but no specific percentage
+      pvaPercentage = Math.floor(Math.random() * 30) + 5;
+    }
+  } else if (hasPva) {
+    // Default PVA percentage for other PVA detections
+    pvaPercentage = Math.floor(Math.random() * 30) + 5;
+  }
+  
+  // Generate a product name that makes more sense
+  let productName;
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    // Try to extract a meaningful product name from the path
+    const meaningfulParts = pathParts.filter(part => 
+      part && 
+      part.length > 3 && 
+      !['pages', 'products', 'product', 'shop', 'category'].includes(part.toLowerCase())
+    );
+    
+    if (meaningfulParts.length > 0) {
+      // Use the last meaningful part as it's often the product name
+      productName = meaningfulParts[meaningfulParts.length - 1]
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+        
+      if (productName.length > 30) {
+        // Truncate very long names
+        productName = productName.substring(0, 30) + '...';
+      }
+    } else {
+      // Fallback to a generic name with a random identifier
+      productName = `${randomType} ${Math.random().toString(36).substring(2, 7)}`;
+    }
+  } catch (e) {
+    productName = `${randomType} ${Math.random().toString(36).substring(2, 7)}`;
+  }
   
   return {
-    name: `${randomType} ${Math.random().toString(36).substring(2, 7)}`,
-    brand: domain,
+    name: productName,
+    brand: brand,
     type: randomType,
-    description: `A ${randomType.toLowerCase()} product that may contain PVA. URL: ${url}`,
+    description: `A ${randomType.toLowerCase()} product that was scanned from URL: ${url}`,
     pvaPercentage: hasPva ? pvaPercentage : null,
     country: 'Global',
     imageUrl: null,

@@ -1,8 +1,25 @@
+
 export const PVA_KEYWORDS_CATEGORIES = {
   commonNames: ["PVA", "PVOH", "Polyvinyl Alcohol", "Polyvinyl alcohol"],
-  chemicalSynonyms: ["Ethenol homopolymer", "Vinyl alcohol polymer"],
+  chemicalSynonyms: [
+    "Ethenol homopolymer", 
+    "Vinyl alcohol polymer",
+    "Poly(vinyl alcohol)",
+    "Poly vinyl alcohol"
+  ],
   inciTerms: ["Polyvinyl Alcohol"],
-  additional: ["Film", "Soluble film", "Dissolving film"]
+  casNumbers: [
+    "25213-24-5", // Most common CAS for PVA
+    "9002-89-5"   // Alternative CAS for PVA
+  ],
+  additional: [
+    "Film", 
+    "Soluble film", 
+    "Dissolving film",
+    "Mowiol", // Commercial name
+    "Elvanol", // Commercial name
+    "Vinnapas" // Commercial name
+  ]
 };
 
 export const getAllPvaPatterns = () => {
@@ -102,7 +119,9 @@ export const submitProduct = async (data, userId) => {
       const ingredientsLower = data.ingredients.toLowerCase();
       if (ingredientsLower.includes('polyvinyl alcohol') || 
           ingredientsLower.includes('pva') || 
-          ingredientsLower.includes('poly(vinyl alcohol)')) {
+          ingredientsLower.includes('poly(vinyl alcohol)') ||
+          ingredientsLower.includes('25213-24-5') ||
+          ingredientsLower.includes('9002-89-5')) {
         newSubmission.pvaStatus = 'contains';
         
         if (data.pvaPercentage !== undefined) {
@@ -195,7 +214,8 @@ export const analyzePvaContent = (ingredients) => {
     "pva", "pvoh", "polyvinyl alcohol", "poly vinyl alcohol", "poly(vinyl alcohol)",
     "ethenol homopolymer", "vinyl alcohol polymer", "polyethenol", "pvac", "polyvinyl acetate",
     "alcohol, polyvinyl", "polyvinyl alcohol, partially hydrolyzed",
-    "poval", "vinnapas"
+    "poval", "vinnapas", "mowiol", "elvanol",
+    "25213-24-5", "9002-89-5" // CAS numbers
   ];
   const detectedTerms = [];
   

@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Define the ProductDetails interface to match the one in ProductDetailsDialog
 interface ProductDetails {
+  brand: string;
+  name: string;
   description: string;
   imageUrl: string;
   videoUrl: string;
@@ -23,6 +25,8 @@ export const useProductEditing = (onSuccess?: () => void) => {
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [productDetails, setProductDetails] = useState<ProductDetails>({
+    brand: '',
+    name: '',
     description: '',
     imageUrl: '',
     videoUrl: '',
@@ -48,6 +52,8 @@ export const useProductEditing = (onSuccess?: () => void) => {
 
     setSelectedProduct(product);
     setProductDetails({
+      brand: product.brand || '',
+      name: product.name || '',
       description: product.description || '',
       imageUrl: product.imageUrl || '',
       videoUrl: product.videoUrl || '',
@@ -82,6 +88,8 @@ export const useProductEditing = (onSuccess?: () => void) => {
     try {
       // Prepare the data to update
       const updateData: Partial<ProductSubmission> = {
+        brand: productDetails.brand,
+        name: productDetails.name,
         description: productDetails.description,
         imageUrl: productDetails.imageUrl,
         videoUrl: productDetails.videoUrl,
@@ -103,6 +111,8 @@ export const useProductEditing = (onSuccess?: () => void) => {
         try {
           // Convert the keys to match Supabase column names
           const supabaseUpdateData = {
+            brand: updateData.brand,
+            name: updateData.name,
             description: updateData.description,
             imageurl: updateData.imageUrl,
             videourl: updateData.videoUrl,

@@ -11,6 +11,8 @@ import { Loader2 } from "lucide-react";
 
 // Define product details interface separately to avoid circular references
 interface ProductDetails {
+  brand: string;
+  name: string;
   description: string;
   imageUrl: string;
   videoUrl: string;
@@ -75,8 +77,8 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
               <div className="col-span-3">
                 <Input 
                   id="brand" 
-                  value={product.brand || ""} 
-                  disabled 
+                  value={details.brand} 
+                  onChange={(e) => onDetailsChange({ brand: e.target.value })}
                 />
               </div>
             </div>
@@ -88,8 +90,8 @@ const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
               <div className="col-span-3">
                 <Input 
                   id="name" 
-                  value={product.name || ""} 
-                  disabled 
+                  value={details.name}
+                  onChange={(e) => onDetailsChange({ name: e.target.value })}
                 />
               </div>
             </div>
