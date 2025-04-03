@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -35,54 +36,66 @@ const PendingProducts: React.FC<PendingProductsProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [localProducts, setLocalProducts] = useState<ProductSubmission[]>([]);
   
+  // Update local products when parent products change
   useEffect(() => {
+    console.log(`PendingProducts: Received ${products.length} products from parent`);
     setLocalProducts(products);
   }, [products]);
   
-  console.log(`PendingProducts component received ${products.length} pending products`);
-  
+  // Add event listener for product cache invalidation
   useEffect(() => {
-    const refreshInterval = setInterval(() => {
+    const handleInvalidateCache = () => {
+      console.log("PendingProducts: Cache invalidation event received");
       handleForceRefresh();
-    }, 30 * 1000); // Every 30 seconds
+    };
     
-    return () => clearInterval(refreshInterval);
+    window.addEventListener('invalidate-product-cache', handleInvalidateCache);
+    window.addEventListener('reload-products', () => {
+      console.log("PendingProducts: reload-products event received");
+    });
+    
+    // Auto-refresh on a timer
+    const refreshInterval = setInterval(() => {
+      console.log("PendingProducts: Auto-refresh triggered");
+      handleForceRefresh();
+    }, 60 * 1000); // Every 60 seconds
+    
+    return () => {
+      window.removeEventListener('invalidate-product-cache', handleInvalidateCache);
+      window.removeEventListener('reload-products', () => {});
+      clearInterval(refreshInterval);
+    };
   }, []);
   
-  const handleForceRefresh = () => {
+  const handleForceRefresh = useCallback(() => {
     setRefreshing(true);
-    forceProductRefresh();
+    console.log("PendingProducts: Force refresh triggered");
     
-    window.dispatchEvent(new Event('reload-products'));
+    try {
+      forceProductRefresh();
+      window.dispatchEvent(new Event('reload-products'));
+    } catch (e) {
+      console.error("Error during refresh:", e);
+    }
     
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
-  };
+  }, []);
   
   const handleEdit = (product: ProductSubmission) => {
-    console.log("Edit button clicked for product:", product.name);
+    console.log("Edit button clicked for product:", product);
     setEditingProductId(product.id);
     
-    if (!product.type) {
-      product.type = 'Detergent';
-    }
+    // Ensure required fields have defaults
+    const enhancedProduct = {
+      ...product,
+      type: product.type || 'Detergent',
+      description: product.description || 'This product may contain PVA according to customers - please verify'
+    };
     
-    if (!product.description) {
-      product.description = 'This product may contain PVA according to customers - please verify';
-    }
-    
-    if (product && product.id) {
-      console.log("Calling onViewDetails with product:", product);
-      onViewDetails(product);
-    } else {
-      console.error("Invalid product data:", product);
-      toast({
-        title: "Error",
-        description: "Failed to edit product due to missing data",
-        variant: "destructive"
-      });
-    }
+    console.log("Calling onViewDetails with enhanced product:", enhancedProduct);
+    onViewDetails(enhancedProduct);
   };
 
   const handleVerify = (product: ProductSubmission) => {

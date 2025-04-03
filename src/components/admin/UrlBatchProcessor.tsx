@@ -68,7 +68,15 @@ const UrlBatchProcessor = () => {
       setResults([]);
       setProgress(0);
 
-      const urls = urlList.split('\n').filter(url => url.trim() !== '');
+      const urls = urlList.split('\n')
+        .map(url => url.trim())
+        .filter(url => url !== '')
+        .map(url => {
+          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            return 'https://' + url;
+          }
+          return url;
+        });
       
       if (urls.length === 0) {
         toast({
@@ -86,7 +94,7 @@ const UrlBatchProcessor = () => {
       });
 
       for (let i = 0; i < urls.length; i++) {
-        const url = urls[i].trim();
+        const url = urls[i];
         setCurrentUrl(url);
         
         setResults(prev => [
@@ -95,6 +103,7 @@ const UrlBatchProcessor = () => {
         ]);
 
         try {
+          console.log(`Calling Edge Function for URL: ${url}`);
           const { data, error } = await supabase.functions.invoke('scan-product-urls', {
             body: { 
               url,
@@ -170,6 +179,10 @@ const UrlBatchProcessor = () => {
 
         const newProgress = Math.round(((i + 1) / urls.length) * 100);
         setProgress(newProgress);
+        
+        if (i < urls.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
 
       const successCount = results.filter(r => r.status === 'success').length;
