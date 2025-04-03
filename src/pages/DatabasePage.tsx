@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -9,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table, AlertCircle, Database } from "lucide-react";
+import { Globe, Map, RefreshCw, BarChart as BarChartIcon, Table, AlertTriangle, AlertCircle, Database } from "lucide-react";
 import { requestBrandOwnership } from "@/lib/bulkUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import DataCharts from "@/components/DataCharts";
