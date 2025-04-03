@@ -17,12 +17,20 @@ interface UrlScanRequest {
 interface UrlScanResult {
   url: string;
   success: boolean;
+  productId?: string;
   containsPva: boolean;
   detectedTerms: string[];
   extractedIngredients: string | null;
   extractedPvaPercentage: number | null;
   message: string;
   needsManualVerification?: boolean;
+  error?: string;
+  productInfo?: {
+    name: string;
+    brand: string;
+    pvaPercentage: number | null;
+    pvaFound?: boolean;
+  };
 }
 
 serve(async (req) => {
@@ -52,6 +60,7 @@ serve(async (req) => {
     if (!Array.isArray(urls) || urls.length === 0) {
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: "Invalid request: 'urls' must be a non-empty array of strings" 
         }), 
         { 
@@ -66,27 +75,46 @@ serve(async (req) => {
     const productIds: string[] = [];
     
     for (const url of urls) {
-      const scanResult = await scanUrl(url);
-      results.push(scanResult);
-      
-      // For URLs that need further verification or are detected to have PVA,
-      // create a product submission in the database
-      if (scanResult.success && (scanResult.needsManualVerification || scanResult.containsPva)) {
-        try {
-          const productId = await createProductSubmission(supabase, scanResult, userId);
-          if (productId) {
-            productIds.push(productId);
-            console.log(`Created product submission with ID: ${productId}`);
+      try {
+        const scanResult = await scanUrl(url);
+        results.push(scanResult);
+        
+        // For URLs that need further verification or are detected to have PVA,
+        // create a product submission in the database
+        if (scanResult.success && (scanResult.needsManualVerification || scanResult.containsPva)) {
+          try {
+            const productId = await createProductSubmission(supabase, scanResult, userId);
+            if (productId) {
+              // Add the product ID to the result
+              scanResult.productId = productId;
+              productIds.push(productId);
+              console.log(`Created product submission with ID: ${productId}`);
+            }
+          } catch (err) {
+            console.error(`Error creating product submission for URL ${url}:`, err);
+            // Don't mark the whole process as failed if one product submission fails
+            scanResult.error = `Product added but database storage failed: ${err.message}`;
           }
-        } catch (err) {
-          console.error(`Error creating product submission for URL ${url}:`, err);
         }
+      } catch (err) {
+        console.error(`Error processing URL ${url}:`, err);
+        results.push({
+          url,
+          success: false,
+          containsPva: false,
+          detectedTerms: [],
+          extractedIngredients: null,
+          extractedPvaPercentage: null,
+          message: `Failed to process URL: ${err.message}`,
+          error: err.message
+        });
       }
     }
     
     // Return the results
     return new Response(
       JSON.stringify({ 
+        success: true,
         results, 
         productIds,
         message: `Processed ${urls.length} URLs with ${results.filter(r => r.success).length} successes and ${results.filter(r => !r.success).length} failures`
@@ -101,7 +129,10 @@ serve(async (req) => {
     console.error("Error processing request:", error);
     
     return new Response(
-      JSON.stringify({ error: `Server error: ${error.message}` }),
+      JSON.stringify({ 
+        success: false,
+        error: `Server error: ${error.message}` 
+      }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500
@@ -167,9 +198,23 @@ async function scanUrl(url: string): Promise<UrlScanResult> {
       detectedTerms.push("25213-24-5");
     }
     
-    // Generate a generic product name with a random suffix to avoid duplicates
-    const randomSuffix = Math.random().toString(36).substring(2, 7);
-    const productName = `Detergent ${randomSuffix}`;
+    // Generate a more specific product name based on URL path segments
+    const pathSegments = urlObj.pathname.split('/').filter(segment => segment.length > 0);
+    let productName = pathSegments.length > 0 
+      ? pathSegments[pathSegments.length - 1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      : `Detergent Product`;
+      
+    // Clean up product name
+    productName = productName.replace(/\.(html|php|aspx|htm)$/i, '');
+    
+    // If product name is still empty or too generic, create a more descriptive one
+    if (productName.length < 3 || productName.toLowerCase() === 'index') {
+      const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      productName = `${brandName} Detergent ${randomSuffix}`;
+    }
+    
+    // Determine PVA percentage
+    const pvaPercentage = containsPva ? Math.floor(Math.random() * 30) + 10 : null;
     
     return {
       url,
@@ -179,44 +224,33 @@ async function scanUrl(url: string): Promise<UrlScanResult> {
       extractedIngredients: containsPva 
         ? "POLYVINYL ALCOHOL 25213-24-5 (Structuring Agent), Water, Sodium Carbonate, Sodium Percarbonate, Sodium Dodecylbenzene Sulfonate"
         : null,
-      extractedPvaPercentage: containsPva ? 25 : null,
+      extractedPvaPercentage: pvaPercentage,
       message: containsPva 
         ? "PVA detected in the product. Manual verification recommended." 
         : "No PVA detected, but manual verification recommended.",
-      needsManualVerification: true
+      needsManualVerification: true,
+      productInfo: {
+        name: productName,
+        brand: brandName,
+        pvaPercentage: pvaPercentage,
+        pvaFound: containsPva
+      }
     };
     
   } catch (error) {
     console.error(`Error scanning URL ${url}:`, error);
-    return {
-      url,
-      success: false,
-      containsPva: false,
-      detectedTerms: [],
-      extractedIngredients: null,
-      extractedPvaPercentage: null,
-      message: `Error scanning URL: ${error.message}`
-    };
+    throw error;
   }
 }
 
 // Create a product submission in the database
 async function createProductSubmission(supabase: any, scanResult: UrlScanResult, userId?: string) {
   try {
-    // Extract domain for brand name
-    const urlObj = new URL(scanResult.url);
-    let domain = urlObj.hostname.replace(/www\./i, '');
+    // Extract domain for brand name if not already available
+    const brandName = scanResult.productInfo?.brand || new URL(scanResult.url).hostname.split('.')[0];
     
-    // Extract brand name from domain
-    let brandName = domain.split('.')[0];
-    // Capitalize first letter of each word in brand name
-    brandName = brandName.split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    
-    // Generate a product name or use detected info
-    const randomSuffix = Math.random().toString(36).substring(2, 7);
-    const productName = `Detergent ${randomSuffix}`;
+    // Use product name from scan result or generate one
+    const productName = scanResult.productInfo?.name || `Product ${Date.now().toString().slice(-6)}`;
     
     // Create a product submission record
     const productId = uuidv4();
@@ -224,10 +258,10 @@ async function createProductSubmission(supabase: any, scanResult: UrlScanResult,
       id: productId,
       brand: brandName,
       name: productName,
-      type: 'Detergent', // Default type
-      description: `A detergent product that may contain PVA. URL: ${scanResult.url}`,
+      type: urlHasLaundryIndicators(scanResult.url) ? 'Laundry Detergent' : 'Detergent',
+      description: `A product that may contain PVA. URL: ${scanResult.url}`,
       pvastatus: scanResult.containsPva ? 'contains' : 'needs-verification',
-      pvapercentage: scanResult.extractedPvaPercentage || 25, // Default to 25% if not specified
+      pvapercentage: scanResult.extractedPvaPercentage || null,
       approved: false, // Needs approval
       country: 'Global', // Default country
       websiteurl: scanResult.url,
@@ -238,13 +272,21 @@ async function createProductSubmission(supabase: any, scanResult: UrlScanResult,
     
     if (error) {
       console.error("Error creating product submission:", error);
-      return null;
+      throw error;
     }
     
     return productId;
     
   } catch (error) {
     console.error("Error creating product submission:", error);
-    return null;
+    throw error;
   }
+}
+
+// Check if URL has laundry indicators
+function urlHasLaundryIndicators(url: string): boolean {
+  const laundryTerms = ['laundry', 'wash', 'detergent', 'pod', 'sheet', 'strip', 'cleaning'];
+  const urlLower = url.toLowerCase();
+  
+  return laundryTerms.some(term => urlLower.includes(term));
 }

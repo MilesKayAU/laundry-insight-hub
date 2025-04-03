@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Tabs, 
@@ -184,8 +185,14 @@ const AdminPage = () => {
     
     window.addEventListener('reload-products', handleReloadProducts);
     
+    // Add an interval to refresh products periodically
+    const intervalId = setInterval(() => {
+      loadProducts();
+    }, 60000); // Refresh every minute
+    
     return () => {
       window.removeEventListener('reload-products', handleReloadProducts);
+      clearInterval(intervalId);
     };
   }, [loadProducts]);
 
@@ -222,9 +229,17 @@ const AdminPage = () => {
         status: 'approved' as ProductStatus
       };
       
+      // Update Supabase if product exists there
+      if (productToApprove.websiteUrl) {
+        updateSupabaseProductStatus(productId, true)
+          .catch(error => console.error("Error updating Supabase product:", error));
+      }
+      
+      // Update local state
       setApprovedProducts([...approvedProducts, updatedProduct]);
       setPendingProducts(pendingProducts.filter(p => p.id !== productId));
       
+      // Update localStorage
       const allProducts = getProductSubmissions();
       const updatedAllProducts = allProducts.map((p: ProductSubmission) => 
         p.id === productId ? { 
@@ -232,12 +247,12 @@ const AdminPage = () => {
           approved: true 
         } : p
       );
-      localStorage.setItem('products', JSON.stringify(updatedAllProducts));
+      localStorage.setItem('product_submissions', JSON.stringify(updatedAllProducts));
       
       console.log("Product approved successfully:", productId);
       toast({
         title: "Success",
-        description: "Product approved successfully",
+        description: `Product "${productToApprove.brand} ${productToApprove.name}" approved successfully`,
       });
     } catch (error) {
       console.error("Error approving product:", error);
@@ -246,6 +261,27 @@ const AdminPage = () => {
         description: "Failed to approve product",
         variant: "destructive"
       });
+    }
+  };
+  
+  // New function to update product status in Supabase
+  const updateSupabaseProductStatus = async (productId: string, approved: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('product_submissions')
+        .update({ approved: approved })
+        .eq('id', productId);
+      
+      if (error) {
+        console.error("Error updating product in Supabase:", error);
+        throw error;
+      }
+      
+      console.log(`Product ${productId} status updated in Supabase to ${approved ? 'approved' : 'pending'}`);
+      return true;
+    } catch (error) {
+      console.error("Exception updating product in Supabase:", error);
+      throw error;
     }
   };
 
@@ -258,6 +294,12 @@ const AdminPage = () => {
         return;
       }
       
+      // Update Supabase if product exists there
+      if (productToDelete.websiteUrl) {
+        updateSupabaseProductStatus(productId, false)
+          .catch(error => console.error("Error updating Supabase product:", error));
+      }
+      
       setPendingProducts(pendingProducts.filter(p => p.id !== productId));
       
       const success = deleteProductSubmission(productId);
@@ -266,7 +308,7 @@ const AdminPage = () => {
         console.log("Product rejected and deleted successfully from localStorage:", productId);
         toast({
           title: "Success",
-          description: "Product rejected and deleted successfully",
+          description: `Product "${productToDelete.brand} ${productToDelete.name}" rejected and deleted successfully`,
         });
       } else {
         console.error("Failed to delete product from localStorage:", productId);
@@ -274,7 +316,7 @@ const AdminPage = () => {
         try {
           const allProducts = getProductSubmissions();
           const filteredProducts = allProducts.filter((p: ProductSubmission) => p.id !== productId);
-          localStorage.setItem('products', JSON.stringify(filteredProducts));
+          localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
           console.log("Product deleted through fallback method");
         } catch (fallbackError) {
           console.error("Even fallback deletion failed:", fallbackError);
