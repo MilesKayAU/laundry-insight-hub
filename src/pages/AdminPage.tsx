@@ -58,6 +58,38 @@ const AdminPage = () => {
   const mockMessages: any[] = [];
   const mockProfiles: any[] = [];
 
+  const updateSupabaseProductStatus = async (productId: string, isApproved: boolean): Promise<boolean> => {
+    try {
+      console.log(`Updating Supabase product ${productId} approval status to: ${isApproved}`);
+      
+      const { error } = await supabase
+        .from('product_submissions')
+        .update({ approved: isApproved })
+        .eq('id', productId);
+      
+      if (error) {
+        console.error("Error updating product in Supabase:", error);
+        toast({
+          title: "Database Error",
+          description: "Failed to update product in database, but will continue with local update.",
+          variant: "warning"
+        });
+        return false;
+      }
+      
+      console.log(`Successfully updated product ${productId} in Supabase to ${isApproved ? 'approved' : 'rejected'}`);
+      return true;
+    } catch (dbError) {
+      console.error("Exception updating product in Supabase:", dbError);
+      toast({
+        title: "Database Connection Error",
+        description: "Failed to connect to database, but will continue with local update.",
+        variant: "warning"
+      });
+      return false;
+    }
+  };
+
   const fetchSupabaseProducts = async () => {
     try {
       console.log("Fetching products from Supabase...");
@@ -231,31 +263,7 @@ const AdminPage = () => {
       }
       
       // Update Supabase - Do this first to ensure database consistency
-      try {
-        console.log("Updating product in Supabase:", productId);
-        const { error } = await supabase
-          .from('product_submissions')
-          .update({ approved: true })
-          .eq('id', productId);
-        
-        if (error) {
-          console.error("Error updating product in Supabase:", error);
-          toast({
-            title: "Database Error",
-            description: "Failed to update product in database, but will continue with local update.",
-            variant: "warning"
-          });
-        } else {
-          console.log("Successfully updated product in Supabase:", productId);
-        }
-      } catch (dbError) {
-        console.error("Exception updating product in Supabase:", dbError);
-        toast({
-          title: "Database Connection Error",
-          description: "Failed to connect to database, but will continue with local update.",
-          variant: "warning"
-        });
-      }
+      await updateSupabaseProductStatus(productId, true);
       
       const updatedProduct = {
         ...productToApprove, 
