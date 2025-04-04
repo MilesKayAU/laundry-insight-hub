@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -216,12 +215,13 @@ const VideoManagement = () => {
       
       const { data, error } = await supabase
         .from('videos')
-        .insert([{
+        .insert({
           title: newVideo.title.trim(),
           description: newVideo.description.trim() || null,
           youtube_url: newVideo.youtube_url.trim(),
           category_id: newVideo.category_id,
-        }])
+          youtube_id: ''
+        })
         .select();
       
       if (error) throw error;
@@ -263,6 +263,7 @@ const VideoManagement = () => {
           youtube_url: editVideo.youtube_url.trim(),
           category_id: editVideo.category_id,
           updated_at: new Date().toISOString(),
+          youtube_id: editVideo.youtube_id
         })
         .eq('id', editVideo.id);
       
