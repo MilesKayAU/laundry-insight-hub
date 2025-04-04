@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Tabs, 
@@ -252,6 +253,7 @@ const AdminPage = () => {
     
     window.addEventListener('reload-products', handleReloadProducts);
     
+    // Reduced frequency of auto-refresh to once per minute instead of every 5-10 seconds
     const intervalId = setInterval(() => {
       console.log("Periodic refresh trigger");
       if (!loadingRef.current) {
@@ -259,7 +261,7 @@ const AdminPage = () => {
       } else {
         console.log("Skipping periodic refresh - already loading");
       }
-    }, 60000);
+    }, 60000); // Changed to 60000 (once per minute)
     
     return () => {
       window.removeEventListener('reload-products', handleReloadProducts);

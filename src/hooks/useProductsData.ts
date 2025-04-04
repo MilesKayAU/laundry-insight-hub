@@ -96,10 +96,10 @@ export const useProductsData = (selectedCountry: string) => {
   const { data: supabaseProducts = [], isError, error, refetch } = useQuery({
     queryKey: ['supabaseProducts', refreshKey, isAuthenticated],
     queryFn: () => fetchProductsFromSupabase(isAuthenticated),
-    staleTime: 15 * 1000, // 15 seconds - reduced for more frequent refreshing
-    gcTime: 1 * 60 * 1000, // 1 minute - reduced to clear cache more frequently
-    retry: 2, // Try up to 3 times (initial + 2 retries)
-    enabled: true, // Always fetch on mount
+    staleTime: 30 * 1000, // Increased to 30 seconds - less frequent refresh
+    gcTime: 2 * 60 * 1000, // Increased to 2 minutes - less frequent cache clearing
+    retry: 2, 
+    enabled: true, 
   });
 
   useEffect(() => {
@@ -132,11 +132,11 @@ export const useProductsData = (selectedCountry: string) => {
     // Initial load
     handleRefreshData();
     
-    // Auto-refresh on a timer - more frequent refresh
+    // Less frequent auto-refresh
     const refreshInterval = setInterval(() => {
       console.log("useProductsData: Periodic refresh of product data...");
       handleRefreshData();
-    }, 10000); // Every 10 seconds
+    }, 60000); // Increased to 60 seconds
     
     return () => {
       window.removeEventListener('invalidate-product-cache', handleInvalidateCache);
