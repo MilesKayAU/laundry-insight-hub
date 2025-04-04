@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Tabs, 
@@ -46,6 +45,7 @@ const AdminPage = () => {
   const [messageResponse, setMessageResponse] = useState("");
   const [newKeyword, setNewKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("commonNames");
+  const [keywordCategories, setKeywordCategories] = useState(PVA_KEYWORDS_CATEGORIES);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const loadingRef = useRef(false);
   
@@ -644,18 +644,65 @@ const AdminPage = () => {
   };
 
   const handleAddKeyword = () => {
-    toast({
-      title: "Keyword Added",
-      description: `Added '${newKeyword}' to ${selectedCategory}`,
-    });
-    setNewKeyword('');
+    if (!newKeyword.trim()) {
+      toast({
+        title: "Empty Keyword",
+        description: "Please enter a keyword to add",
+        variant: "warning"
+      });
+      return;
+    }
+    
+    try {
+      // Create a deep copy of the current keywords
+      const updatedCategories = {
+        ...keywordCategories,
+        [selectedCategory]: [...keywordCategories[selectedCategory as keyof typeof keywordCategories], newKeyword]
+      };
+      
+      // Update the state
+      setKeywordCategories(updatedCategories);
+      
+      toast({
+        title: "Keyword Added",
+        description: `Added '${newKeyword}' to ${getCategoryDisplayName(selectedCategory)}`,
+      });
+      setNewKeyword('');
+    } catch (error) {
+      console.error("Error adding keyword:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add the keyword",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleRemoveKeyword = (keyword: string, category: keyof typeof PVA_KEYWORDS_CATEGORIES) => {
-    toast({
-      title: "Keyword Removed",
-      description: `Removed '${keyword}' from ${category}`,
-    });
+    try {
+      console.log(`Removing '${keyword}' from ${category}`);
+      
+      // Create a deep copy of the current keywords
+      const updatedCategories = {
+        ...keywordCategories,
+        [category]: keywordCategories[category].filter(k => k !== keyword)
+      };
+      
+      // Update the state
+      setKeywordCategories(updatedCategories);
+      
+      toast({
+        title: "Keyword Removed",
+        description: `Removed '${keyword}' from ${getCategoryDisplayName(category)}`,
+      });
+    } catch (error) {
+      console.error("Error removing keyword:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove the keyword",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleResetDatabase = () => {
@@ -777,13 +824,13 @@ const AdminPage = () => {
         
         <TabsContent value="settings">
           <AdminSettings 
-            keywordCategories={PVA_KEYWORDS_CATEGORIES}
+            keywordCategories={keywordCategories}
             newKeyword={newKeyword}
             selectedCategory={selectedCategory}
-            showResetDialog={false}
+            showResetDialog={showCleanupDialog}
             setShowResetDialog={setShowCleanupDialog}
-            onNewKeywordChange={handleNewKeywordChange}
-            onCategoryChange={handleCategoryChange}
+            onNewKeywordChange={setNewKeyword}
+            onCategoryChange={setSelectedCategory}
             onAddKeyword={handleAddKeyword}
             onRemoveKeyword={handleRemoveKeyword}
             onResetDatabase={handleResetDatabase}

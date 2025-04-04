@@ -50,6 +50,12 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
   onResetDatabase,
   getCategoryDisplayName
 }) => {
+  // Function to handle keyword removal from any category
+  const handleRemoveKeyword = (keyword: string, category: keyof KeywordCategories) => {
+    console.log(`Removing keyword: ${keyword} from category: ${category}`);
+    onRemoveKeyword(keyword, category);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -79,7 +85,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => onRemoveKeyword(keyword, 'commonNames')}
+                        onClick={() => handleRemoveKeyword(keyword, 'commonNames')}
                       >
                         <XCircle className="h-3 w-3" />
                       </Button>
@@ -105,7 +111,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => onRemoveKeyword(keyword, 'chemicalSynonyms')}
+                        onClick={() => handleRemoveKeyword(keyword, 'chemicalSynonyms')}
                       >
                         <XCircle className="h-3 w-3" />
                       </Button>
@@ -131,7 +137,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => onRemoveKeyword(keyword, 'inciTerms')}
+                        onClick={() => handleRemoveKeyword(keyword, 'inciTerms')}
                       >
                         <XCircle className="h-3 w-3" />
                       </Button>
@@ -157,7 +163,8 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1 p-0 hover:bg-transparent"
-                        onClick={() => onRemoveKeyword(keyword, 'additional')}
+                        onClick={() => handleRemoveKeyword(keyword, 'additional')}
+                        aria-label={`Remove ${keyword}`}
                       >
                         <XCircle className="h-3 w-3" />
                       </Button>
