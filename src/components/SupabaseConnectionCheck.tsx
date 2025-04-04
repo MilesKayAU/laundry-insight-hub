@@ -9,7 +9,7 @@ import {
   setLiveDataOnlyMode,
   isLiveDataOnlyMode
 } from "@/utils/supabaseUtils";
-import { AlertTriangle, CheckCircle, XCircle, RefreshCw, Database } from "lucide-react";
+import { CheckCircle, XCircle, RefreshCw, Database } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -73,11 +73,11 @@ const SupabaseConnectionCheck = () => {
     <Card className="max-w-lg mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Supabase Connection Diagnostics
+          Database Connection Status
           {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
         </CardTitle>
         <CardDescription>
-          Check your database connection status
+          View and manage your database connection settings
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -137,16 +137,16 @@ const SupabaseConnectionCheck = () => {
             <h3 className="text-sm font-medium">Row Level Security (RLS)</h3>
             <div className="flex items-center gap-2">
               {rlsStatus.blocking === true ? (
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <XCircle className="h-5 w-5 text-red-600" />
               ) : rlsStatus.blocking === 'maybe' ? (
-                <AlertTriangle className="h-5 w-5 text-amber-400" />
+                <XCircle className="h-5 w-5 text-amber-400" />
               ) : rlsStatus.blocking === 'unknown' ? (
-                <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                <XCircle className="h-5 w-5 text-muted-foreground" />
               ) : (
                 <CheckCircle className="h-5 w-5 text-green-600" />
               )}
               <span className={
-                rlsStatus.blocking === true ? "text-amber-600" : 
+                rlsStatus.blocking === true ? "text-red-600" : 
                 rlsStatus.blocking === 'maybe' ? "text-amber-400" : 
                 rlsStatus.blocking === 'unknown' ? "text-muted-foreground" : 
                 "text-green-600"
@@ -164,7 +164,7 @@ const SupabaseConnectionCheck = () => {
           className="w-full"
         >
           {loading && <RefreshCw className="h-4 w-4 animate-spin mr-2" />}
-          Re-check Connection
+          Refresh Connection Status
         </Button>
       </CardFooter>
     </Card>
