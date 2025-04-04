@@ -19,6 +19,7 @@ import BrandProfilePage from "./pages/BrandProfilePage";
 import ProfilePage from "./pages/ProfilePage";
 import ResearchPage from "./pages/ResearchPage";
 import MethodologyPage from "./pages/MethodologyPage";
+import PvaJargonPage from "./pages/PvaJargonPage";
 import PvaPercentageUpdatePage from "./pages/PvaPercentageUpdatePage";
 import FaqPage from "./pages/FaqPage";
 import TermsPage from "./pages/TermsPage";
@@ -86,6 +87,7 @@ const App: React.FC = () => {
                   <Route path="/database" element={<DatabasePage />} />
                   <Route path="/research" element={<ResearchPage />} />
                   <Route path="/methodology" element={<MethodologyPage />} />
+                  <Route path="/pva-jargon" element={<PvaJargonPage />} />
                   <Route path="/faq" element={<FaqPage />} />
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />

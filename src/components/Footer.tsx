@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Mail, Github, Twitter, ShieldCheck } from "lucide-react";
 
@@ -85,6 +86,11 @@ const Footer = () => {
               <li>
                 <ScrollTopLink to="/methodology" className="text-gray-300 hover:text-science-300 transition-colors">
                   Our Methodology
+                </ScrollTopLink>
+              </li>
+              <li>
+                <ScrollTopLink to="/pva-jargon" className="text-gray-300 hover:text-science-300 transition-colors">
+                  PVA Jargon Guide
                 </ScrollTopLink>
               </li>
               <li>
