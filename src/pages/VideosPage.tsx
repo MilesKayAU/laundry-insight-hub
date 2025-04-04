@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { YouTube } from "lucide-react";
+import { Youtube } from "lucide-react";
 
 interface VideoCategory {
   id: string;
@@ -49,8 +49,8 @@ const VideosPage = () => {
         
         if (videosError) throw videosError;
         
-        setCategories(categoriesData);
-        setVideos(videosData);
+        setCategories(categoriesData || []);
+        setVideos(videosData || []);
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -143,7 +143,7 @@ const VideosPage = () => {
                             />
                           ) : (
                             <div className="w-full h-full bg-muted flex items-center justify-center">
-                              <YouTube className="h-12 w-12 text-muted-foreground" />
+                              <Youtube className="h-12 w-12 text-muted-foreground" />
                             </div>
                           )}
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
