@@ -24,6 +24,7 @@ import {
   FlaskConical,
   LogOut,
   User,
+  Youtube,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,7 @@ const navLinks = [
   { label: "Home", path: "/" },
   { label: "Database", path: "/database" },
   { label: "Research", path: "/research" },
+  { label: "Videos", path: "/videos" },
   { label: "About PVA", path: "/about" },
   { label: "PVA Free", path: "/pva-free" },
   { label: "Certification", path: "/certification" },
@@ -46,6 +48,7 @@ const Navbar = () => {
     { name: "Home", path: "/", icon: <Home className="h-4 w-4 mr-2" /> },
     { name: "About PVA", path: "/about", icon: <FlaskConical className="h-4 w-4 mr-2" /> },
     { name: "Database", path: "/database", icon: <Database className="h-4 w-4 mr-2" /> },
+    { name: "Videos", path: "/videos", icon: <Youtube className="h-4 w-4 mr-2" /> },
     { name: "Contribute", path: "/contribute", icon: <UploadCloud className="h-4 w-4 mr-2" /> },
     // Only include Admin link if user is admin
     ...(isAdmin ? [{ name: "Admin", path: "/admin", icon: <Settings className="h-4 w-4 mr-2" /> }] : []),

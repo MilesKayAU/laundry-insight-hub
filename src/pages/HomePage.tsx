@@ -1,4 +1,4 @@
-import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight, Info } from "lucide-react";
+import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight, Info, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -34,6 +34,11 @@ const HomePage = () => {
             <Button asChild size="lg" variant="outline" className="border-science-400 text-science-600 hover:bg-science-50">
               <Link to="/database">
                 View Database <Database className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-science-400 text-science-600 hover:bg-science-50">
+              <Link to="/videos">
+                Educational Videos <Youtube className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>
@@ -185,11 +190,18 @@ const HomePage = () => {
           <p className="text-xl mb-8 max-w-2xl mx-auto">
             Together, we can expand our molecular database and bring scientific transparency to household products. Your contributions make all the difference.
           </p>
-          <Button asChild size="lg" variant="secondary" className="bg-white text-science-700 hover:bg-gray-100">
-            <Link to="/contribute">
-              Contribute Research Data
-            </Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg" variant="secondary" className="bg-white text-science-700 hover:bg-gray-100">
+              <Link to="/contribute">
+                Contribute Research Data
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10">
+              <Link to="/videos">
+                Watch Educational Videos <Youtube className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
     </div>
