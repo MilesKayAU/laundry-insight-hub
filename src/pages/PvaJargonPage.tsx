@@ -35,15 +35,6 @@ const PvaJargonPage = () => {
                 temperature, and time. In oceans, rivers, septic tanks, or greywater systems, it may persist or partially 
                 degrade, raising long-term environmental concerns.
               </p>
-              <div className="bg-muted p-3 rounded-md">
-                <h4 className="font-medium flex items-center gap-1 mb-2">
-                  <Info className="h-4 w-4 text-science-600" /> Sources:
-                </h4>
-                <ul className="list-disc ml-6 space-y-1">
-                  <li><a href="#" className="text-science-600 hover:underline">Arizona State University Study</a></li>
-                  <li><a href="#" className="text-science-600 hover:underline">Washington Post</a></li>
-                </ul>
-              </div>
             </CardContent>
           </Card>
 
