@@ -24,6 +24,7 @@ import PvaPercentageUpdatePage from "./pages/PvaPercentageUpdatePage";
 import FaqPage from "./pages/FaqPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import VideosPage from "./pages/VideosPage";
 import AuthGuard from "./components/AuthGuard";
 import AdminGuard from "./components/AdminGuard";
 import NotFound from "./pages/NotFound";
@@ -86,6 +87,7 @@ const App: React.FC = () => {
                   } />
                   <Route path="/database" element={<DatabasePage />} />
                   <Route path="/research" element={<ResearchPage />} />
+                  <Route path="/videos" element={<VideosPage />} />
                   <Route path="/methodology" element={<MethodologyPage />} />
                   <Route path="/pva-jargon" element={<PvaJargonPage />} />
                   <Route path="/faq" element={<FaqPage />} />

@@ -287,11 +287,85 @@ export type Database = {
         }
         Relationships: []
       }
+      video_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      videos: {
+        Row: {
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          youtube_id: string
+          youtube_url: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          youtube_id: string
+          youtube_url: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          youtube_id?: string
+          youtube_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "video_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      extract_youtube_id: {
+        Args: {
+          youtube_url: string
+        }
+        Returns: string
+      }
       force_delete_product: {
         Args: {
           product_id: string

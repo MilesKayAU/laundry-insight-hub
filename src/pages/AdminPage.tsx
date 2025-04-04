@@ -14,6 +14,7 @@ import UserManagement from "@/components/admin/UserManagement";
 import AdminSettings from "@/components/admin/AdminSettings";
 import PvaPercentageSubmissions from "@/components/admin/PvaPercentageSubmissions";
 import ResearchManagement from "@/components/admin/ResearchManagement";
+import VideoManagement from "@/components/admin/VideoManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ProductSubmission, getProductSubmissions, deleteProductSubmission, PVA_KEYWORDS_CATEGORIES, getAllPvaPatterns } from "@/lib/textExtractor";
@@ -730,6 +731,7 @@ const AdminPage = () => {
               <TabsTrigger value="pvaSubmissions">PVA % Submissions</TabsTrigger>
               <TabsTrigger value="brandVerifications">Verifications</TabsTrigger>
               <TabsTrigger value="brandMessages">Messages</TabsTrigger>
+              <TabsTrigger value="videos">Videos</TabsTrigger>
               <TabsTrigger value="research">Research</TabsTrigger>
               <TabsTrigger value="communications">Comms</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
@@ -792,6 +794,10 @@ const AdminPage = () => {
             onSendResponse={() => {}}
             loading={loading}
           />
+        </TabsContent>
+        
+        <TabsContent value="videos">
+          <VideoManagement />
         </TabsContent>
         
         <TabsContent value="research">
