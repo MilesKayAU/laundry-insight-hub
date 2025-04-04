@@ -106,4 +106,13 @@
   .glass-effect {
     @apply bg-white/70 backdrop-blur-md border border-science-100/50 shadow-sm;
   }
+  
+  /* Admin tab styles for better mobile responsiveness */
+  [role="tablist"] {
+    @apply gap-1 md:gap-2;
+  }
+  
+  [role="tab"] {
+    @apply px-2 md:px-3 py-1 text-xs md:text-sm whitespace-nowrap;
+  }
 }

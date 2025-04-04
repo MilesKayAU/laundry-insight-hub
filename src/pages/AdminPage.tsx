@@ -23,6 +23,8 @@ import UrlBatchProcessor from '@/components/admin/UrlBatchProcessor';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { forceProductRefresh, invalidateProductCache } from "@/utils/supabaseUtils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ProductStatus = 'pending' | 'approved' | 'rejected';
 
@@ -33,6 +35,7 @@ interface ExtendedProductSubmission extends ProductSubmission {
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("pending");
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [pendingProducts, setPendingProducts] = useState<ExtendedProductSubmission[]>([]);
   const [approvedProducts, setApprovedProducts] = useState<ExtendedProductSubmission[]>([]);
   const [localProducts, setLocalProducts] = useState<ExtendedProductSubmission[]>([]);
@@ -253,7 +256,6 @@ const AdminPage = () => {
     
     window.addEventListener('reload-products', handleReloadProducts);
     
-    // Reduced frequency of auto-refresh to once per minute instead of every 5-10 seconds
     const intervalId = setInterval(() => {
       console.log("Periodic refresh trigger");
       if (!loadingRef.current) {
@@ -261,7 +263,7 @@ const AdminPage = () => {
       } else {
         console.log("Skipping periodic refresh - already loading");
       }
-    }, 60000); // Changed to 60000 (once per minute)
+    }, 60000);
     
     return () => {
       window.removeEventListener('reload-products', handleReloadProducts);
@@ -427,28 +429,23 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting approved product with ID:", productId);
       
-      // Find the product to be deleted for better user feedback
       const productToDelete = approvedProducts.find(p => p.id === productId);
       const productName = productToDelete ? `${productToDelete.brand} ${productToDelete.name}` : "Product";
       
-      // Perform optimistic UI update first
       setLocalProducts(prev => prev.filter(p => p.id !== productId));
       setApprovedProducts(prev => prev.filter(p => p.id !== productId));
       
       try {
-        // Add slight delay to ensure UI updates first
         await new Promise(resolve => setTimeout(resolve, 100));
         
         const deleteSuccess = await hookDeleteProduct(productId);
         
         if (deleteSuccess) {
-          // Show success toast only if we're sure it succeeded
           toast({
             title: "Product Deleted",
             description: `${productName} has been successfully deleted.`,
           });
         } else {
-          // Only warn the user but don't try to revert the UI since the product might actually be gone
           console.warn("Product deletion reported potential issues - will refresh data anyway");
           toast({
             title: "Deletion Status Unclear",
@@ -457,8 +454,6 @@ const AdminPage = () => {
           });
         }
         
-        // Always refresh data after deletion attempt
-        console.log("Refreshing product list after deletion");
         setTimeout(() => {
           invalidateProductCache();
           forceProductRefresh();
@@ -475,10 +470,9 @@ const AdminPage = () => {
           variant: "destructive"
         });
         
-        // Force refresh after error
         setTimeout(() => {
           safeLoadProducts().catch(e => {
-            console.error("Failed to refresh after delete error:", e);
+            console.error("Failed to refresh after product deletion:", e);
           });
         }, 1000);
       }
@@ -490,7 +484,6 @@ const AdminPage = () => {
         variant: "destructive"
       });
     } finally {
-      // Release delete lock after a short delay
       setTimeout(() => {
         setDeletingProductId(null);
       }, 500);
@@ -507,27 +500,22 @@ const AdminPage = () => {
       setDeletingProductId(productId);
       console.log("Deleting pending product with ID:", productId);
       
-      // Find the product to be deleted for better user feedback
       const productToDelete = pendingProducts.find(p => p.id === productId);
       const productName = productToDelete ? `${productToDelete.brand} ${productToDelete.name}` : "Product";
       
-      // Perform optimistic UI update first
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
       
       try {
-        // Add slight delay to ensure UI updates first
         await new Promise(resolve => setTimeout(resolve, 100));
         
         const deleteSuccess = await hookDeleteProduct(productId);
         
         if (deleteSuccess) {
-          // Show success toast only if we're sure it succeeded
           toast({
             title: "Product Deleted",
             description: `${productName} has been successfully deleted.`,
           });
         } else {
-          // Only warn the user but don't try to revert the UI since the product might actually be gone
           console.warn("Product deletion reported potential issues - will refresh data anyway");
           toast({
             title: "Deletion Status Unclear",
@@ -536,8 +524,6 @@ const AdminPage = () => {
           });
         }
         
-        // Always refresh data after deletion attempt
-        console.log("Refreshing product list after deletion");
         setTimeout(() => {
           invalidateProductCache();
           forceProductRefresh();
@@ -554,7 +540,6 @@ const AdminPage = () => {
           variant: "destructive"
         });
         
-        // Force refresh after error
         setTimeout(() => {
           safeLoadProducts().catch(e => {
             console.error("Failed to refresh after delete error:", e);
@@ -569,7 +554,6 @@ const AdminPage = () => {
         variant: "destructive"
       });
     } finally {
-      // Release delete lock after a short delay
       setTimeout(() => {
         setDeletingProductId(null);
       }, 500);
@@ -654,13 +638,11 @@ const AdminPage = () => {
     }
     
     try {
-      // Create a deep copy of the current keywords
       const updatedCategories = {
         ...keywordCategories,
         [selectedCategory]: [...keywordCategories[selectedCategory as keyof typeof keywordCategories], newKeyword]
       };
       
-      // Update the state
       setKeywordCategories(updatedCategories);
       
       toast({
@@ -682,13 +664,11 @@ const AdminPage = () => {
     try {
       console.log(`Removing '${keyword}' from ${category}`);
       
-      // Create a deep copy of the current keywords
       const updatedCategories = {
         ...keywordCategories,
         [category]: keywordCategories[category].filter(k => k !== keyword)
       };
       
-      // Update the state
       setKeywordCategories(updatedCategories);
       
       toast({
@@ -741,19 +721,23 @@ const AdminPage = () => {
         </Alert>
       )}
       
-      <Tabs defaultValue="pending" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-8">
-          <TabsTrigger value="pending">Pending Products</TabsTrigger>
-          <TabsTrigger value="approved">Approved Products</TabsTrigger>
-          <TabsTrigger value="pvaSubmissions">PVA % Submissions</TabsTrigger>
-          <TabsTrigger value="brandVerifications">Brand Verifications</TabsTrigger>
-          <TabsTrigger value="brandMessages">Brand Messages</TabsTrigger>
-          <TabsTrigger value="research">Research</TabsTrigger>
-          <TabsTrigger value="communications">Communications</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="batchProcessor">Batch URL Processor</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="pending" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="relative w-full">
+          <ScrollArea className="w-full pb-3">
+            <TabsList className="mb-8 flex-wrap md:flex-nowrap overflow-visible h-auto">
+              <TabsTrigger value="pending">Pending Products</TabsTrigger>
+              <TabsTrigger value="approved">Approved Products</TabsTrigger>
+              <TabsTrigger value="pvaSubmissions">PVA % Submissions</TabsTrigger>
+              <TabsTrigger value="brandVerifications">Verifications</TabsTrigger>
+              <TabsTrigger value="brandMessages">Messages</TabsTrigger>
+              <TabsTrigger value="research">Research</TabsTrigger>
+              <TabsTrigger value="communications">Comms</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="batchProcessor">URL Batch</TabsTrigger>
+            </TabsList>
+          </ScrollArea>
+        </div>
         
         <TabsContent value="pending">
           <PendingProducts 
