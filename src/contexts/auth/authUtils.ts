@@ -38,7 +38,8 @@ export const handleAuthRedirect = async () => {
   const hash = window.location.hash;
   
   if (hash && (hash.includes('access_token') || hash.includes('error'))) {
-    const result = await supabase.auth.getSessionFromUrl();
-    console.log('Auth redirect processed', result);
+    // Using the new method to handle URL auth
+    const { data, error } = await supabase.auth.getSession();
+    console.log('Auth redirect processed', { data, error });
   }
 };
