@@ -1,22 +1,48 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
-import { Pencil, Trash2, Youtube, Loader2 } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose
+} from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { Trash2, Pencil, Plus, RotateCw, Video, Loader2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface VideoCategory {
   id: string;
   name: string;
   description: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 interface Video {
@@ -27,39 +53,47 @@ interface Video {
   youtube_url: string;
   youtube_id: string;
   thumbnail_url: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 const VideoManagement = () => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<VideoCategory[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('categories');
+  const [loading, setLoading] = useState(true);
+  const [savingVideo, setSavingVideo] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   
-  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
-  const [editCategory, setEditCategory] = useState<VideoCategory | null>(null);
-  const [newVideo, setNewVideo] = useState({ 
-    title: '', 
-    description: '', 
-    youtube_url: '', 
-    category_id: '' 
+  // Form states
+  const [newVideo, setNewVideo] = useState({
+    title: '',
+    description: '',
+    youtube_url: '',
+    category_id: ''
   });
+  const [newCategory, setNewCategory] = useState({
+    name: '',
+    description: ''
+  });
+  const [editCategory, setEditCategory] = useState<VideoCategory | null>(null);
   const [editVideo, setEditVideo] = useState<Video | null>(null);
   
+  // Dialog states
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [editCategoryDialogOpen, setEditCategoryDialogOpen] = useState(false);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [editCategoryDialogOpen, setEditCategoryDialogOpen] = useState(false);
   const [editVideoDialogOpen, setEditVideoDialogOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
-    setIsLoading(true);
     try {
-      console.log("Fetching fresh video categories and videos data...");
+      setLoading(true);
+      console.log("Fetching video data...");
       
+      // Fetch categories
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('video_categories')
         .select('*')
@@ -70,8 +104,7 @@ const VideoManagement = () => {
         throw categoriesError;
       }
       
-      console.log("Fetched categories:", categoriesData);
-      
+      // Fetch videos
       const { data: videosData, error: videosError } = await supabase
         .from('videos')
         .select('*')
@@ -82,6 +115,7 @@ const VideoManagement = () => {
         throw videosError;
       }
       
+      console.log("Fetched categories:", categoriesData);
       console.log("Fetched videos:", videosData);
       
       setCategories(categoriesData || []);
@@ -90,36 +124,33 @@ const VideoManagement = () => {
       console.error('Error fetching data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load videos and categories',
+        description: 'Failed to load video data',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-  
-  useEffect(() => {
-    fetchData();
-  }, []);
-  
+
   const handleAddCategory = async () => {
+    if (!newCategory.name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Category name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
-      if (!newCategory.name.trim()) {
-        toast({
-          title: 'Validation Error',
-          description: 'Category name is required',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
+      setSavingCategory(true);
       console.log("Adding new category:", newCategory);
       
       const { data, error } = await supabase
         .from('video_categories')
         .insert([{ 
-          name: newCategory.name.trim(), 
-          description: newCategory.description.trim() || null 
+          name: newCategory.name,
+          description: newCategory.description || null
         }])
         .select();
       
@@ -130,176 +161,166 @@ const VideoManagement = () => {
       
       console.log("Category added successfully:", data);
       
+      // Add the new category to local state
+      if (data && data.length > 0) {
+        setCategories([...categories, data[0]]);
+      }
+      
+      // Reset the form
+      setNewCategory({
+        name: '',
+        description: ''
+      });
+      
+      setCategoryDialogOpen(false);
+      
       toast({
         title: 'Success',
         description: 'Category added successfully',
       });
-      
-      setCategoryDialogOpen(false);
-      setNewCategory({ name: '', description: '' });
-      fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding category:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add category',
+        description: error.message || 'Failed to add category',
         variant: 'destructive',
       });
+    } finally {
+      setSavingCategory(false);
     }
   };
-  
+
   const handleUpdateCategory = async () => {
-    if (!editCategory) return;
+    if (!editCategory || !editCategory.name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Category name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     try {
-      setIsUpdating(true);
+      setSavingCategory(true);
+      console.log("Updating category:", editCategory);
       
-      if (!editCategory.name.trim()) {
-        toast({
-          title: 'Validation Error',
-          description: 'Category name is required',
-          variant: 'destructive',
-        });
-        setIsUpdating(false);
-        return;
-      }
-      
-      // Create a clean update object to avoid sending unnecessary fields
-      const updateData = {
-        name: editCategory.name.trim(),
-        description: typeof editCategory.description === 'string' 
-          ? (editCategory.description.trim() || null) 
-          : null,
-        updated_at: new Date().toISOString()
-      };
-      
-      console.log("Updating category with data:", updateData);
-      
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('video_categories')
-        .update(updateData)
-        .eq('id', editCategory.id)
-        .select();
+        .update({ 
+          name: editCategory.name,
+          description: editCategory.description
+        })
+        .eq('id', editCategory.id);
       
       if (error) {
-        console.error("Update error:", error);
+        console.error("Error updating category:", error);
         throw error;
       }
       
-      console.log("Category update successful, response:", data);
+      console.log("Category updated successfully");
+      
+      // Update the category in local state
+      setCategories(categories.map(cat => 
+        cat.id === editCategory.id ? { ...editCategory } : cat
+      ));
+      
+      setEditCategoryDialogOpen(false);
       
       toast({
         title: 'Success',
         description: 'Category updated successfully',
       });
-      
-      setEditCategoryDialogOpen(false);
-      setEditCategory(null);
-      await fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating category:', error);
       toast({
         title: 'Error',
-        description: `Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: error.message || 'Failed to update category',
         variant: 'destructive',
       });
     } finally {
-      setIsUpdating(false);
+      setSavingCategory(false);
     }
   };
-  
-  const handleDeleteCategory = async (id: string) => {
+
+  const handleDeleteCategory = async (categoryId: string) => {
     try {
-      setIsDeleting(true);
-      if (!window.confirm('Are you sure you want to delete this category? All associated videos will also be deleted.')) {
-        setIsDeleting(false);
-        return;
-      }
+      setDeleting(categoryId);
+      console.log("Deleting category:", categoryId);
       
-      console.log("Deleting category with ID:", id);
+      // First check if there are any videos in this category
+      const videosInCategory = videos.filter(v => v.category_id === categoryId);
       
-      // First check if there are videos in this category
-      const { data: categoryVideos, error: checkError } = await supabase
-        .from('videos')
-        .select('id')
-        .eq('category_id', id);
-        
-      if (checkError) {
-        console.error("Error checking videos in category:", checkError);
-        throw checkError;
-      }
-      
-      if (categoryVideos && categoryVideos.length > 0) {
-        console.log(`Found ${categoryVideos.length} videos to delete in this category`);
-        
+      if (videosInCategory.length > 0) {
         // Delete all videos in this category first
-        const { error: videosDeleteError } = await supabase
-          .from('videos')
-          .delete()
-          .eq('category_id', id);
+        for (const video of videosInCategory) {
+          console.log("Deleting video in category:", video.id);
+          const { error: videoError } = await supabase
+            .from('videos')
+            .delete()
+            .eq('id', video.id);
           
-        if (videosDeleteError) {
-          console.error("Error deleting category videos:", videosDeleteError);
-          throw videosDeleteError;
+          if (videoError) {
+            console.error("Error deleting video:", videoError);
+            throw videoError;
+          }
         }
-        
-        console.log("Successfully deleted all videos in the category");
       }
       
-      // Now delete the category
-      const { error: categoryDeleteError } = await supabase
+      // Then delete the category
+      const { error } = await supabase
         .from('video_categories')
         .delete()
-        .eq('id', id);
+        .eq('id', categoryId);
       
-      if (categoryDeleteError) {
-        console.error("Delete category error:", categoryDeleteError);
-        throw categoryDeleteError;
+      if (error) {
+        console.error("Error deleting category:", error);
+        throw error;
       }
       
       console.log("Category deleted successfully");
       
+      // Update local state
+      setCategories(categories.filter(cat => cat.id !== categoryId));
+      setVideos(videos.filter(v => v.category_id !== categoryId));
+      
       toast({
         title: 'Success',
-        description: 'Category and all its videos deleted successfully',
+        description: 'Category and its videos deleted successfully',
       });
-      
-      // Refresh the data to update the UI
-      await fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting category:', error);
       toast({
         title: 'Error',
-        description: `Failed to delete category: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: error.message || 'Failed to delete category',
         variant: 'destructive',
       });
     } finally {
-      setIsDeleting(false);
+      setDeleting(null);
     }
   };
-  
+
   const handleAddVideo = async () => {
+    if (!newVideo.title.trim() || !newVideo.youtube_url.trim() || !newVideo.category_id) {
+      toast({
+        title: 'Validation Error',
+        description: 'Title, YouTube URL, and category are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
-      if (!newVideo.title.trim() || !newVideo.youtube_url.trim() || !newVideo.category_id) {
-        toast({
-          title: 'Validation Error',
-          description: 'Title, YouTube URL, and category are required',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
+      setSavingVideo(true);
       console.log("Adding new video:", newVideo);
       
       const { data, error } = await supabase
         .from('videos')
-        .insert({
-          title: newVideo.title.trim(),
-          description: newVideo.description.trim() || null,
-          youtube_url: newVideo.youtube_url.trim(),
-          category_id: newVideo.category_id,
-          youtube_id: '' // This will be populated by the database trigger
-        })
+        .insert([{ 
+          title: newVideo.title,
+          description: newVideo.description || null,
+          youtube_url: newVideo.youtube_url,
+          category_id: newVideo.category_id
+        }])
         .select();
       
       if (error) {
@@ -309,512 +330,573 @@ const VideoManagement = () => {
       
       console.log("Video added successfully:", data);
       
+      // Add the new video to local state
+      if (data && data.length > 0) {
+        setVideos([...videos, data[0]]);
+      }
+      
+      // Reset the form
+      setNewVideo({
+        title: '',
+        description: '',
+        youtube_url: '',
+        category_id: ''
+      });
+      
+      setVideoDialogOpen(false);
+      
       toast({
         title: 'Success',
         description: 'Video added successfully',
       });
-      
-      setVideoDialogOpen(false);
-      setNewVideo({ title: '', description: '', youtube_url: '', category_id: '' });
-      fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding video:', error);
       toast({
         title: 'Error',
-        description: `Failed to add video: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: error.message || 'Failed to add video',
         variant: 'destructive',
       });
+    } finally {
+      setSavingVideo(false);
     }
   };
-  
+
   const handleUpdateVideo = async () => {
-    if (!editVideo) return;
+    if (!editVideo || !editVideo.title.trim() || !editVideo.youtube_url.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Title and YouTube URL are required',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     try {
-      setIsUpdating(true);
+      setSavingVideo(true);
+      console.log("Updating video:", editVideo);
       
-      if (!editVideo.title.trim() || !editVideo.youtube_url.trim() || !editVideo.category_id) {
-        toast({
-          title: 'Validation Error',
-          description: 'Title, YouTube URL, and category are required',
-          variant: 'destructive',
-        });
-        setIsUpdating(false);
-        return;
-      }
-      
-      // Create a clean update object
-      const updateData = {
-        title: editVideo.title.trim(),
-        description: typeof editVideo.description === 'string' 
-          ? (editVideo.description.trim() || null) 
-          : null,
-        youtube_url: editVideo.youtube_url.trim(),
-        category_id: editVideo.category_id,
-        updated_at: new Date().toISOString()
-      };
-      
-      console.log("Updating video with data:", updateData);
-      
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('videos')
-        .update(updateData)
-        .eq('id', editVideo.id)
-        .select();
+        .update({ 
+          title: editVideo.title,
+          description: editVideo.description,
+          youtube_url: editVideo.youtube_url,
+          category_id: editVideo.category_id
+        })
+        .eq('id', editVideo.id);
       
       if (error) {
-        console.error("Video update error:", error);
+        console.error("Error updating video:", error);
         throw error;
       }
       
-      console.log("Video update successful, response:", data);
+      console.log("Video updated successfully");
+      
+      // Update the video in local state
+      setVideos(videos.map(vid => 
+        vid.id === editVideo.id ? { ...editVideo } : vid
+      ));
+      
+      setEditVideoDialogOpen(false);
       
       toast({
         title: 'Success',
         description: 'Video updated successfully',
       });
-      
-      setEditVideoDialogOpen(false);
-      setEditVideo(null);
-      await fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating video:', error);
       toast({
         title: 'Error',
-        description: `Failed to update video: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: error.message || 'Failed to update video',
         variant: 'destructive',
       });
     } finally {
-      setIsUpdating(false);
+      setSavingVideo(false);
     }
   };
-  
-  const handleDeleteVideo = async (id: string) => {
+
+  const handleDeleteVideo = async (videoId: string) => {
     try {
-      setIsDeleting(true);
-      if (!window.confirm('Are you sure you want to delete this video?')) {
-        setIsDeleting(false);
-        return;
-      }
-      
-      console.log("Deleting video with ID:", id);
+      setDeleting(videoId);
+      console.log("Deleting video:", videoId);
       
       const { error } = await supabase
         .from('videos')
         .delete()
-        .eq('id', id);
+        .eq('id', videoId);
       
       if (error) {
-        console.error("Delete video error:", error);
+        console.error("Error deleting video:", error);
         throw error;
       }
       
       console.log("Video deleted successfully");
       
+      // Update local state
+      setVideos(videos.filter(vid => vid.id !== videoId));
+      
       toast({
         title: 'Success',
         description: 'Video deleted successfully',
       });
-      
-      // Refresh the data to update the UI
-      await fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting video:', error);
       toast({
         title: 'Error',
-        description: `Failed to delete video: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: error.message || 'Failed to delete video',
         variant: 'destructive',
       });
     } finally {
-      setIsDeleting(false);
+      setDeleting(null);
     }
   };
 
+  const openEditCategoryDialog = (category: VideoCategory) => {
+    setEditCategory({ ...category });
+    setEditCategoryDialogOpen(true);
+  };
+
+  const openEditVideoDialog = (video: Video) => {
+    setEditVideo({ ...video });
+    setEditVideoDialogOpen(true);
+  };
+
+  // Group videos by category for display
+  const videosByCategory = categories.map(category => ({
+    category,
+    videos: videos.filter(video => video.category_id === category.id)
+  }));
+
   return (
-    <div className="container mx-auto py-8">
-      <Tabs defaultValue="categories" onValueChange={setActiveTab} value={activeTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="videos">Videos</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="categories">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Video Categories</h2>
-            <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>Add Category</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Category</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="category-name">Name</Label>
-                    <Input 
-                      id="category-name" 
-                      value={newCategory.name} 
-                      onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                      placeholder="Category name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category-description">Description (optional)</Label>
-                    <Textarea 
-                      id="category-description" 
-                      value={newCategory.description} 
-                      onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
-                      placeholder="Brief description of this category"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleAddCategory}>Save Category</Button>
-                  </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Video Management</CardTitle>
+        <CardDescription>
+          Manage educational videos and categories
+        </CardDescription>
+        <div className="flex justify-end space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchData}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RotateCw className="h-4 w-4 mr-2" />
+            )}
+            Refresh
+          </Button>
+          <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                New Category
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Category</DialogTitle>
+                <DialogDescription>
+                  Create a new video category for organizing educational content.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="categoryName">Category Name *</Label>
+                  <Input
+                    id="categoryName"
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                    placeholder="e.g. PVA Science"
+                  />
                 </div>
-              </DialogContent>
-            </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor="categoryDescription">Description</Label>
+                  <Textarea
+                    id="categoryDescription"
+                    value={newCategory.description}
+                    onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                    placeholder="Optional description of this category"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button 
+                  onClick={handleAddCategory} 
+                  disabled={savingCategory || !newCategory.name.trim()}
+                >
+                  {savingCategory && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Add Category
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Video className="h-4 w-4 mr-2" />
+                New Video
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Video</DialogTitle>
+                <DialogDescription>
+                  Add a new educational video from YouTube.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="videoTitle">Video Title *</Label>
+                  <Input
+                    id="videoTitle"
+                    value={newVideo.title}
+                    onChange={(e) => setNewVideo({ ...newVideo, title: e.target.value })}
+                    placeholder="Video title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="videoDescription">Description</Label>
+                  <Textarea
+                    id="videoDescription"
+                    value={newVideo.description}
+                    onChange={(e) => setNewVideo({ ...newVideo, description: e.target.value })}
+                    placeholder="Optional video description"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="youtubeUrl">YouTube URL *</Label>
+                  <Input
+                    id="youtubeUrl"
+                    value={newVideo.youtube_url}
+                    onChange={(e) => setNewVideo({ ...newVideo, youtube_url: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="videoCategory">Category *</Label>
+                  <Select
+                    value={newVideo.category_id}
+                    onValueChange={(value) => setNewVideo({ ...newVideo, category_id: value })}
+                  >
+                    <SelectTrigger id="videoCategory">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(category => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button 
+                  onClick={handleAddVideo} 
+                  disabled={savingVideo || !newVideo.title.trim() || !newVideo.youtube_url.trim() || !newVideo.category_id}
+                >
+                  {savingVideo && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Add Video
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="ml-2">Loading categories...</p>
-            </div>
-          ) : categories.length === 0 ? (
-            <p className="text-center py-12 text-muted-foreground">No categories found. Add one to get started.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categories.map((category) => (
-                <Card key={category.id} className="overflow-hidden">
-                  <CardHeader className="p-4 pb-2">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{category.name}</CardTitle>
-                      <div className="flex space-x-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => {
-                            console.log("Setting edit category:", JSON.stringify(category, null, 2));
-                            // Create a deep copy to avoid mutation issues
-                            setEditCategory({...category});
-                            setEditCategoryDialogOpen(true);
-                          }}
-                          disabled={isDeleting}
+        ) : (
+          <Tabs defaultValue="categories">
+            <TabsList className="mb-4">
+              <TabsTrigger value="categories">Categories</TabsTrigger>
+              <TabsTrigger value="videos">Videos</TabsTrigger>
+            </TabsList>
+            <TabsContent value="categories">
+              <div className="space-y-4">
+                {categories.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No categories found. Create a new category to get started.
+                  </div>
+                ) : (
+                  categories.map(category => (
+                    <div key={category.id} className="flex items-center justify-between border-b pb-2">
+                      <div>
+                        <h3 className="font-medium">{category.name}</h3>
+                        {category.description && (
+                          <p className="text-sm text-muted-foreground">{category.description}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {videos.filter(v => v.category_id === category.id).length} videos
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditCategoryDialog(category)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleDeleteCategory(category.id)}
-                          disabled={isDeleting}
-                        >
-                          {isDeleting ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-destructive" />
-                          ) : (
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          )}
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={deleting === category.id}
+                            >
+                              {deleting === category.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will delete the category "{category.name}" and all videos in this category. 
+                                This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive hover:bg-destructive/90"
+                                onClick={() => handleDeleteCategory(category.id)}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-2">
-                    {category.description && (
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{category.description}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {videos.filter(v => v.category_id === category.id).length} videos
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-          
-          <Dialog open={editCategoryDialogOpen} onOpenChange={setEditCategoryDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Category</DialogTitle>
-              </DialogHeader>
-              {editCategory && (
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="edit-category-name">Name</Label>
-                    <Input 
-                      id="edit-category-name" 
-                      value={editCategory.name} 
-                      onChange={(e) => setEditCategory({
-                        ...editCategory, 
-                        name: e.target.value
-                      })}
-                    />
+                  ))
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="videos">
+              <div className="space-y-8">
+                {videos.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No videos found. Add videos to get started.
                   </div>
-                  <div>
-                    <Label htmlFor="edit-category-description">Description (optional)</Label>
-                    <Textarea 
-                      id="edit-category-description" 
-                      value={editCategory.description || ''} 
-                      onChange={(e) => {
-                        console.log("Description changed to:", e.target.value);
-                        setEditCategory({
-                          ...editCategory,
-                          description: e.target.value
-                        });
-                      }}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setEditCategoryDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleUpdateCategory} 
-                      disabled={isUpdating}
-                    >
-                      {isUpdating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Updating...
-                        </>
-                      ) : 'Update Category'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
-        
-        <TabsContent value="videos">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Videos</h2>
-            <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>Add Video</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Add New Video</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="video-title">Title</Label>
-                    <Input 
-                      id="video-title" 
-                      value={newVideo.title} 
-                      onChange={(e) => setNewVideo({...newVideo, title: e.target.value})}
-                      placeholder="Video title"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="video-category">Category</Label>
-                    <select 
-                      id="video-category" 
-                      className="w-full p-2 border rounded-md" 
-                      value={newVideo.category_id}
-                      onChange={(e) => setNewVideo({...newVideo, category_id: e.target.value})}
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="video-url">YouTube URL</Label>
-                    <Input 
-                      id="video-url" 
-                      value={newVideo.youtube_url} 
-                      onChange={(e) => setNewVideo({...newVideo, youtube_url: e.target.value})}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="video-description">Description (optional)</Label>
-                    <Textarea 
-                      id="video-description" 
-                      value={newVideo.description} 
-                      onChange={(e) => setNewVideo({...newVideo, description: e.target.value})}
-                      placeholder="Brief description of this video"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleAddVideo}>Save Video</Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="ml-2">Loading videos...</p>
-            </div>
-          ) : videos.length === 0 ? (
-            <p className="text-center py-12 text-muted-foreground">No videos found. Add one to get started.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {videos.map((video) => {
-                const category = categories.find(c => c.id === video.category_id);
-                return (
-                  <Card key={video.id} className="overflow-hidden">
-                    <div className="relative aspect-video">
-                      {video.thumbnail_url ? (
-                        <img 
-                          src={video.thumbnail_url} 
-                          alt={video.title} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                          <Youtube className="h-12 w-12 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                    <CardHeader className="p-4 pb-2">
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg truncate">{video.title}</CardTitle>
-                        <div className="flex space-x-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => {
-                              console.log("Setting edit video:", JSON.stringify(video, null, 2));
-                              // Create a deep copy to avoid mutation issues
-                              setEditVideo({...video});
-                              setEditVideoDialogOpen(true);
-                            }}
-                            disabled={isDeleting}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleDeleteVideo(video.id)}
-                            disabled={isDeleting}
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-destructive" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            )}
-                          </Button>
+                ) : (
+                  videosByCategory.map(({ category, videos }) => (
+                    videos.length > 0 && (
+                      <div key={category.id} className="space-y-3">
+                        <h3 className="font-medium border-b pb-1">{category.name}</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {videos.map(video => (
+                            <div key={video.id} className="border rounded-md overflow-hidden">
+                              <div className="aspect-video relative bg-muted">
+                                {video.thumbnail_url ? (
+                                  <img 
+                                    src={video.thumbnail_url} 
+                                    alt={video.title} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Video className="h-12 w-12 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-3">
+                                <h4 className="font-medium truncate" title={video.title}>{video.title}</h4>
+                                {video.description && (
+                                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{video.description}</p>
+                                )}
+                                <div className="flex justify-end mt-3 space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditVideoDialog(video)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        disabled={deleting === video.id}
+                                      >
+                                        {deleting === video.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Video</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete "{video.title}"? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          className="bg-destructive hover:bg-destructive/90"
+                                          onClick={() => handleDeleteVideo(video.id)}
+                                        >
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      {video.description && (
-                        <p className="text-sm text-muted-foreground truncate mb-2">{video.description}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Category: {category?.name || 'Unknown'}
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                    )
+                  ))
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* Edit Category Dialog */}
+        <Dialog open={editCategoryDialogOpen} onOpenChange={setEditCategoryDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Category</DialogTitle>
+              <DialogDescription>
+                Update the video category details.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editCategoryName">Category Name *</Label>
+                <Input
+                  id="editCategoryName"
+                  value={editCategory?.name || ''}
+                  onChange={(e) => setEditCategory(editCategory ? { ...editCategory, name: e.target.value } : null)}
+                  placeholder="e.g. PVA Science"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editCategoryDescription">Description</Label>
+                <Textarea
+                  id="editCategoryDescription"
+                  value={editCategory?.description || ''}
+                  onChange={(e) => setEditCategory(editCategory ? { ...editCategory, description: e.target.value } : null)}
+                  placeholder="Optional description of this category"
+                  rows={3}
+                />
+              </div>
             </div>
-          )}
-          
-          <Dialog open={editVideoDialogOpen} onOpenChange={setEditVideoDialogOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Edit Video</DialogTitle>
-              </DialogHeader>
-              {editVideo && (
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="edit-video-title">Title</Label>
-                    <Input 
-                      id="edit-video-title" 
-                      value={editVideo.title} 
-                      onChange={(e) => setEditVideo({
-                        ...editVideo,
-                        title: e.target.value
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-video-category">Category</Label>
-                    <select 
-                      id="edit-video-category" 
-                      className="w-full p-2 border rounded-md" 
-                      value={editVideo.category_id}
-                      onChange={(e) => setEditVideo({
-                        ...editVideo,
-                        category_id: e.target.value
-                      })}
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-video-url">YouTube URL</Label>
-                    <Input 
-                      id="edit-video-url" 
-                      value={editVideo.youtube_url} 
-                      onChange={(e) => setEditVideo({
-                        ...editVideo,
-                        youtube_url: e.target.value
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-video-description">Description (optional)</Label>
-                    <Textarea 
-                      id="edit-video-description" 
-                      value={editVideo.description || ''} 
-                      onChange={(e) => setEditVideo({
-                        ...editVideo,
-                        description: e.target.value
-                      })}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setEditVideoDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleUpdateVideo} 
-                      disabled={isUpdating}
-                    >
-                      {isUpdating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Updating...
-                        </>
-                      ) : 'Update Video'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
-      </Tabs>
-    </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button 
+                onClick={handleUpdateCategory} 
+                disabled={savingCategory || !editCategory?.name?.trim()}
+              >
+                {savingCategory && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Update Category
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Video Dialog */}
+        <Dialog open={editVideoDialogOpen} onOpenChange={setEditVideoDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Video</DialogTitle>
+              <DialogDescription>
+                Update video details.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editVideoTitle">Video Title *</Label>
+                <Input
+                  id="editVideoTitle"
+                  value={editVideo?.title || ''}
+                  onChange={(e) => setEditVideo(editVideo ? { ...editVideo, title: e.target.value } : null)}
+                  placeholder="Video title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editVideoDescription">Description</Label>
+                <Textarea
+                  id="editVideoDescription"
+                  value={editVideo?.description || ''}
+                  onChange={(e) => setEditVideo(editVideo ? { ...editVideo, description: e.target.value } : null)}
+                  placeholder="Optional video description"
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editYoutubeUrl">YouTube URL *</Label>
+                <Input
+                  id="editYoutubeUrl"
+                  value={editVideo?.youtube_url || ''}
+                  onChange={(e) => setEditVideo(editVideo ? { ...editVideo, youtube_url: e.target.value } : null)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editVideoCategory">Category *</Label>
+                <Select
+                  value={editVideo?.category_id || ''}
+                  onValueChange={(value) => setEditVideo(editVideo ? { ...editVideo, category_id: value } : null)}
+                >
+                  <SelectTrigger id="editVideoCategory">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button 
+                onClick={handleUpdateVideo} 
+                disabled={savingVideo || !editVideo?.title?.trim() || !editVideo?.youtube_url?.trim()}
+              >
+                {savingVideo && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Update Video
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
   );
 };
 
