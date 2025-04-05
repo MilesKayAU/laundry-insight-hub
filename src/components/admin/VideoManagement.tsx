@@ -36,8 +36,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Pencil, Plus, RotateCw, Video, Loader2 } from 'lucide-react';
+import { Trash2, Pencil, Plus, RotateCw, Video, Loader2, AlertTriangle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface VideoCategory {
   id: string;
@@ -57,12 +58,14 @@ interface Video {
 
 const VideoManagement = () => {
   const { toast } = useToast();
+  const { user, isAuthenticated, isAdmin } = useAuth();
   const [categories, setCategories] = useState<VideoCategory[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingVideo, setSavingVideo] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   
   // Form states
   const [newVideo, setNewVideo] = useState({
@@ -85,8 +88,16 @@ const VideoManagement = () => {
   const [editVideoDialogOpen, setEditVideoDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    // Check if user is admin when component mounts or auth state changes
+    if (!isLoading && !isAuthenticated) {
+      setAuthError("You must be logged in to manage videos");
+    } else if (!isLoading && isAuthenticated && !isAdmin) {
+      setAuthError("You must have admin privileges to manage videos");
+    } else if (isAuthenticated && isAdmin) {
+      setAuthError(null);
+      fetchData();
+    }
+  }, [isAuthenticated, isAdmin]);
 
   const fetchData = async () => {
     try {
@@ -147,6 +158,11 @@ const VideoManagement = () => {
       setSavingCategory(true);
       console.log("Adding new category:", newCategory);
       
+      // Check if user is authenticated and has admin role
+      if (!isAuthenticated || !isAdmin) {
+        throw new Error("You don't have permission to add categories");
+      }
+      
       const { data, error } = await supabase
         .from('video_categories')
         .insert([{ 
@@ -204,13 +220,19 @@ const VideoManagement = () => {
       setSavingCategory(true);
       console.log("Updating category:", editCategory);
       
+      // Check if user is authenticated and has admin role
+      if (!isAuthenticated || !isAdmin) {
+        throw new Error("You don't have permission to update categories");
+      }
+      
       const { error } = await supabase
         .from('video_categories')
         .update({ 
           name: editCategory.name,
           description: editCategory.description
         })
-        .eq('id', editCategory.id);
+        .eq('id', editCategory.id)
+        .select();
       
       if (error) {
         console.error("Error updating category:", error);
@@ -246,6 +268,11 @@ const VideoManagement = () => {
       setDeleting(categoryId);
       console.log("Deleting category:", categoryId);
       
+      // Check if user is authenticated and has admin role
+      if (!isAuthenticated || !isAdmin) {
+        throw new Error("You don't have permission to delete categories");
+      }
+      
       // First check if there are any videos in this category
       const videosInCategory = videos.filter(v => v.category_id === categoryId);
       
@@ -258,7 +285,8 @@ const VideoManagement = () => {
           const { error: videoError } = await supabase
             .from('videos')
             .delete()
-            .eq('id', video.id);
+            .eq('id', video.id)
+            .select();
           
           if (videoError) {
             console.error("Error deleting video:", videoError);
@@ -271,7 +299,8 @@ const VideoManagement = () => {
       const { error } = await supabase
         .from('video_categories')
         .delete()
-        .eq('id', categoryId);
+        .eq('id', categoryId)
+        .select();
       
       if (error) {
         console.error("Error deleting category:", error);
@@ -333,6 +362,11 @@ const VideoManagement = () => {
     try {
       setSavingVideo(true);
       console.log("Adding new video:", newVideo);
+      
+      // Check if user is authenticated and has admin role
+      if (!isAuthenticated || !isAdmin) {
+        throw new Error("You don't have permission to add videos");
+      }
       
       const youtubeId = extractYoutubeId(newVideo.youtube_url);
       const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
@@ -400,6 +434,11 @@ const VideoManagement = () => {
       setSavingVideo(true);
       console.log("Updating video:", editVideo);
       
+      // Check if user is authenticated and has admin role
+      if (!isAuthenticated || !isAdmin) {
+        throw new Error("You don't have permission to update videos");
+      }
+      
       const youtubeId = extractYoutubeId(editVideo.youtube_url);
       const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
       
@@ -456,6 +495,11 @@ const VideoManagement = () => {
       setDeleting(videoId);
       console.log("Deleting video:", videoId);
       
+      // Check if user is authenticated and has admin role
+      if (!isAuthenticated || !isAdmin) {
+        throw new Error("You don't have permission to delete videos");
+      }
+      
       // Try explicit delete with RETURNING * to check what's happening
       const { data, error } = await supabase
         .from('videos')
@@ -505,6 +549,26 @@ const VideoManagement = () => {
     category,
     videos: videos.filter(video => video.category_id === category.id)
   }));
+
+  if (authError) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Video Management</CardTitle>
+          <CardDescription>
+            Manage educational videos and categories
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+            <AlertTriangle className="h-12 w-12 text-amber-500" />
+            <h3 className="text-xl font-semibold">Authentication Required</h3>
+            <p className="text-muted-foreground">{authError}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
