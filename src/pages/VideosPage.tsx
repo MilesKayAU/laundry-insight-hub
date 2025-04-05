@@ -59,7 +59,6 @@ const VideosPage = () => {
         
         console.log("Fetched categories:", categoriesData?.length || 0);
         console.log("Fetched videos:", videosData?.length || 0);
-        console.log("Video data:", videosData);
         
         setCategories(categoriesData || []);
         setVideos(videosData || []);

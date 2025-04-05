@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -115,9 +116,7 @@ const VideoManagement = () => {
       }
       
       console.log("Fetched categories:", categoriesData?.length || 0);
-      console.log("Fetched categories data:", categoriesData);
       console.log("Fetched videos:", videosData?.length || 0);
-      console.log("Fetched videos data:", videosData);
       
       setCategories(categoriesData || []);
       setVideos(videosData || []);
@@ -161,11 +160,6 @@ const VideoManagement = () => {
       }
       
       console.log("Category added successfully:", data);
-      
-      // Add the new category to local state
-      if (data && data.length > 0) {
-        setCategories([...categories, data[0]]);
-      }
       
       // Reset the form
       setNewCategory({
@@ -223,11 +217,6 @@ const VideoManagement = () => {
       }
       
       console.log("Category updated successfully");
-      
-      // Update the category in local state
-      setCategories(categories.map(cat => 
-        cat.id === editCategory.id ? { ...editCategory } : cat
-      ));
       
       setEditCategoryDialogOpen(false);
       
@@ -290,10 +279,6 @@ const VideoManagement = () => {
       
       console.log("Category deleted successfully");
       
-      // Update local state
-      setCategories(categories.filter(cat => cat.id !== categoryId));
-      setVideos(videos.filter(v => v.category_id !== categoryId));
-      
       toast({
         title: 'Success',
         description: 'Category and its videos deleted successfully',
@@ -351,7 +336,6 @@ const VideoManagement = () => {
       const youtubeId = extractYoutubeId(newVideo.youtube_url);
       const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
       
-      // Insert as a single object, not an array
       const { data, error } = await supabase
         .from('videos')
         .insert({ 
@@ -370,11 +354,6 @@ const VideoManagement = () => {
       }
       
       console.log("Video added successfully:", data);
-      
-      // Add the new video to local state
-      if (data && data.length > 0) {
-        setVideos([...videos, data[0]]);
-      }
       
       // Reset the form
       setNewVideo({
@@ -423,9 +402,10 @@ const VideoManagement = () => {
       const youtubeId = extractYoutubeId(editVideo.youtube_url);
       const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
       
+      // Prepare the update payload with explicit null for description if it's empty
       const updatePayload = { 
         title: editVideo.title,
-        description: editVideo.description,
+        description: editVideo.description || null,
         youtube_url: editVideo.youtube_url,
         category_id: editVideo.category_id,
         youtube_id: youtubeId,
@@ -434,29 +414,17 @@ const VideoManagement = () => {
       
       console.log("Sending update with payload:", updatePayload);
       
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('videos')
         .update(updatePayload)
-        .eq('id', editVideo.id)
-        .select();
+        .eq('id', editVideo.id);
       
       if (error) {
         console.error("Error updating video:", error);
         throw error;
       }
       
-      console.log("Video updated successfully:", data);
-      
-      // Update the video in local state
-      const updatedVideo = {
-        ...editVideo,
-        youtube_id: youtubeId,
-        thumbnail_url: thumbnailUrl
-      };
-      
-      setVideos(videos.map(vid => 
-        vid.id === editVideo.id ? updatedVideo : vid
-      ));
+      console.log("Video updated successfully");
       
       setEditVideoDialogOpen(false);
       
@@ -485,21 +453,17 @@ const VideoManagement = () => {
       setDeleting(videoId);
       console.log("Deleting video:", videoId);
       
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('videos')
         .delete()
-        .eq('id', videoId)
-        .select();
+        .eq('id', videoId);
       
       if (error) {
         console.error("Error deleting video:", error);
         throw error;
       }
       
-      console.log("Video deleted successfully:", data);
-      
-      // Update local state
-      setVideos(videos.filter(vid => vid.id !== videoId));
+      console.log("Video deleted successfully");
       
       toast({
         title: 'Success',
