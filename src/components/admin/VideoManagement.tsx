@@ -74,8 +74,8 @@ const VideoManagement = () => {
       
       if (videosError) throw videosError;
       
-      setCategories(categoriesData);
-      setVideos(videosData);
+      setCategories(categoriesData || []);
+      setVideos(videosData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -220,7 +220,7 @@ const VideoManagement = () => {
           description: newVideo.description.trim() || null,
           youtube_url: newVideo.youtube_url.trim(),
           category_id: newVideo.category_id,
-          youtube_id: ''
+          youtube_id: '' // This will be populated by the database trigger
         })
         .select();
       
@@ -255,6 +255,8 @@ const VideoManagement = () => {
         return;
       }
       
+      console.log("Updating video with data:", editVideo);
+      
       const { error } = await supabase
         .from('videos')
         .update({
@@ -263,11 +265,15 @@ const VideoManagement = () => {
           youtube_url: editVideo.youtube_url.trim(),
           category_id: editVideo.category_id,
           updated_at: new Date().toISOString(),
+          // Keep the existing youtube_id
           youtube_id: editVideo.youtube_id
         })
         .eq('id', editVideo.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Update error:", error);
+        throw error;
+      }
       
       toast({
         title: 'Success',
