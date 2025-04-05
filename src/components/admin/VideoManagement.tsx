@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { Pencil, Trash2, Youtube } from "lucide-react";
+import { Pencil, Trash2, Youtube, Loader2 } from "lucide-react";
 
 interface VideoCategory {
   id: string;
@@ -158,30 +158,32 @@ const VideoManagement = () => {
           description: 'Category name is required',
           variant: 'destructive',
         });
+        setIsUpdating(false);
         return;
       }
       
-      console.log("Updating category with data:", editCategory);
+      console.log("Updating category with data:", JSON.stringify(editCategory, null, 2));
       
       const updateData = {
         name: editCategory.name.trim(),
-        description: editCategory.description?.trim() || null,
+        description: editCategory.description === null ? null : editCategory.description.trim(),
         updated_at: new Date().toISOString()
       };
       
-      console.log("Sending update data to Supabase:", updateData);
+      console.log("Sending update data to Supabase:", JSON.stringify(updateData, null, 2));
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('video_categories')
         .update(updateData)
-        .eq('id', editCategory.id);
+        .eq('id', editCategory.id)
+        .select();
       
       if (error) {
         console.error("Update error:", error);
         throw error;
       }
       
-      console.log("Category update successful");
+      console.log("Category update successful, response:", data);
       
       toast({
         title: 'Success',
@@ -213,21 +215,50 @@ const VideoManagement = () => {
       
       console.log("Deleting category with ID:", id);
       
-      const { error } = await supabase
+      // First check if there are videos in this category
+      const { data: categoryVideos, error: checkError } = await supabase
+        .from('videos')
+        .select('id')
+        .eq('category_id', id);
+        
+      if (checkError) {
+        console.error("Error checking videos in category:", checkError);
+        throw checkError;
+      }
+      
+      if (categoryVideos && categoryVideos.length > 0) {
+        console.log(`Found ${categoryVideos.length} videos to delete in this category`);
+        
+        // Delete all videos in this category first
+        const { error: videosDeleteError } = await supabase
+          .from('videos')
+          .delete()
+          .eq('category_id', id);
+          
+        if (videosDeleteError) {
+          console.error("Error deleting category videos:", videosDeleteError);
+          throw videosDeleteError;
+        }
+        
+        console.log("Successfully deleted all videos in the category");
+      }
+      
+      // Now delete the category
+      const { error: categoryDeleteError } = await supabase
         .from('video_categories')
         .delete()
         .eq('id', id);
       
-      if (error) {
-        console.error("Delete category error:", error);
-        throw error;
+      if (categoryDeleteError) {
+        console.error("Delete category error:", categoryDeleteError);
+        throw categoryDeleteError;
       }
       
       console.log("Category deleted successfully");
       
       toast({
         title: 'Success',
-        description: 'Category deleted successfully',
+        description: 'Category and all its videos deleted successfully',
       });
       
       // Refresh the data to update the UI
@@ -296,32 +327,34 @@ const VideoManagement = () => {
           description: 'Title, YouTube URL, and category are required',
           variant: 'destructive',
         });
+        setIsUpdating(false);
         return;
       }
       
-      console.log("Updating video with data:", editVideo);
+      console.log("Updating video with data:", JSON.stringify(editVideo, null, 2));
       
       const updateData = {
         title: editVideo.title.trim(),
-        description: editVideo.description?.trim() || null,
+        description: editVideo.description === null ? null : editVideo.description.trim(),
         youtube_url: editVideo.youtube_url.trim(),
         category_id: editVideo.category_id,
         updated_at: new Date().toISOString()
       };
       
-      console.log("Sending video update data to Supabase:", updateData);
+      console.log("Sending video update data to Supabase:", JSON.stringify(updateData, null, 2));
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('videos')
         .update(updateData)
-        .eq('id', editVideo.id);
+        .eq('id', editVideo.id)
+        .select();
       
       if (error) {
         console.error("Video update error:", error);
         throw error;
       }
       
-      console.log("Video update successful");
+      console.log("Video update successful, response:", data);
       
       toast({
         title: 'Success',
@@ -330,7 +363,7 @@ const VideoManagement = () => {
       
       setEditVideoDialogOpen(false);
       setEditVideo(null);
-      fetchData();
+      await fetchData();
     } catch (error) {
       console.error('Error updating video:', error);
       toast({
@@ -353,17 +386,18 @@ const VideoManagement = () => {
       
       console.log("Deleting video with ID:", id);
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('videos')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
       
       if (error) {
         console.error("Delete video error:", error);
         throw error;
       }
       
-      console.log("Video deleted successfully");
+      console.log("Video deleted successfully, response:", data);
       
       toast({
         title: 'Success',
@@ -450,8 +484,8 @@ const VideoManagement = () => {
                           variant="ghost" 
                           size="icon" 
                           onClick={() => {
-                            console.log("Setting edit category:", category);
-                            setEditCategory({...category});
+                            console.log("Setting edit category:", JSON.stringify(category, null, 2));
+                            setEditCategory(JSON.parse(JSON.stringify(category))); // Deep copy
                             setEditCategoryDialogOpen(true);
                           }}
                           disabled={isDeleting}
@@ -508,8 +542,8 @@ const VideoManagement = () => {
                       onChange={(e) => {
                         console.log("Description changed to:", e.target.value);
                         setEditCategory({
-                          ...editCategory, 
-                          description: e.target.value
+                          ...JSON.parse(JSON.stringify(editCategory)), // Deep copy first
+                          description: e.target.value || null
                         });
                       }}
                       rows={3}
@@ -523,7 +557,12 @@ const VideoManagement = () => {
                       onClick={handleUpdateCategory} 
                       disabled={isUpdating}
                     >
-                      {isUpdating ? 'Updating...' : 'Update Category'}
+                      {isUpdating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : 'Update Category'}
                     </Button>
                   </div>
                 </div>
@@ -608,35 +647,28 @@ const VideoManagement = () => {
                 return (
                   <Card key={video.id} className="overflow-hidden">
                     <div className="relative aspect-video">
-                      {video.thumbnail_url && (
+                      {video.thumbnail_url ? (
                         <img 
                           src={video.thumbnail_url} 
                           alt={video.title} 
                           className="w-full h-full object-cover"
                         />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <Youtube className="h-12 w-12 text-gray-400" />
+                        </div>
                       )}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
-                        <a 
-                          href={`https://www.youtube.com/watch?v=${video.youtube_id}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="bg-red-600 text-white p-2 rounded-full"
-                        >
-                          <Youtube className="h-6 w-6" />
-                        </a>
-                      </div>
                     </div>
                     <CardHeader className="p-4 pb-2">
                       <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">{video.title}</CardTitle>
+                        <CardTitle className="text-lg truncate">{video.title}</CardTitle>
                         <div className="flex space-x-1">
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             onClick={() => {
-                              console.log("Setting edit video:", video);
-                              // Create a deep copy to prevent unintended mutations
-                              setEditVideo(JSON.parse(JSON.stringify(video)));
+                              console.log("Setting edit video:", JSON.stringify(video, null, 2));
+                              setEditVideo(JSON.parse(JSON.stringify(video))); // Deep copy
                               setEditVideoDialogOpen(true);
                             }}
                             disabled={isDeleting}
@@ -654,15 +686,13 @@ const VideoManagement = () => {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-4 pt-2">
-                      {category && (
-                        <div className="text-xs font-medium bg-primary/10 text-primary py-1 px-2 rounded inline-block mb-2">
-                          {category.name}
-                        </div>
-                      )}
+                    <CardContent className="p-4 pt-0">
                       {video.description && (
-                        <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">{video.description}</p>
+                        <p className="text-sm text-muted-foreground truncate mb-2">{video.description}</p>
                       )}
+                      <p className="text-xs text-muted-foreground">
+                        Category: {category?.name || 'Unknown'}
+                      </p>
                     </CardContent>
                   </Card>
                 );
@@ -683,7 +713,7 @@ const VideoManagement = () => {
                       id="edit-video-title" 
                       value={editVideo.title} 
                       onChange={(e) => setEditVideo({
-                        ...editVideo, 
+                        ...JSON.parse(JSON.stringify(editVideo)), // Deep copy
                         title: e.target.value
                       })}
                     />
@@ -695,10 +725,11 @@ const VideoManagement = () => {
                       className="w-full p-2 border rounded-md" 
                       value={editVideo.category_id}
                       onChange={(e) => setEditVideo({
-                        ...editVideo, 
+                        ...JSON.parse(JSON.stringify(editVideo)), // Deep copy
                         category_id: e.target.value
                       })}
                     >
+                      <option value="">Select a category</option>
                       {categories.map(cat => (
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
@@ -710,7 +741,7 @@ const VideoManagement = () => {
                       id="edit-video-url" 
                       value={editVideo.youtube_url} 
                       onChange={(e) => setEditVideo({
-                        ...editVideo, 
+                        ...JSON.parse(JSON.stringify(editVideo)), // Deep copy
                         youtube_url: e.target.value
                       })}
                     />
@@ -721,8 +752,8 @@ const VideoManagement = () => {
                       id="edit-video-description" 
                       value={editVideo.description || ''} 
                       onChange={(e) => setEditVideo({
-                        ...editVideo, 
-                        description: e.target.value
+                        ...JSON.parse(JSON.stringify(editVideo)), // Deep copy
+                        description: e.target.value || null
                       })}
                       rows={3}
                     />
@@ -732,10 +763,15 @@ const VideoManagement = () => {
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>
                     <Button 
-                      onClick={handleUpdateVideo}
+                      onClick={handleUpdateVideo} 
                       disabled={isUpdating}
                     >
-                      {isUpdating ? 'Updating...' : 'Update Video'}
+                      {isUpdating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : 'Update Video'}
                     </Button>
                   </div>
                 </div>

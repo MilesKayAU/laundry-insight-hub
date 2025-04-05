@@ -173,7 +173,7 @@ const VideosPage = () => {
                         <CardContent className="p-4">
                           <h3 className="font-semibold">{video.title}</h3>
                           {video.description && (
-                            <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{video.description}</p>
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{video.description}</p>
                           )}
                         </CardContent>
                       </div>
