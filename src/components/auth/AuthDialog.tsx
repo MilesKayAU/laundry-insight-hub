@@ -55,7 +55,11 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, onSuccess }) => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await register(registerName, registerEmail, registerPassword, { marketingConsent });
+      // Pass metadata as the optional third parameter
+      await register(registerEmail, registerPassword, { 
+        name: registerName, 
+        marketingConsent 
+      });
       setVerificationSent(true);
     } catch (error) {
       // Error handled in the AuthContext

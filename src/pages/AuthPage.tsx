@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,7 +70,11 @@ const AuthPage = () => {
     e.preventDefault();
     setError(null);
     try {
-      await register(registerName, registerEmail, registerPassword, { marketingConsent });
+      // Pass metadata as the optional third parameter
+      await register(registerEmail, registerPassword, { 
+        name: registerName, 
+        marketingConsent 
+      });
       setVerificationSent(true);
       // Navigation happens in useEffect when isAuthenticated changes
     } catch (error: any) {
