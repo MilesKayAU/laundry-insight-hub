@@ -151,13 +151,17 @@ const VideoManagement = () => {
       
       console.log("Updating category with data:", editCategory);
       
+      const updateData = {
+        name: editCategory.name.trim(),
+        description: editCategory.description?.trim() || null,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log("Sending update data to Supabase:", updateData);
+      
       const { error } = await supabase
         .from('video_categories')
-        .update({
-          name: editCategory.name.trim(),
-          description: editCategory.description?.trim() || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', editCategory.id);
       
       if (error) {
@@ -400,7 +404,7 @@ const VideoManagement = () => {
                           size="icon" 
                           onClick={() => {
                             console.log("Setting edit category:", category);
-                            setEditCategory(category);
+                            setEditCategory({...category});
                             setEditCategoryDialogOpen(true);
                           }}
                         >

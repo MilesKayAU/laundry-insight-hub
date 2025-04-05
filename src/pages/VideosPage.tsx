@@ -59,6 +59,14 @@ const VideosPage = () => {
         
         console.log("Fetched categories:", categoriesData);
         console.log("Fetched videos:", videosData);
+        
+        // Debug log to check category descriptions
+        if (categoriesData) {
+          categoriesData.forEach(cat => {
+            console.log(`Category "${cat.name}" description:`, cat.description);
+          });
+        }
+        
         setCategories(categoriesData || []);
         setVideos(videosData || []);
       } catch (error) {
