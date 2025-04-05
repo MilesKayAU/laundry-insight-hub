@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -32,13 +33,18 @@ const VideosPage = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        console.log("Fetching videos and categories data...");
+        
         // Fetch categories
         const { data: categoriesData, error: categoriesError } = await supabase
           .from('video_categories')
           .select('id, name, description')
           .order('name');
         
-        if (categoriesError) throw categoriesError;
+        if (categoriesError) {
+          console.error("Error fetching categories:", categoriesError);
+          throw categoriesError;
+        }
         
         // Fetch videos
         const { data: videosData, error: videosError } = await supabase
@@ -46,7 +52,10 @@ const VideosPage = () => {
           .select('id, category_id, title, description, youtube_url, youtube_id, thumbnail_url')
           .order('title');
         
-        if (videosError) throw videosError;
+        if (videosError) {
+          console.error("Error fetching videos:", videosError);
+          throw videosError;
+        }
         
         console.log("Fetched categories:", categoriesData);
         console.log("Fetched videos:", videosData);

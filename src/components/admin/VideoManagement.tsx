@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +37,6 @@ const VideoManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('categories');
   
-  // Form states
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [editCategory, setEditCategory] = useState<VideoCategory | null>(null);
   const [newVideo, setNewVideo] = useState({ 
@@ -49,19 +47,16 @@ const VideoManagement = () => {
   });
   const [editVideo, setEditVideo] = useState<Video | null>(null);
   
-  // Dialog states
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editCategoryDialogOpen, setEditCategoryDialogOpen] = useState(false);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [editVideoDialogOpen, setEditVideoDialogOpen] = useState(false);
 
-  // Fetch categories and videos
   const fetchData = async () => {
     setIsLoading(true);
     try {
       console.log("Fetching fresh video categories and videos data...");
       
-      // Fetch categories
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('video_categories')
         .select('*')
@@ -74,7 +69,6 @@ const VideoManagement = () => {
       
       console.log("Fetched categories:", categoriesData);
       
-      // Fetch videos
       const { data: videosData, error: videosError } = await supabase
         .from('videos')
         .select('*')
@@ -105,7 +99,6 @@ const VideoManagement = () => {
     fetchData();
   }, []);
   
-  // Category CRUD operations
   const handleAddCategory = async () => {
     try {
       if (!newCategory.name.trim()) {
@@ -156,6 +149,8 @@ const VideoManagement = () => {
         return;
       }
       
+      console.log("Updating category with data:", editCategory);
+      
       const { error } = await supabase
         .from('video_categories')
         .update({
@@ -165,7 +160,12 @@ const VideoManagement = () => {
         })
         .eq('id', editCategory.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Update error:", error);
+        throw error;
+      }
+      
+      console.log("Category update successful");
       
       toast({
         title: 'Success',
@@ -214,7 +214,6 @@ const VideoManagement = () => {
     }
   };
   
-  // Video CRUD operations
   const handleAddVideo = async () => {
     try {
       if (!newVideo.title.trim() || !newVideo.youtube_url.trim() || !newVideo.category_id) {
@@ -278,7 +277,6 @@ const VideoManagement = () => {
           youtube_url: editVideo.youtube_url.trim(),
           category_id: editVideo.category_id,
           updated_at: new Date().toISOString(),
-          // Keep the existing youtube_id
           youtube_id: editVideo.youtube_id
         })
         .eq('id', editVideo.id);
@@ -343,7 +341,6 @@ const VideoManagement = () => {
           <TabsTrigger value="videos">Videos</TabsTrigger>
         </TabsList>
         
-        {/* Categories Tab */}
         <TabsContent value="categories">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Video Categories</h2>
@@ -402,6 +399,7 @@ const VideoManagement = () => {
                           variant="ghost" 
                           size="icon" 
                           onClick={() => {
+                            console.log("Setting edit category:", category);
                             setEditCategory(category);
                             setEditCategoryDialogOpen(true);
                           }}
@@ -419,7 +417,9 @@ const VideoManagement = () => {
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-2">
-                    {category.description && <p className="text-sm text-muted-foreground">{category.description}</p>}
+                    {category.description && (
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{category.description}</p>
+                    )}
                     <p className="text-xs text-muted-foreground mt-2">
                       {videos.filter(v => v.category_id === category.id).length} videos
                     </p>
@@ -429,7 +429,6 @@ const VideoManagement = () => {
             </div>
           )}
           
-          {/* Edit Category Dialog */}
           <Dialog open={editCategoryDialogOpen} onOpenChange={setEditCategoryDialogOpen}>
             <DialogContent>
               <DialogHeader>
@@ -450,7 +449,10 @@ const VideoManagement = () => {
                     <Textarea 
                       id="edit-category-description" 
                       value={editCategory.description || ''} 
-                      onChange={(e) => setEditCategory({...editCategory, description: e.target.value})}
+                      onChange={(e) => {
+                        console.log("Description changed to:", e.target.value);
+                        setEditCategory({...editCategory, description: e.target.value});
+                      }}
                       rows={3}
                     />
                   </div>
@@ -466,7 +468,6 @@ const VideoManagement = () => {
           </Dialog>
         </TabsContent>
         
-        {/* Videos Tab */}
         <TabsContent value="videos">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Videos</h2>
@@ -592,7 +593,7 @@ const VideoManagement = () => {
                         </div>
                       )}
                       {video.description && (
-                        <p className="text-sm text-muted-foreground mb-2">{video.description}</p>
+                        <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">{video.description}</p>
                       )}
                     </CardContent>
                   </Card>
@@ -601,7 +602,6 @@ const VideoManagement = () => {
             </div>
           )}
           
-          {/* Edit Video Dialog */}
           <Dialog open={editVideoDialogOpen} onOpenChange={setEditVideoDialogOpen}>
             <DialogContent className="max-w-lg">
               <DialogHeader>
