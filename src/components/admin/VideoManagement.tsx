@@ -57,7 +57,7 @@ interface Video {
 
 const VideoManagement = () => {
   const { toast } = useToast();
-  const { user, isAuthenticated, isAdmin } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
   const [categories, setCategories] = useState<VideoCategory[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,15 +88,15 @@ const VideoManagement = () => {
 
   useEffect(() => {
     // Check if user is admin when component mounts or auth state changes
-    if (!loading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       setAuthError("You must be logged in to manage videos");
-    } else if (!loading && isAuthenticated && !isAdmin) {
+    } else if (!isLoading && isAuthenticated && !isAdmin) {
       setAuthError("You must have admin privileges to manage videos");
     } else if (isAuthenticated && isAdmin) {
       setAuthError(null);
       fetchData();
     }
-  }, [isAuthenticated, isAdmin]);
+  }, [isAuthenticated, isAdmin, isLoading]);
 
   const fetchData = async () => {
     try {

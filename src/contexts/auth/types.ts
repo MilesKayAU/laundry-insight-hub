@@ -1,23 +1,26 @@
 
 import { User, Session } from '@supabase/supabase-js';
 
-export interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  isAdmin: boolean;
-  login: (email: string, password: string) => Promise<any>;
-  signup: (email: string, password: string, metadata?: any) => Promise<any>;
-  register: (name: string, email: string, password: string, options?: { marketingConsent?: boolean }) => Promise<any>;
-  loginWithGoogle: () => Promise<any>;
-  logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<any>;
-  sendPasswordResetEmail: (email: string) => Promise<any>;
+export interface AuthResult {
+  success: boolean;
+  error?: string | null;
+}
+
+export interface AuthMethods {
+  signIn: (email: string, password: string) => Promise<AuthResult>;
+  signUp: (email: string, password: string, metadata?: any) => Promise<AuthResult>;
+  signOut: () => Promise<AuthResult>;
+  resetPassword: (email: string) => Promise<AuthResult>;
+  updatePassword: (password: string) => Promise<AuthResult>;
 }
 
 export interface AuthState {
   user: User | null;
-  session: Session | null;
+  session?: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
+}
+
+export interface AuthContextType extends AuthState, AuthMethods {
+  isAuthenticated: boolean;
 }

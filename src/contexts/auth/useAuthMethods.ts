@@ -2,190 +2,186 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { User } from '@supabase/supabase-js';
+import { AuthMethods } from './types';
 
 export const useAuthMethods = (
   setIsLoading: (loading: boolean) => void
-) => {
+): AuthMethods => {
   const { toast } = useToast();
 
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
+  const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      setIsLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        throw error;
-      }
-      
+      if (error) throw error;
+
       toast({
         title: "Welcome back!",
-        description: "You've successfully logged in.",
+        description: "You've been successfully logged in.",
       });
+
+      return { success: true, error: null };
     } catch (error: any) {
-      console.error('Login failed:', error);
+      console.error('Error signing in:', error);
+      
       toast({
-        title: "Login failed",
-        description: error.message || "Please check your credentials and try again.",
+        title: "Sign in failed",
+        description: error.message || "An error occurred during sign in.",
         variant: "destructive",
       });
-      throw error;
+      
+      return { 
+        success: false, 
+        error: error.message || "An error occurred during sign in."
+      };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, metadata?: any) => {
-    setIsLoading(true);
+  const signUp = async (email: string, password: string, metadata?: any) => {
     try {
-      const domain = window.location.origin;
-      
-      const skipEmailConfirmation = false;
-      
-      const { data, error } = await supabase.auth.signUp({
+      setIsLoading(true);
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: metadata?.name,
-            username: email.split('@')[0],
-            marketing_consent: metadata?.marketingConsent || false,
-            ...metadata
-          },
-          emailRedirectTo: `${domain}/auth`,
+          data: metadata
         }
       });
 
-      if (error) {
-        throw error;
-      }
-      
-      if (!skipEmailConfirmation) {
-        toast({
-          title: "Account created!",
-          description: "Your account has been successfully created. Please check your email for verification.",
-        });
-      } else {
-        toast({
-          title: "Account created!",
-          description: "Your account has been successfully created and you can log in now.",
-        });
-      }
-      
-      console.log("Registration response:", data);
-      
-      if (data?.user?.identities?.length === 0) {
-        toast({
-          title: "Email already exists",
-          description: "This email is already registered. Please try logging in instead.",
-          variant: "destructive",
-        });
-        return;
-      }
-    } catch (error: any) {
-      console.error('Registration failed:', error);
+      if (error) throw error;
+
       toast({
-        title: "Registration failed",
-        description: error.message || "There was an error creating your account.",
+        title: "Account created",
+        description: "Please check your email to confirm your account.",
+      });
+
+      return { success: true, error: null };
+    } catch (error: any) {
+      console.error('Error signing up:', error);
+      
+      toast({
+        title: "Sign up failed",
+        description: error.message || "An error occurred during sign up.",
         variant: "destructive",
       });
-      throw error;
+      
+      return { 
+        success: false, 
+        error: error.message || "An error occurred during sign up."
+      };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (name: string, email: string, password: string, options?: { marketingConsent?: boolean }) => {
-    return signup(email, password, { 
-      name, 
-      marketingConsent: options?.marketingConsent || false 
-    });
-  };
-
-  const loginWithGoogle = async () => {
-    setIsLoading(true);
+  const signOut = async () => {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-      });
-
-      if (error) {
-        throw error;
-      }
+      setIsLoading(true);
+      const { error } = await supabase.auth.signOut();
       
-      toast({
-        title: "Welcome!",
-        description: "You've successfully signed in.",
-      });
-    } catch (error: any) {
-      console.error('Google login failed:', error);
-      toast({
-        title: "Google login failed",
-        description: error.message || "There was an error signing in with Google.",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await supabase.auth.signOut();
+      if (error) throw error;
+      
       toast({
         title: "Logged out",
         description: "You've been successfully logged out.",
       });
+      
+      return { success: true };
     } catch (error: any) {
-      console.error('Logout failed:', error);
+      console.error('Error signing out:', error);
+      
       toast({
-        title: "Logout failed",
-        description: error.message || "There was an error logging out.",
+        title: "Sign out failed",
+        description: error.message || "An error occurred during sign out.",
         variant: "destructive",
       });
+      
+      return { 
+        success: false, 
+        error: error.message || "An error occurred during sign out."
+      };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
       toast({
         title: "Password reset email sent",
-        description: "Check your email for a link to reset your password.",
+        description: "Check your email for the password reset link.",
       });
+      
+      return { success: true };
     } catch (error: any) {
-      console.error('Password reset failed:', error);
+      console.error('Error resetting password:', error);
+      
       toast({
         title: "Password reset failed",
-        description: error.message || "There was an error sending the password reset email.",
+        description: error.message || "An error occurred during password reset.",
         variant: "destructive",
       });
-      throw error;
+      
+      return { 
+        success: false, 
+        error: error.message || "An error occurred during password reset."
+      };
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const sendPasswordResetEmail = async (email: string) => {
-    return resetPassword(email);
+  const updatePassword = async (password: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.updateUser({
+        password,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully updated.",
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      
+      toast({
+        title: "Password update failed",
+        description: error.message || "An error occurred during password update.",
+        variant: "destructive",
+      });
+      
+      return { 
+        success: false, 
+        error: error.message || "An error occurred during password update."
+      };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {
-    login,
-    signup,
-    register,
-    loginWithGoogle,
-    logout,
+    signIn,
+    signUp,
+    signOut,
     resetPassword,
-    sendPasswordResetEmail
+    updatePassword
   };
 };
