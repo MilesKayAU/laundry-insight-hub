@@ -177,11 +177,22 @@ export const useAuthMethods = (
     }
   };
 
+  // Add alias methods to match what components are expecting
+  const login = signIn;
+  const logout = signOut;
+  const register = signUp;
+  const sendPasswordResetEmail = resetPassword;
+
   return {
     signIn,
     signUp,
     signOut,
     resetPassword,
-    updatePassword
+    updatePassword,
+    // Additional alias methods
+    login,
+    logout,
+    register,
+    sendPasswordResetEmail
   };
 };

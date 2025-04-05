@@ -12,6 +12,12 @@ export interface AuthMethods {
   signOut: () => Promise<AuthResult>;
   resetPassword: (email: string) => Promise<AuthResult>;
   updatePassword: (password: string) => Promise<AuthResult>;
+  
+  // Additional methods needed by components
+  login: (email: string, password: string) => Promise<AuthResult>;
+  logout: () => Promise<AuthResult>;
+  register: (email: string, password: string, metadata?: any) => Promise<AuthResult>;
+  sendPasswordResetEmail: (email: string) => Promise<AuthResult>;
 }
 
 export interface AuthState {

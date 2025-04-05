@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -57,7 +58,7 @@ interface Video {
 
 const VideoManagement = () => {
   const { toast } = useToast();
-  const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoading: authLoading } = useAuth();
   const [categories, setCategories] = useState<VideoCategory[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,7 @@ const VideoManagement = () => {
   const [savingCategory, setSavingCategory] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [rlsError, setRlsError] = useState<string | null>(null);
   
   // Form states
   const [newVideo, setNewVideo] = useState({
@@ -88,19 +90,22 @@ const VideoManagement = () => {
 
   useEffect(() => {
     // Check if user is admin when component mounts or auth state changes
-    if (!isLoading && !isAuthenticated) {
-      setAuthError("You must be logged in to manage videos");
-    } else if (!isLoading && isAuthenticated && !isAdmin) {
-      setAuthError("You must have admin privileges to manage videos");
-    } else if (isAuthenticated && isAdmin) {
-      setAuthError(null);
-      fetchData();
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        setAuthError("You must be logged in to manage videos");
+      } else if (!isAdmin) {
+        setAuthError("You must have admin privileges to manage videos");
+      } else {
+        setAuthError(null);
+        fetchData();
+      }
     }
-  }, [isAuthenticated, isAdmin, isLoading]);
+  }, [isAuthenticated, isAdmin, authLoading]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      setRlsError(null);
       console.log("Fetching video data...");
       
       // Fetch categories
@@ -111,6 +116,9 @@ const VideoManagement = () => {
       
       if (categoriesError) {
         console.error("Error fetching categories:", categoriesError);
+        if (categoriesError.message.includes("row-level security")) {
+          setRlsError(categoriesError.message);
+        }
         throw categoriesError;
       }
       
@@ -122,20 +130,22 @@ const VideoManagement = () => {
       
       if (videosError) {
         console.error("Error fetching videos:", videosError);
+        if (videosError.message.includes("row-level security")) {
+          setRlsError(videosError.message);
+        }
         throw videosError;
       }
       
       console.log("Fetched categories:", categoriesData?.length || 0);
       console.log("Fetched videos:", videosData?.length || 0);
-      console.log("Video data sample:", videosData && videosData.length > 0 ? videosData[0] : "No videos");
       
       setCategories(categoriesData || []);
       setVideos(videosData || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load video data',
+        description: 'Failed to load video data: ' + error.message,
         variant: 'destructive',
       });
     } finally {
@@ -155,6 +165,7 @@ const VideoManagement = () => {
     
     try {
       setSavingCategory(true);
+      setRlsError(null);
       console.log("Adding new category:", newCategory);
       
       // Check if user is authenticated and has admin role
@@ -172,6 +183,9 @@ const VideoManagement = () => {
       
       if (error) {
         console.error("Error adding category:", error);
+        if (error.message.includes("row-level security")) {
+          setRlsError(error.message);
+        }
         throw error;
       }
       
@@ -360,6 +374,7 @@ const VideoManagement = () => {
     
     try {
       setSavingVideo(true);
+      setRlsError(null);
       console.log("Adding new video:", newVideo);
       
       // Check if user is authenticated and has admin role
@@ -384,6 +399,9 @@ const VideoManagement = () => {
       
       if (error) {
         console.error("Error adding video:", error);
+        if (error.message.includes("row-level security")) {
+          setRlsError(error.message);
+        }
         throw error;
       }
       
@@ -549,6 +567,22 @@ const VideoManagement = () => {
     videos: videos.filter(video => video.category_id === category.id)
   }));
 
+  if (authLoading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Video Management</CardTitle>
+          <CardDescription>Loading authentication state...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (authError) {
     return (
       <Card className="w-full">
@@ -576,6 +610,19 @@ const VideoManagement = () => {
         <CardDescription>
           Manage educational videos and categories
         </CardDescription>
+        {rlsError && (
+          <div className="mt-4 p-4 bg-destructive/10 border border-destructive rounded-md">
+            <h3 className="font-medium text-destructive flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Row Level Security Error
+            </h3>
+            <p className="text-sm mt-1">{rlsError}</p>
+            <p className="text-xs mt-2">
+              This error indicates that your user account doesn't have permission to perform this action.
+              Make sure you're logged in with an admin account and that the correct RLS policies are set up.
+            </p>
+          </div>
+        )}
         <div className="flex justify-end space-x-2">
           <Button 
             variant="outline" 
