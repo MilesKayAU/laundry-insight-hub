@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Youtube } from "lucide-react";
+import { Youtube, Loader2 } from "lucide-react";
 
 interface VideoCategory {
   id: string;
@@ -60,13 +60,6 @@ const VideosPage = () => {
         console.log("Fetched categories:", categoriesData);
         console.log("Fetched videos:", videosData);
         
-        // Debug log to check category descriptions
-        if (categoriesData) {
-          categoriesData.forEach(cat => {
-            console.log(`Category "${cat.name}" description:`, cat.description);
-          });
-        }
-        
         setCategories(categoriesData || []);
         setVideos(videosData || []);
       } catch (error) {
@@ -82,7 +75,7 @@ const VideosPage = () => {
     };
 
     fetchData();
-  }, []);
+  }, [toast]);
 
   // Group videos by category
   const videosByCategory = categories.map(category => ({
@@ -101,6 +94,7 @@ const VideosPage = () => {
 
       {isLoading ? (
         <div className="flex justify-center items-center min-h-[200px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mr-2" />
           <p>Loading videos...</p>
         </div>
       ) : videosByCategory.length === 0 ? (
