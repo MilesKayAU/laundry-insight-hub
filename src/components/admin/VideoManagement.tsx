@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -115,8 +114,10 @@ const VideoManagement = () => {
         throw videosError;
       }
       
-      console.log("Fetched categories:", categoriesData);
-      console.log("Fetched videos:", videosData);
+      console.log("Fetched categories:", categoriesData?.length || 0);
+      console.log("Fetched categories data:", categoriesData);
+      console.log("Fetched videos:", videosData?.length || 0);
+      console.log("Fetched videos data:", videosData);
       
       setCategories(categoriesData || []);
       setVideos(videosData || []);
@@ -178,6 +179,10 @@ const VideoManagement = () => {
         title: 'Success',
         description: 'Category added successfully',
       });
+      
+      // Refresh data to ensure we have the latest from the server
+      await fetchData();
+      
     } catch (error: any) {
       console.error('Error adding category:', error);
       toast({
@@ -230,6 +235,10 @@ const VideoManagement = () => {
         title: 'Success',
         description: 'Category updated successfully',
       });
+      
+      // Refresh data to ensure we have the latest from the server
+      await fetchData();
+      
     } catch (error: any) {
       console.error('Error updating category:', error);
       toast({
@@ -289,6 +298,10 @@ const VideoManagement = () => {
         title: 'Success',
         description: 'Category and its videos deleted successfully',
       });
+      
+      // Refresh data to ensure we have the latest from the server
+      await fetchData();
+      
     } catch (error: any) {
       console.error('Error deleting category:', error);
       toast({
@@ -299,6 +312,26 @@ const VideoManagement = () => {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const extractYoutubeId = (url: string): string => {
+    let youtubeId = '';
+    
+    // Extract YouTube ID from different URL formats
+    if (url.includes('youtube.com/watch?v=')) {
+      const match = url.match(/v=([^&]+)/);
+      if (match) youtubeId = match[1];
+    } else if (url.includes('youtu.be/')) {
+      const match = url.match(/youtu\.be\/([^?]+)/);
+      if (match) youtubeId = match[1];
+    } else if (url.includes('youtube.com/embed/')) {
+      const match = url.match(/embed\/([^?]+)/);
+      if (match) youtubeId = match[1];
+    } else {
+      youtubeId = url; // Just use the URL as-is if no pattern matches
+    }
+    
+    return youtubeId;
   };
 
   const handleAddVideo = async () => {
@@ -315,7 +348,10 @@ const VideoManagement = () => {
       setSavingVideo(true);
       console.log("Adding new video:", newVideo);
       
-      // Insert a single object, not an array
+      const youtubeId = extractYoutubeId(newVideo.youtube_url);
+      const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
+      
+      // Insert as a single object, not an array
       const { data, error } = await supabase
         .from('videos')
         .insert({ 
@@ -323,7 +359,8 @@ const VideoManagement = () => {
           description: newVideo.description || null,
           youtube_url: newVideo.youtube_url,
           category_id: newVideo.category_id,
-          youtube_id: extractYoutubeId(newVideo.youtube_url)  // Add this function
+          youtube_id: youtubeId,
+          thumbnail_url: thumbnailUrl
         })
         .select();
       
@@ -353,6 +390,10 @@ const VideoManagement = () => {
         title: 'Success',
         description: 'Video added successfully',
       });
+      
+      // Refresh data to ensure we have the latest from the server
+      await fetchData();
+      
     } catch (error: any) {
       console.error('Error adding video:', error);
       toast({
@@ -363,27 +404,6 @@ const VideoManagement = () => {
     } finally {
       setSavingVideo(false);
     }
-  };
-
-  // Helper function to extract YouTube ID
-  const extractYoutubeId = (url: string): string => {
-    let youtubeId = '';
-    
-    // Extract YouTube ID from different URL formats
-    if (url.includes('youtube.com/watch?v=')) {
-      const match = url.match(/v=([^&]+)/);
-      if (match) youtubeId = match[1];
-    } else if (url.includes('youtu.be/')) {
-      const match = url.match(/youtu\.be\/([^?]+)/);
-      if (match) youtubeId = match[1];
-    } else if (url.includes('youtube.com/embed/')) {
-      const match = url.match(/embed\/([^?]+)/);
-      if (match) youtubeId = match[1];
-    } else {
-      youtubeId = url; // Just use the URL as-is if no pattern matches
-    }
-    
-    return youtubeId;
   };
 
   const handleUpdateVideo = async () => {
@@ -403,24 +423,29 @@ const VideoManagement = () => {
       const youtubeId = extractYoutubeId(editVideo.youtube_url);
       const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
       
-      const { error } = await supabase
+      const updatePayload = { 
+        title: editVideo.title,
+        description: editVideo.description,
+        youtube_url: editVideo.youtube_url,
+        category_id: editVideo.category_id,
+        youtube_id: youtubeId,
+        thumbnail_url: thumbnailUrl
+      };
+      
+      console.log("Sending update with payload:", updatePayload);
+      
+      const { error, data } = await supabase
         .from('videos')
-        .update({ 
-          title: editVideo.title,
-          description: editVideo.description,
-          youtube_url: editVideo.youtube_url,
-          category_id: editVideo.category_id,
-          youtube_id: youtubeId,
-          thumbnail_url: thumbnailUrl
-        })
-        .eq('id', editVideo.id);
+        .update(updatePayload)
+        .eq('id', editVideo.id)
+        .select();
       
       if (error) {
         console.error("Error updating video:", error);
         throw error;
       }
       
-      console.log("Video updated successfully");
+      console.log("Video updated successfully:", data);
       
       // Update the video in local state
       const updatedVideo = {
@@ -439,6 +464,10 @@ const VideoManagement = () => {
         title: 'Success',
         description: 'Video updated successfully',
       });
+      
+      // Refresh data to ensure we have the latest from the server
+      await fetchData();
+      
     } catch (error: any) {
       console.error('Error updating video:', error);
       toast({
@@ -456,17 +485,18 @@ const VideoManagement = () => {
       setDeleting(videoId);
       console.log("Deleting video:", videoId);
       
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('videos')
         .delete()
-        .eq('id', videoId);
+        .eq('id', videoId)
+        .select();
       
       if (error) {
         console.error("Error deleting video:", error);
         throw error;
       }
       
-      console.log("Video deleted successfully");
+      console.log("Video deleted successfully:", data);
       
       // Update local state
       setVideos(videos.filter(vid => vid.id !== videoId));
@@ -475,6 +505,10 @@ const VideoManagement = () => {
         title: 'Success',
         description: 'Video deleted successfully',
       });
+      
+      // Refresh data to ensure we have the latest from the server
+      await fetchData();
+      
     } catch (error: any) {
       console.error('Error deleting video:', error);
       toast({
@@ -748,6 +782,10 @@ const VideoManagement = () => {
                                     src={video.thumbnail_url} 
                                     alt={video.title} 
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = `https://img.youtube.com/vi/${video.youtube_id}/mqdefault.jpg`;
+                                    }}
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">
