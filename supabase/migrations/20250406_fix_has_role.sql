@@ -2,16 +2,18 @@
 -- Create or replace the has_role function to properly check user roles
 CREATE OR REPLACE FUNCTION public.has_role(role text)
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
-  SELECT EXISTS (
+BEGIN
+  RETURN EXISTS (
     SELECT 1
     FROM public.user_roles
     WHERE user_id = auth.uid()
     AND role = $1
   );
+END;
 $$;
 
 -- Grant usage on the has_role function to authenticated users
@@ -26,13 +28,12 @@ SET search_path TO 'public'
 AS $$
 DECLARE
   user_email text;
-  primary_admin_email text := 'mileskayaustralia@gmail.com';
 BEGIN
   -- Get the current user's email
   SELECT email INTO user_email FROM auth.users WHERE id = auth.uid();
   
   -- Check if the email matches the primary admin email
-  RETURN LOWER(user_email) = LOWER(primary_admin_email);
+  RETURN LOWER(user_email) = LOWER('mileskayaustralia@gmail.com');
 END;
 $$;
 
