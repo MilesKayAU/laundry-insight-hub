@@ -49,6 +49,7 @@ const VideosPage = () => {
         
         if (videosError) throw videosError;
         
+        console.log("Fetched categories:", categoriesData);
         console.log("Fetched videos:", videosData);
         setCategories(categoriesData || []);
         setVideos(videosData || []);
@@ -96,7 +97,7 @@ const VideosPage = () => {
             <section key={category.id} className="space-y-4">
               <h2 className="text-2xl font-bold border-b border-muted pb-2">{category.name}</h2>
               {category.description && (
-                <p className="text-muted-foreground mb-4">{category.description}</p>
+                <p className="text-muted-foreground mb-4 whitespace-pre-wrap">{category.description}</p>
               )}
               
               {selectedVideo && selectedVideo.category_id === category.id ? (
@@ -116,7 +117,7 @@ const VideosPage = () => {
                   <div className="text-center max-w-3xl mx-auto">
                     <h3 className="text-xl font-semibold mb-2">{selectedVideo.title}</h3>
                     {selectedVideo.description && (
-                      <p className="text-muted-foreground">{selectedVideo.description}</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap">{selectedVideo.description}</p>
                     )}
                     <Button 
                       variant="outline" 
@@ -154,9 +155,9 @@ const VideosPage = () => {
                           </div>
                         </div>
                         <CardContent className="p-4">
-                          <h3 className="font-semibold line-clamp-2">{video.title}</h3>
+                          <h3 className="font-semibold">{video.title}</h3>
                           {video.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{video.description}</p>
+                            <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{video.description}</p>
                           )}
                         </CardContent>
                       </div>
