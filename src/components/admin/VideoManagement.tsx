@@ -53,6 +53,7 @@ const VideoManagement = () => {
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [editVideoDialogOpen, setEditVideoDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -203,24 +204,34 @@ const VideoManagement = () => {
   };
   
   const handleDeleteCategory = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this category? All associated videos will also be deleted.')) {
-      return;
-    }
-    
     try {
+      setIsDeleting(true);
+      if (!window.confirm('Are you sure you want to delete this category? All associated videos will also be deleted.')) {
+        setIsDeleting(false);
+        return;
+      }
+      
+      console.log("Deleting category with ID:", id);
+      
       const { error } = await supabase
         .from('video_categories')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Delete category error:", error);
+        throw error;
+      }
+      
+      console.log("Category deleted successfully");
       
       toast({
         title: 'Success',
         description: 'Category deleted successfully',
       });
       
-      fetchData();
+      // Refresh the data to update the UI
+      await fetchData();
     } catch (error) {
       console.error('Error deleting category:', error);
       toast({
@@ -228,6 +239,8 @@ const VideoManagement = () => {
         description: 'Failed to delete category',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
   
@@ -331,24 +344,34 @@ const VideoManagement = () => {
   };
   
   const handleDeleteVideo = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this video?')) {
-      return;
-    }
-    
     try {
+      setIsDeleting(true);
+      if (!window.confirm('Are you sure you want to delete this video?')) {
+        setIsDeleting(false);
+        return;
+      }
+      
+      console.log("Deleting video with ID:", id);
+      
       const { error } = await supabase
         .from('videos')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Delete video error:", error);
+        throw error;
+      }
+      
+      console.log("Video deleted successfully");
       
       toast({
         title: 'Success',
         description: 'Video deleted successfully',
       });
       
-      fetchData();
+      // Refresh the data to update the UI
+      await fetchData();
     } catch (error) {
       console.error('Error deleting video:', error);
       toast({
@@ -356,6 +379,8 @@ const VideoManagement = () => {
         description: 'Failed to delete video',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -429,6 +454,7 @@ const VideoManagement = () => {
                             setEditCategory({...category});
                             setEditCategoryDialogOpen(true);
                           }}
+                          disabled={isDeleting}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -436,6 +462,7 @@ const VideoManagement = () => {
                           variant="ghost" 
                           size="icon" 
                           onClick={() => handleDeleteCategory(category.id)}
+                          disabled={isDeleting}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -467,7 +494,10 @@ const VideoManagement = () => {
                     <Input 
                       id="edit-category-name" 
                       value={editCategory.name} 
-                      onChange={(e) => setEditCategory({...editCategory, name: e.target.value})}
+                      onChange={(e) => setEditCategory({
+                        ...editCategory, 
+                        name: e.target.value
+                      })}
                     />
                   </div>
                   <div>
@@ -477,7 +507,10 @@ const VideoManagement = () => {
                       value={editCategory.description || ''} 
                       onChange={(e) => {
                         console.log("Description changed to:", e.target.value);
-                        setEditCategory({...editCategory, description: e.target.value});
+                        setEditCategory({
+                          ...editCategory, 
+                          description: e.target.value
+                        });
                       }}
                       rows={3}
                     />
@@ -602,9 +635,11 @@ const VideoManagement = () => {
                             size="icon" 
                             onClick={() => {
                               console.log("Setting edit video:", video);
-                              setEditVideo({...video});
+                              // Create a deep copy to prevent unintended mutations
+                              setEditVideo(JSON.parse(JSON.stringify(video)));
                               setEditVideoDialogOpen(true);
                             }}
+                            disabled={isDeleting}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -612,6 +647,7 @@ const VideoManagement = () => {
                             variant="ghost" 
                             size="icon" 
                             onClick={() => handleDeleteVideo(video.id)}
+                            disabled={isDeleting}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -646,7 +682,10 @@ const VideoManagement = () => {
                     <Input 
                       id="edit-video-title" 
                       value={editVideo.title} 
-                      onChange={(e) => setEditVideo({...editVideo, title: e.target.value})}
+                      onChange={(e) => setEditVideo({
+                        ...editVideo, 
+                        title: e.target.value
+                      })}
                     />
                   </div>
                   <div>
@@ -655,7 +694,10 @@ const VideoManagement = () => {
                       id="edit-video-category" 
                       className="w-full p-2 border rounded-md" 
                       value={editVideo.category_id}
-                      onChange={(e) => setEditVideo({...editVideo, category_id: e.target.value})}
+                      onChange={(e) => setEditVideo({
+                        ...editVideo, 
+                        category_id: e.target.value
+                      })}
                     >
                       {categories.map(cat => (
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -667,7 +709,10 @@ const VideoManagement = () => {
                     <Input 
                       id="edit-video-url" 
                       value={editVideo.youtube_url} 
-                      onChange={(e) => setEditVideo({...editVideo, youtube_url: e.target.value})}
+                      onChange={(e) => setEditVideo({
+                        ...editVideo, 
+                        youtube_url: e.target.value
+                      })}
                     />
                   </div>
                   <div>
@@ -675,7 +720,10 @@ const VideoManagement = () => {
                     <Textarea 
                       id="edit-video-description" 
                       value={editVideo.description || ''} 
-                      onChange={(e) => setEditVideo({...editVideo, description: e.target.value})}
+                      onChange={(e) => setEditVideo({
+                        ...editVideo, 
+                        description: e.target.value
+                      })}
                       rows={3}
                     />
                   </div>
