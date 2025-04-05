@@ -13,7 +13,7 @@ export interface AuthMethods {
   resetPassword: (email: string) => Promise<AuthResult>;
   updatePassword: (password: string) => Promise<AuthResult>;
   
-  // Additional methods needed by components
+  // Additional methods needed by components - now with correct parameter types
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
   register: (email: string, password: string, metadata?: any) => Promise<AuthResult>;

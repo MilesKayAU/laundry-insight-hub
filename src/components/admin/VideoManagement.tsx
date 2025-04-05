@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -68,7 +67,6 @@ const VideoManagement = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [rlsError, setRlsError] = useState<string | null>(null);
   
-  // Form states
   const [newVideo, setNewVideo] = useState({
     title: '',
     description: '',
@@ -82,14 +80,12 @@ const VideoManagement = () => {
   const [editCategory, setEditCategory] = useState<VideoCategory | null>(null);
   const [editVideo, setEditVideo] = useState<Video | null>(null);
   
-  // Dialog states
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [editCategoryDialogOpen, setEditCategoryDialogOpen] = useState(false);
   const [editVideoDialogOpen, setEditVideoDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Check if user is admin when component mounts or auth state changes
     if (!authLoading) {
       if (!isAuthenticated) {
         setAuthError("You must be logged in to manage videos");
@@ -106,9 +102,10 @@ const VideoManagement = () => {
     try {
       setLoading(true);
       setRlsError(null);
-      console.log("Fetching video data...");
+      console.log("Fetching video data with auth...");
       
-      // Fetch categories
+      console.log("Auth status:", { isAuthenticated, isAdmin, userId: user?.id });
+      
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('video_categories')
         .select('*')
@@ -116,13 +113,13 @@ const VideoManagement = () => {
       
       if (categoriesError) {
         console.error("Error fetching categories:", categoriesError);
-        if (categoriesError.message.includes("row-level security")) {
+        if (categoriesError.message.includes("row-level security") || 
+            categoriesError.code === 'PGRST301') {
           setRlsError(categoriesError.message);
         }
         throw categoriesError;
       }
       
-      // Fetch videos
       const { data: videosData, error: videosError } = await supabase
         .from('videos')
         .select('*')
@@ -130,7 +127,8 @@ const VideoManagement = () => {
       
       if (videosError) {
         console.error("Error fetching videos:", videosError);
-        if (videosError.message.includes("row-level security")) {
+        if (videosError.message.includes("row-level security") ||
+            videosError.code === 'PGRST301') {
           setRlsError(videosError.message);
         }
         throw videosError;
@@ -145,7 +143,7 @@ const VideoManagement = () => {
       console.error('Error fetching data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load video data: ' + error.message,
+        description: 'Failed to load video data: ' + (error.message || 'Unknown error'),
         variant: 'destructive',
       });
     } finally {
@@ -168,7 +166,6 @@ const VideoManagement = () => {
       setRlsError(null);
       console.log("Adding new category:", newCategory);
       
-      // Check if user is authenticated and has admin role
       if (!isAuthenticated || !isAdmin) {
         throw new Error("You don't have permission to add categories");
       }
@@ -183,7 +180,8 @@ const VideoManagement = () => {
       
       if (error) {
         console.error("Error adding category:", error);
-        if (error.message.includes("row-level security")) {
+        if (error.message.includes("row-level security") ||
+            error.code === 'PGRST301') {
           setRlsError(error.message);
         }
         throw error;
@@ -191,7 +189,6 @@ const VideoManagement = () => {
       
       console.log("Category added successfully:", data);
       
-      // Reset the form
       setNewCategory({
         name: '',
         description: ''
@@ -204,7 +201,6 @@ const VideoManagement = () => {
         description: 'Category added successfully',
       });
       
-      // Refresh data to ensure we have the latest from the server
       await fetchData();
       
     } catch (error: any) {
@@ -231,9 +227,9 @@ const VideoManagement = () => {
     
     try {
       setSavingCategory(true);
+      setRlsError(null);
       console.log("Updating category:", editCategory);
       
-      // Check if user is authenticated and has admin role
       if (!isAuthenticated || !isAdmin) {
         throw new Error("You don't have permission to update categories");
       }
@@ -244,11 +240,14 @@ const VideoManagement = () => {
           name: editCategory.name,
           description: editCategory.description
         })
-        .eq('id', editCategory.id)
-        .select();
+        .eq('id', editCategory.id);
       
       if (error) {
         console.error("Error updating category:", error);
+        if (error.message.includes("row-level security") ||
+            error.code === 'PGRST301') {
+          setRlsError(error.message);
+        }
         throw error;
       }
       
@@ -261,7 +260,6 @@ const VideoManagement = () => {
         description: 'Category updated successfully',
       });
       
-      // Refresh data to ensure we have the latest from the server
       await fetchData();
       
     } catch (error: any) {
@@ -279,44 +277,47 @@ const VideoManagement = () => {
   const handleDeleteCategory = async (categoryId: string) => {
     try {
       setDeleting(categoryId);
+      setRlsError(null);
       console.log("Deleting category:", categoryId);
       
-      // Check if user is authenticated and has admin role
       if (!isAuthenticated || !isAdmin) {
         throw new Error("You don't have permission to delete categories");
       }
       
-      // First check if there are any videos in this category
       const videosInCategory = videos.filter(v => v.category_id === categoryId);
       
       if (videosInCategory.length > 0) {
         console.log(`Found ${videosInCategory.length} videos to delete in this category`);
         
-        // Delete all videos in this category first
         for (const video of videosInCategory) {
           console.log("Deleting video in category:", video.id);
           const { error: videoError } = await supabase
             .from('videos')
             .delete()
-            .eq('id', video.id)
-            .select();
+            .eq('id', video.id);
           
           if (videoError) {
             console.error("Error deleting video:", videoError);
+            if (videoError.message.includes("row-level security") ||
+                videoError.code === 'PGRST301') {
+              setRlsError(videoError.message);
+            }
             throw videoError;
           }
         }
       }
       
-      // Then delete the category
       const { error } = await supabase
         .from('video_categories')
         .delete()
-        .eq('id', categoryId)
-        .select();
+        .eq('id', categoryId);
       
       if (error) {
         console.error("Error deleting category:", error);
+        if (error.message.includes("row-level security") ||
+            error.code === 'PGRST301') {
+          setRlsError(error.message);
+        }
         throw error;
       }
       
@@ -327,7 +328,6 @@ const VideoManagement = () => {
         description: 'Category and its videos deleted successfully',
       });
       
-      // Refresh data to ensure we have the latest from the server
       await fetchData();
       
     } catch (error: any) {
@@ -345,7 +345,6 @@ const VideoManagement = () => {
   const extractYoutubeId = (url: string): string => {
     let youtubeId = '';
     
-    // Extract YouTube ID from different URL formats
     if (url.includes('youtube.com/watch?v=')) {
       const match = url.match(/v=([^&]+)/);
       if (match) youtubeId = match[1];
@@ -356,7 +355,7 @@ const VideoManagement = () => {
       const match = url.match(/embed\/([^?]+)/);
       if (match) youtubeId = match[1];
     } else {
-      youtubeId = url; // Just use the URL as-is if no pattern matches
+      youtubeId = url;
     }
     
     return youtubeId;
@@ -377,7 +376,6 @@ const VideoManagement = () => {
       setRlsError(null);
       console.log("Adding new video:", newVideo);
       
-      // Check if user is authenticated and has admin role
       if (!isAuthenticated || !isAdmin) {
         throw new Error("You don't have permission to add videos");
       }
@@ -399,7 +397,8 @@ const VideoManagement = () => {
       
       if (error) {
         console.error("Error adding video:", error);
-        if (error.message.includes("row-level security")) {
+        if (error.message.includes("row-level security") ||
+            error.code === 'PGRST301') {
           setRlsError(error.message);
         }
         throw error;
@@ -407,7 +406,6 @@ const VideoManagement = () => {
       
       console.log("Video added successfully:", data);
       
-      // Reset the form
       setNewVideo({
         title: '',
         description: '',
@@ -422,7 +420,6 @@ const VideoManagement = () => {
         description: 'Video added successfully',
       });
       
-      // Refresh data to ensure we have the latest from the server
       await fetchData();
       
     } catch (error: any) {
@@ -449,9 +446,9 @@ const VideoManagement = () => {
     
     try {
       setSavingVideo(true);
+      setRlsError(null);
       console.log("Updating video:", editVideo);
       
-      // Check if user is authenticated and has admin role
       if (!isAuthenticated || !isAdmin) {
         throw new Error("You don't have permission to update videos");
       }
@@ -459,7 +456,6 @@ const VideoManagement = () => {
       const youtubeId = extractYoutubeId(editVideo.youtube_url);
       const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
       
-      // Prepare the update payload with explicit null for description if it's empty
       const updatePayload = { 
         title: editVideo.title,
         description: editVideo.description || null,
@@ -471,7 +467,6 @@ const VideoManagement = () => {
       
       console.log("Sending update with payload:", updatePayload);
       
-      // Try explicit update with RETURNING * to check what's happening
       const { data, error } = await supabase
         .from('videos')
         .update(updatePayload)
@@ -492,7 +487,6 @@ const VideoManagement = () => {
         description: 'Video updated successfully',
       });
       
-      // Refresh data to ensure we have the latest from the server
       await fetchData();
       
     } catch (error: any) {
@@ -510,14 +504,13 @@ const VideoManagement = () => {
   const handleDeleteVideo = async (videoId: string) => {
     try {
       setDeleting(videoId);
+      setRlsError(null);
       console.log("Deleting video:", videoId);
       
-      // Check if user is authenticated and has admin role
       if (!isAuthenticated || !isAdmin) {
         throw new Error("You don't have permission to delete videos");
       }
       
-      // Try explicit delete with RETURNING * to check what's happening
       const { data, error } = await supabase
         .from('videos')
         .delete()
@@ -536,7 +529,6 @@ const VideoManagement = () => {
         description: 'Video deleted successfully',
       });
       
-      // Refresh data to ensure we have the latest from the server
       await fetchData();
       
     } catch (error: any) {
@@ -561,7 +553,6 @@ const VideoManagement = () => {
     setEditVideoDialogOpen(true);
   };
 
-  // Group videos by category for display
   const videosByCategory = categories.map(category => ({
     category,
     videos: videos.filter(video => video.category_id === category.id)
@@ -932,7 +923,6 @@ const VideoManagement = () => {
           </Tabs>
         )}
 
-        {/* Edit Category Dialog */}
         <Dialog open={editCategoryDialogOpen} onOpenChange={setEditCategoryDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -977,7 +967,6 @@ const VideoManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Video Dialog */}
         <Dialog open={editVideoDialogOpen} onOpenChange={setEditVideoDialogOpen}>
           <DialogContent>
             <DialogHeader>
