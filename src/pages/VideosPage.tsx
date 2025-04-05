@@ -49,6 +49,7 @@ const VideosPage = () => {
         
         if (videosError) throw videosError;
         
+        console.log("Fetched videos:", videosData);
         setCategories(categoriesData || []);
         setVideos(videosData || []);
       } catch (error) {
@@ -155,7 +156,7 @@ const VideosPage = () => {
                         <CardContent className="p-4">
                           <h3 className="font-semibold line-clamp-2">{video.title}</h3>
                           {video.description && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{video.description}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{video.description}</p>
                           )}
                         </CardContent>
                       </div>
