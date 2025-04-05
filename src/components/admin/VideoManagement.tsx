@@ -251,6 +251,8 @@ const VideoManagement = () => {
       const videosInCategory = videos.filter(v => v.category_id === categoryId);
       
       if (videosInCategory.length > 0) {
+        console.log(`Found ${videosInCategory.length} videos to delete in this category`);
+        
         // Delete all videos in this category first
         for (const video of videosInCategory) {
           console.log("Deleting video in category:", video.id);
@@ -313,14 +315,16 @@ const VideoManagement = () => {
       setSavingVideo(true);
       console.log("Adding new video:", newVideo);
       
+      // Insert a single object, not an array
       const { data, error } = await supabase
         .from('videos')
-        .insert([{ 
+        .insert({ 
           title: newVideo.title,
           description: newVideo.description || null,
           youtube_url: newVideo.youtube_url,
-          category_id: newVideo.category_id
-        }])
+          category_id: newVideo.category_id,
+          youtube_id: extractYoutubeId(newVideo.youtube_url)  // Add this function
+        })
         .select();
       
       if (error) {
@@ -361,6 +365,27 @@ const VideoManagement = () => {
     }
   };
 
+  // Helper function to extract YouTube ID
+  const extractYoutubeId = (url: string): string => {
+    let youtubeId = '';
+    
+    // Extract YouTube ID from different URL formats
+    if (url.includes('youtube.com/watch?v=')) {
+      const match = url.match(/v=([^&]+)/);
+      if (match) youtubeId = match[1];
+    } else if (url.includes('youtu.be/')) {
+      const match = url.match(/youtu\.be\/([^?]+)/);
+      if (match) youtubeId = match[1];
+    } else if (url.includes('youtube.com/embed/')) {
+      const match = url.match(/embed\/([^?]+)/);
+      if (match) youtubeId = match[1];
+    } else {
+      youtubeId = url; // Just use the URL as-is if no pattern matches
+    }
+    
+    return youtubeId;
+  };
+
   const handleUpdateVideo = async () => {
     if (!editVideo || !editVideo.title.trim() || !editVideo.youtube_url.trim()) {
       toast({
@@ -375,13 +400,18 @@ const VideoManagement = () => {
       setSavingVideo(true);
       console.log("Updating video:", editVideo);
       
+      const youtubeId = extractYoutubeId(editVideo.youtube_url);
+      const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
+      
       const { error } = await supabase
         .from('videos')
         .update({ 
           title: editVideo.title,
           description: editVideo.description,
           youtube_url: editVideo.youtube_url,
-          category_id: editVideo.category_id
+          category_id: editVideo.category_id,
+          youtube_id: youtubeId,
+          thumbnail_url: thumbnailUrl
         })
         .eq('id', editVideo.id);
       
@@ -393,8 +423,14 @@ const VideoManagement = () => {
       console.log("Video updated successfully");
       
       // Update the video in local state
+      const updatedVideo = {
+        ...editVideo,
+        youtube_id: youtubeId,
+        thumbnail_url: thumbnailUrl
+      };
+      
       setVideos(videos.map(vid => 
-        vid.id === editVideo.id ? { ...editVideo } : vid
+        vid.id === editVideo.id ? updatedVideo : vid
       ));
       
       setEditVideoDialogOpen(false);

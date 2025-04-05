@@ -57,8 +57,8 @@ const VideosPage = () => {
           throw videosError;
         }
         
-        console.log("Fetched categories:", categoriesData);
-        console.log("Fetched videos:", videosData);
+        console.log("Fetched categories:", categoriesData?.length || 0);
+        console.log("Fetched videos:", videosData?.length || 0);
         
         setCategories(categoriesData || []);
         setVideos(videosData || []);
@@ -152,6 +152,10 @@ const VideosPage = () => {
                               src={video.thumbnail_url} 
                               alt={video.title} 
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://img.youtube.com/vi/${video.youtube_id}/mqdefault.jpg`;
+                              }}
                             />
                           ) : (
                             <div className="w-full h-full bg-muted flex items-center justify-center">
