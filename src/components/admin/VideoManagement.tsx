@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +52,7 @@ const VideoManagement = () => {
   const [editCategoryDialogOpen, setEditCategoryDialogOpen] = useState(false);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [editVideoDialogOpen, setEditVideoDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -80,6 +82,13 @@ const VideoManagement = () => {
       }
       
       console.log("Fetched videos:", videosData);
+      
+      // Debug log to check category descriptions
+      if (categoriesData) {
+        categoriesData.forEach(cat => {
+          console.log(`Category "${cat.name}" description:`, cat.description);
+        });
+      }
       
       setCategories(categoriesData || []);
       setVideos(videosData || []);
@@ -140,6 +149,8 @@ const VideoManagement = () => {
   
   const handleUpdateCategory = async () => {
     try {
+      setIsUpdating(true);
+      
       if (!editCategory || !editCategory.name.trim()) {
         toast({
           title: 'Validation Error',
@@ -186,6 +197,8 @@ const VideoManagement = () => {
         description: 'Failed to update category',
         variant: 'destructive',
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
   
@@ -262,6 +275,8 @@ const VideoManagement = () => {
   
   const handleUpdateVideo = async () => {
     try {
+      setIsUpdating(true);
+      
       if (!editVideo || !editVideo.title.trim() || !editVideo.youtube_url.trim() || !editVideo.category_id) {
         toast({
           title: 'Validation Error',
@@ -273,22 +288,27 @@ const VideoManagement = () => {
       
       console.log("Updating video with data:", editVideo);
       
+      const updateData = {
+        title: editVideo.title.trim(),
+        description: editVideo.description?.trim() || null,
+        youtube_url: editVideo.youtube_url.trim(),
+        category_id: editVideo.category_id,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log("Sending video update data to Supabase:", updateData);
+      
       const { error } = await supabase
         .from('videos')
-        .update({
-          title: editVideo.title.trim(),
-          description: editVideo.description?.trim() || null,
-          youtube_url: editVideo.youtube_url.trim(),
-          category_id: editVideo.category_id,
-          updated_at: new Date().toISOString(),
-          youtube_id: editVideo.youtube_id
-        })
+        .update(updateData)
         .eq('id', editVideo.id);
       
       if (error) {
-        console.error("Update error:", error);
+        console.error("Video update error:", error);
         throw error;
       }
+      
+      console.log("Video update successful");
       
       toast({
         title: 'Success',
@@ -305,6 +325,8 @@ const VideoManagement = () => {
         description: 'Failed to update video',
         variant: 'destructive',
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
   
@@ -464,7 +486,12 @@ const VideoManagement = () => {
                     <DialogClose asChild>
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={handleUpdateCategory}>Update Category</Button>
+                    <Button 
+                      onClick={handleUpdateCategory} 
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? 'Updating...' : 'Update Category'}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -574,7 +601,8 @@ const VideoManagement = () => {
                             variant="ghost" 
                             size="icon" 
                             onClick={() => {
-                              setEditVideo(video);
+                              console.log("Setting edit video:", video);
+                              setEditVideo({...video});
                               setEditVideoDialogOpen(true);
                             }}
                           >
@@ -655,7 +683,12 @@ const VideoManagement = () => {
                     <DialogClose asChild>
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={handleUpdateVideo}>Update Video</Button>
+                    <Button 
+                      onClick={handleUpdateVideo}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? 'Updating...' : 'Update Video'}
+                    </Button>
                   </div>
                 </div>
               )}
