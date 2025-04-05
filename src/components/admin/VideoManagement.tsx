@@ -117,6 +117,7 @@ const VideoManagement = () => {
       
       console.log("Fetched categories:", categoriesData?.length || 0);
       console.log("Fetched videos:", videosData?.length || 0);
+      console.log("Video data sample:", videosData && videosData.length > 0 ? videosData[0] : "No videos");
       
       setCategories(categoriesData || []);
       setVideos(videosData || []);
@@ -414,17 +415,19 @@ const VideoManagement = () => {
       
       console.log("Sending update with payload:", updatePayload);
       
-      const { error } = await supabase
+      // Try explicit update with RETURNING * to check what's happening
+      const { data, error } = await supabase
         .from('videos')
         .update(updatePayload)
-        .eq('id', editVideo.id);
+        .eq('id', editVideo.id)
+        .select();
       
       if (error) {
         console.error("Error updating video:", error);
         throw error;
       }
       
-      console.log("Video updated successfully");
+      console.log("Video updated successfully, server returned:", data);
       
       setEditVideoDialogOpen(false);
       
@@ -453,17 +456,19 @@ const VideoManagement = () => {
       setDeleting(videoId);
       console.log("Deleting video:", videoId);
       
-      const { error } = await supabase
+      // Try explicit delete with RETURNING * to check what's happening
+      const { data, error } = await supabase
         .from('videos')
         .delete()
-        .eq('id', videoId);
+        .eq('id', videoId)
+        .select();
       
       if (error) {
         console.error("Error deleting video:", error);
         throw error;
       }
       
-      console.log("Video deleted successfully");
+      console.log("Video deleted successfully, server returned:", data);
       
       toast({
         title: 'Success',
