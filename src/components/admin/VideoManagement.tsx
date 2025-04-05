@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,13 +59,20 @@ const VideoManagement = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      console.log("Fetching fresh video categories and videos data...");
+      
       // Fetch categories
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('video_categories')
         .select('*')
         .order('name');
       
-      if (categoriesError) throw categoriesError;
+      if (categoriesError) {
+        console.error("Error fetching categories:", categoriesError);
+        throw categoriesError;
+      }
+      
+      console.log("Fetched categories:", categoriesData);
       
       // Fetch videos
       const { data: videosData, error: videosError } = await supabase
@@ -72,7 +80,12 @@ const VideoManagement = () => {
         .select('*')
         .order('title');
       
-      if (videosError) throw videosError;
+      if (videosError) {
+        console.error("Error fetching videos:", videosError);
+        throw videosError;
+      }
+      
+      console.log("Fetched videos:", videosData);
       
       setCategories(categoriesData || []);
       setVideos(videosData || []);
