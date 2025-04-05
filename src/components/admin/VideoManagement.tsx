@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -89,9 +88,9 @@ const VideoManagement = () => {
 
   useEffect(() => {
     // Check if user is admin when component mounts or auth state changes
-    if (!isLoading && !isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       setAuthError("You must be logged in to manage videos");
-    } else if (!isLoading && isAuthenticated && !isAdmin) {
+    } else if (!loading && isAuthenticated && !isAdmin) {
       setAuthError("You must have admin privileges to manage videos");
     } else if (isAuthenticated && isAdmin) {
       setAuthError(null);
