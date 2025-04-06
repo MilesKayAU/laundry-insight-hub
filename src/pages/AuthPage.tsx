@@ -33,6 +33,7 @@ const AuthPage = () => {
   
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [ageVerified, setAgeVerified] = useState(false);
+  const [formReady, setFormReady] = useState(false);
   
   const returnUrl = location.state?.returnUrl || '/';
   
@@ -48,6 +49,12 @@ const AuthPage = () => {
       navigate(returnUrl, { replace: true });
     }
   }, [isAuthenticated, navigate, returnUrl]);
+  
+  useEffect(() => {
+    setTimeout(() => {
+      setFormReady(true);
+    }, 500);
+  }, []);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,37 +311,41 @@ const AuthPage = () => {
                       />
                     </div>
                     
-                    <div className="flex items-center space-x-2 pt-2">
-                      <Checkbox 
-                        id="age-verification" 
-                        checked={ageVerified}
-                        onCheckedChange={(checked) => setAgeVerified(checked === true)}
-                      />
-                      <Label 
-                        htmlFor="age-verification" 
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        I confirm that I am at least 16 years old
-                      </Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="marketing-consent" 
-                        checked={marketingConsent}
-                        onCheckedChange={(checked) => setMarketingConsent(checked === true)}
-                      />
-                      <Label 
-                        htmlFor="marketing-consent" 
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        I consent to receiving occasional emails about PVAFree updates and news
-                      </Label>
-                    </div>
-                    
-                    <div className="mt-2">
-                      <Recaptcha onChange={setRecaptchaToken} />
-                    </div>
+                    {formReady && (
+                      <>
+                        <div className="flex items-center space-x-2 pt-2">
+                          <Checkbox 
+                            id="age-verification" 
+                            checked={ageVerified}
+                            onCheckedChange={(checked) => setAgeVerified(checked === true)}
+                          />
+                          <Label 
+                            htmlFor="age-verification" 
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            I confirm that I am at least 16 years old
+                          </Label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="marketing-consent" 
+                            checked={marketingConsent}
+                            onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+                          />
+                          <Label 
+                            htmlFor="marketing-consent" 
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            I consent to receiving occasional emails about PVAFree updates and news
+                          </Label>
+                        </div>
+                        
+                        <div className="mt-2">
+                          <Recaptcha onChange={setRecaptchaToken} />
+                        </div>
+                      </>
+                    )}
                     
                     {error && (
                       <Alert variant="destructive">

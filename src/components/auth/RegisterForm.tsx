@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [ageVerified, setAgeVerified] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isFormReady, setIsFormReady] = useState(false);
+  
+  useEffect(() => {
+    // Ensure form is ready after component mounts
+    setIsFormReady(true);
+  }, []);
   
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,37 +116,41 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           />
         </div>
         
-        <div className="flex items-center space-x-2 pt-2">
-          <Checkbox 
-            id="age-verification" 
-            checked={ageVerified}
-            onCheckedChange={(checked) => setAgeVerified(checked === true)}
-          />
-          <Label 
-            htmlFor="age-verification" 
-            className="text-sm font-normal cursor-pointer"
-          >
-            I confirm that I am at least 16 years old
-          </Label>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="marketing-consent" 
-            checked={marketingConsent}
-            onCheckedChange={(checked) => setMarketingConsent(checked === true)}
-          />
-          <Label 
-            htmlFor="marketing-consent" 
-            className="text-sm font-normal cursor-pointer"
-          >
-            I consent to receiving occasional emails about PVAFree updates and news
-          </Label>
-        </div>
-        
-        <div className="mt-2">
-          <Recaptcha onChange={setRecaptchaToken} />
-        </div>
+        {isFormReady && (
+          <>
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox 
+                id="age-verification" 
+                checked={ageVerified}
+                onCheckedChange={(checked) => setAgeVerified(checked === true)}
+              />
+              <Label 
+                htmlFor="age-verification" 
+                className="text-sm font-normal cursor-pointer"
+              >
+                I confirm that I am at least 16 years old
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="marketing-consent" 
+                checked={marketingConsent}
+                onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+              />
+              <Label 
+                htmlFor="marketing-consent" 
+                className="text-sm font-normal cursor-pointer"
+              >
+                I consent to receiving occasional emails about PVAFree updates and news
+              </Label>
+            </div>
+            
+            <div className="mt-2">
+              <Recaptcha onChange={setRecaptchaToken} />
+            </div>
+          </>
+        )}
       </div>
       
       <DialogFooter>
