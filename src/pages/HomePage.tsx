@@ -17,14 +17,11 @@ const HomePage = () => {
             <span className="text-sm font-medium text-gray-700">Collaborative Product Database</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-science-700 to-tech-600 bg-clip-text text-transparent">
-              Community-Powered Transparency
-            </span>
+            Exposing the Truth Behind "Plastic-Free" Laundry Sheets
           </h1>
-          <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-gray-700">
-            Exposing the Plastic-Free Myth — Uncovering the Truth About PVA in Laundry Products.
-            Join our community to analyze ingredients, decode greenwashing, and empower others to choose truly plastic-free solutions.
-          </p>
+          <h2 className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-gray-700">
+            Are Your Detergent Sheets Really Safe for Our Waterways?
+          </h2>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-science-600 hover:bg-science-700 shadow-lg">
               <Link to="/contribute">
@@ -124,7 +121,7 @@ const HomePage = () => {
               <div className="rounded-lg overflow-hidden shadow-2xl">
                 <img 
                   src="/lovable-uploads/92933f9c-0e6a-46ef-8059-9b5c4cb8d2db.png" 
-                  alt="PVA dripping from laundry sheets" 
+                  alt="PVA dripping from laundry sheets - hidden microplastic in eco products" 
                   className="w-full h-auto"
                 />
               </div>

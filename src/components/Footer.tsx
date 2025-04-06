@@ -40,7 +40,7 @@ const Footer = () => {
           <div className="flex flex-col items-center gap-2 mb-4">
             <img 
               src="/lovable-uploads/81ba1971-9504-4977-a9a9-493f5351c835.png" 
-              alt="PVAFree.com Logo" 
+              alt="PVAFree.com Logo - Zero PVA Laundry Products Directory" 
               className="h-24" 
             />
           </div>
@@ -140,15 +140,15 @@ const Footer = () => {
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
             <ExternalLink href="#" className="text-gray-400 hover:text-science-300 transition-colors">
               <Mail className="h-5 w-5" />
-              <span className="sr-only">Email</span>
+              <span className="sr-only">Email PVAFree.com</span>
             </ExternalLink>
             <ExternalLink href="#" className="text-gray-400 hover:text-science-300 transition-colors">
               <Github className="h-5 w-5" />
-              <span className="sr-only">GitHub</span>
+              <span className="sr-only">PVAFree.com GitHub</span>
             </ExternalLink>
             <ExternalLink href="#" className="text-gray-400 hover:text-science-300 transition-colors">
               <Twitter className="h-5 w-5" />
-              <span className="sr-only">Twitter</span>
+              <span className="sr-only">PVAFree.com Twitter</span>
             </ExternalLink>
           </div>
         </div>
