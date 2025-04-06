@@ -475,7 +475,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
                   <FormItem>
                     <FormLabel>Verification</FormLabel>
                     <FormControl>
-                      <Recaptcha onChange={handleRecaptchaChange} className="mt-2" />
+                      <Recaptcha 
+                        onChange={handleRecaptchaChange} 
+                        className="mt-2"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

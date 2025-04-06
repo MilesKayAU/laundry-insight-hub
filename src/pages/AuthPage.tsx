@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,50 +5,45 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2, Microscope } from "lucide-react";
+import { Loader2, Microscope, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import Recaptcha from "@/components/ui/recaptcha";
 
 const AuthPage = () => {
   const { login, register, isAuthenticated, isLoading, sendPasswordResetEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Login state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
-  // Register state
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
   
-  // Error state
   const [error, setError] = useState<string | null>(null);
   
-  // Verification state
   const [verificationSent, setVerificationSent] = useState(false);
   
-  // Reset password state
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetEmailSent, setResetEmailSent] = useState(false);
   
-  // Get the return URL from location state
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [ageVerified, setAgeVerified] = useState(false);
+  
   const returnUrl = location.state?.returnUrl || '/';
   
-  // Check if we have a hash in the URL (for auth redirects)
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes('access_token') || hash.includes('error')) {
-      // This is an auth redirect, let AuthContext handle it
       console.log('Auth redirect detected in AuthPage');
     }
   }, []);
   
   useEffect(() => {
-    // If user is already authenticated, redirect to the return URL
     if (isAuthenticated) {
       navigate(returnUrl, { replace: true });
     }
@@ -60,25 +54,31 @@ const AuthPage = () => {
     setError(null);
     try {
       await login(loginEmail, loginPassword);
-      // Navigation happens in useEffect when isAuthenticated changes
     } catch (error: any) {
-      // Error is handled in the AuthContext
     }
   };
   
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    if (!recaptchaToken) {
+      setError("Please complete the CAPTCHA verification");
+      return;
+    }
+    
+    if (!ageVerified) {
+      setError("You must confirm that you are at least 16 years old");
+      return;
+    }
+    
     try {
-      // Pass metadata as the optional third parameter
       await register(registerEmail, registerPassword, { 
         name: registerName, 
         marketingConsent 
       });
       setVerificationSent(true);
-      // Navigation happens in useEffect when isAuthenticated changes
     } catch (error: any) {
-      // Error is handled in the AuthContext
     }
   };
   
@@ -89,7 +89,6 @@ const AuthPage = () => {
       await sendPasswordResetEmail(resetEmail);
       setResetEmailSent(true);
     } catch (error: any) {
-      // Error is handled in the AuthContext
     }
   };
   
@@ -307,6 +306,20 @@ const AuthPage = () => {
                     
                     <div className="flex items-center space-x-2 pt-2">
                       <Checkbox 
+                        id="age-verification" 
+                        checked={ageVerified}
+                        onCheckedChange={(checked) => setAgeVerified(checked === true)}
+                      />
+                      <Label 
+                        htmlFor="age-verification" 
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        I confirm that I am at least 16 years old
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
                         id="marketing-consent" 
                         checked={marketingConsent}
                         onCheckedChange={(checked) => setMarketingConsent(checked === true)}
@@ -319,7 +332,18 @@ const AuthPage = () => {
                       </Label>
                     </div>
                     
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <div className="mt-2">
+                      <Recaptcha onChange={setRecaptchaToken} />
+                    </div>
+                    
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <Button type="submit" className="w-full" disabled={isLoading || !recaptchaToken || !ageVerified}>
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -335,7 +359,7 @@ const AuthPage = () => {
             </Tabs>
           )}
           
-          {error && (
+          {error && !verificationSent && (
             <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
               {error}
             </div>
