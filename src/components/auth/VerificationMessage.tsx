@@ -28,11 +28,6 @@ const VerificationMessage: React.FC<VerificationMessageProps> = ({ onReturn }) =
           After verification, you can return here to log in.
         </AlertDescription>
       </Alert>
-      <Alert className="bg-yellow-50 text-yellow-800 border-yellow-200">
-        <AlertDescription>
-          <strong>Development Note:</strong> If you're not receiving emails, you may need to configure your Supabase email settings or temporarily disable email confirmation in AuthContext.tsx.
-        </AlertDescription>
-      </Alert>
       <DialogFooter>
         <Button onClick={onReturn}>
           Return to Login

@@ -222,11 +222,6 @@ const AuthPage = () => {
                   We've sent a verification link to your email. Please check your inbox and click the link to verify your account.
                 </AlertDescription>
               </Alert>
-              <Alert className="bg-yellow-50 text-yellow-800 border-yellow-200">
-                <AlertDescription>
-                  <strong>Development Note:</strong> If you're not receiving emails, you may need to configure your Supabase email settings or temporarily disable email confirmation in AuthContext.tsx.
-                </AlertDescription>
-              </Alert>
               <p className="text-sm text-gray-500 text-center">
                 After verification, you can return here to log in.
               </p>
