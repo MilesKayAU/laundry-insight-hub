@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import ContributePageHeader from "@/components/contribute/ContributePageHeader";
@@ -10,7 +10,7 @@ import PvaPercentageForm from "@/components/PvaPercentageForm";
 import TrustLevelInfoDialog from "@/components/contribute/TrustLevelInfoDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { InfoIcon, Shield } from "lucide-react";
+import { InfoIcon, Shield, AlertTriangle } from "lucide-react";
 import { UserTrustLevel, getUserTrustLevel } from "@/utils/supabaseUtils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -18,6 +18,9 @@ const ContributePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("individual");
   const [showTrustInfo, setShowTrustInfo] = useState(false);
   const [trustLevel, setTrustLevel] = useState<UserTrustLevel>(UserTrustLevel.NEW);
+  const [submissionCount, setSubmissionCount] = useState(0);
+  const [submissionTimestamps, setSubmissionTimestamps] = useState<number[]>([]);
+  const [isRateLimited, setIsRateLimited] = useState(false);
   const { toast } = useToast();
   const { user, isAuthenticated, isAdmin } = useAuth();
 
@@ -33,24 +36,70 @@ const ContributePage: React.FC = () => {
     fetchTrustLevel();
   }, [user?.id]);
 
+  // Anti-spam rate limiting
+  useEffect(() => {
+    const storedData = localStorage.getItem('submission_timestamps');
+    if (storedData) {
+      const timestamps = JSON.parse(storedData);
+      // Filter out timestamps older than 1 hour
+      const recentTimestamps = timestamps.filter(
+        (t: number) => Date.now() - t < 60 * 60 * 1000
+      );
+      setSubmissionTimestamps(recentTimestamps);
+      setSubmissionCount(recentTimestamps.length);
+      
+      // Check if user is rate limited (more than 10 submissions in the last hour)
+      setIsRateLimited(recentTimestamps.length >= 10 && !isAdmin);
+    }
+  }, [isAdmin]);
+
+  const recordSubmission = () => {
+    const now = Date.now();
+    const updatedTimestamps = [...submissionTimestamps, now];
+    localStorage.setItem('submission_timestamps', JSON.stringify(updatedTimestamps));
+    setSubmissionTimestamps(updatedTimestamps);
+    setSubmissionCount(updatedTimestamps.length);
+    
+    // Check if user is now rate limited
+    if (updatedTimestamps.length >= 10 && !isAdmin) {
+      setIsRateLimited(true);
+    }
+  };
+
   const handleFormComplete = () => {
-    // Can be used for any post-submission actions if needed
+    // Record submission for rate limiting
+    recordSubmission();
     console.log("Form submission complete!");
   };
 
   const handleBulkUploadComplete = () => {
+    // Record submission for rate limiting
+    recordSubmission();
     console.log("Bulk upload complete - products added to pending submissions");
     
     toast({
       title: "Bulk upload complete",
       description: "Your products have been submitted for review and are now in the pending queue.",
-      variant: "default" // Fixing the type error by using a valid variant
+      variant: "default"
     });
   };
 
   return (
     <div className="container mx-auto py-10 px-4 pb-32">
       <ContributePageHeader />
+      
+      {isRateLimited && (
+        <div className="max-w-4xl mx-auto mb-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Submission Rate Limit Reached</AlertTitle>
+            <AlertDescription>
+              You've submitted too many items in a short period. For security reasons, 
+              please wait before making additional submissions. Try again in an hour.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
       
       {isAuthenticated && !isAdmin && (
         <div className="max-w-4xl mx-auto mb-6">

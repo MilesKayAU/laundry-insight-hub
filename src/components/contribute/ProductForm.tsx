@@ -41,6 +41,7 @@ import {
   UserTrustLevel 
 } from "@/utils/supabaseUtils";
 import { useAuth } from "@/contexts/AuthContext";
+import Recaptcha from "@/components/ui/recaptcha";
 
 const productSchema = z.object({
   productName: z.string().min(2, {
@@ -67,6 +68,9 @@ const productSchema = z.object({
       message: "PVA percentage must be between 0 and 100",
     })
     .optional(),
+  recaptchaToken: z.string({
+    required_error: "Please complete the CAPTCHA verification",
+  }),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -94,6 +98,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
   const [media, setMedia] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, isAuthenticated, isAdmin } = useAuth();
   const [submissionLimits, setSubmissionLimits] = useState<{
@@ -119,6 +124,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
       ingredients: "",
       comments: "",
       pvaPercentage: "",
+      recaptchaToken: "",
     },
   });
 
@@ -136,7 +142,35 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
     checkLimits();
   }, [user?.id, isAdmin]);
 
+  useEffect(() => {
+    if (recaptchaToken) {
+      form.setValue('recaptchaToken', recaptchaToken);
+    }
+  }, [recaptchaToken, form]);
+
+  const handleRecaptchaChange = (token: string | null) => {
+    setRecaptchaToken(token);
+    if (token) {
+      form.setValue('recaptchaToken', token);
+      form.clearErrors('recaptchaToken');
+    } else {
+      form.setError('recaptchaToken', {
+        type: 'manual',
+        message: 'Please complete the CAPTCHA verification'
+      });
+    }
+  };
+
   const onSubmit = async (data: ProductFormValues) => {
+    if (!recaptchaToken) {
+      toast({
+        title: "CAPTCHA verification failed",
+        description: "Please complete the CAPTCHA verification to continue.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!submissionLimits.allowed) {
       toast({
         title: "Submission limit reached",
@@ -182,6 +216,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
         form.reset();
         setMedia([]);
         setSelectedCountries([]);
+        setRecaptchaToken(null);
         onComplete();
       } else {
         toast({
@@ -432,11 +467,27 @@ const ProductForm: React.FC<ProductFormProps> = ({ onComplete }) => {
               )}
             />
             
+            <div className="space-y-3">
+              <FormField
+                control={form.control}
+                name="recaptchaToken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Verification</FormLabel>
+                    <FormControl>
+                      <Recaptcha onChange={handleRecaptchaChange} className="mt-2" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <Button 
               type="submit" 
               className="w-full" 
               size="lg" 
-              disabled={submitting || !submissionLimits.allowed}
+              disabled={submitting || !submissionLimits.allowed || !recaptchaToken}
             >
               {submitting ? (
                 <>Submitting...</>
