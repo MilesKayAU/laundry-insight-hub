@@ -83,6 +83,24 @@ export const useAuthMethods = (
   const signOut = async () => {
     try {
       setIsLoading(true);
+      
+      // Check if we have a session before trying to sign out
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        // If no session exists, we're already signed out, so just clear local state
+        console.log('No active session found, clearing local auth state only');
+        
+        // Show toast to indicate successful sign out (even though we were already signed out)
+        toast({
+          title: "Logged out",
+          description: "You've been successfully logged out.",
+        });
+        
+        return { success: true };
+      }
+      
+      // If we have a session, proceed with normal sign out
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
@@ -95,6 +113,18 @@ export const useAuthMethods = (
       return { success: true };
     } catch (error: any) {
       console.error('Error signing out:', error);
+      
+      // If we get an AuthSessionMissingError, treat it as a successful logout
+      if (error.name === 'AuthSessionMissingError') {
+        console.log('Auth session missing, considering user already logged out');
+        
+        toast({
+          title: "Logged out",
+          description: "You've been successfully logged out.",
+        });
+        
+        return { success: true };
+      }
       
       toast({
         title: "Sign out failed",
