@@ -8,27 +8,44 @@ interface RecaptchaProps {
 }
 
 const Recaptcha: React.FC<RecaptchaProps> = ({ onChange, className }) => {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   useEffect(() => {
-    // Ensure recaptcha is visible after component mounts
-    setIsVisible(true);
+    // Short delay to ensure DOM is fully rendered before showing recaptcha
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 300);
+    
+    return () => clearTimeout(timer);
   }, []);
+
+  // For debugging
+  useEffect(() => {
+    console.log("Recaptcha component mounted, isLoaded:", isLoaded);
+  }, [isLoaded]);
 
   return (
     <div className={`recaptcha-wrapper ${className || ''}`}>
-      {isVisible && (
+      {isLoaded && (
         <>
           <ReCAPTCHA
             sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" // This is Google's test key - replace with your actual site key in production
-            onChange={onChange}
+            onChange={(token) => {
+              console.log("reCAPTCHA token received:", token ? "valid" : "null");
+              onChange(token);
+            }}
             size="normal"
-            className="recaptcha-container" // Adding a class for better styling/debugging
+            className="recaptcha-container"
           />
           <p className="text-xs text-muted-foreground mt-1">
             This site is protected by reCAPTCHA to prevent spam submissions.
           </p>
         </>
+      )}
+      {!isLoaded && (
+        <div className="h-[78px] w-full bg-gray-100 animate-pulse rounded flex items-center justify-center">
+          <p className="text-sm text-gray-500">Loading verification...</p>
+        </div>
       )}
     </div>
   );

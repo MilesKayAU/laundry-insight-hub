@@ -33,9 +33,22 @@ const AuthPage = () => {
   
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [ageVerified, setAgeVerified] = useState(false);
-  const [formReady, setFormReady] = useState(false);
+  const [componentMounted, setComponentMounted] = useState(false);
   
   const returnUrl = location.state?.returnUrl || '/';
+  
+  useEffect(() => {
+    console.log("AuthPage mounting");
+    const timer = setTimeout(() => {
+      setComponentMounted(true);
+      console.log("AuthPage marked as mounted");
+    }, 300);
+    
+    return () => {
+      clearTimeout(timer);
+      console.log("AuthPage unmounting");
+    };
+  }, []);
   
   useEffect(() => {
     const hash = window.location.hash;
@@ -51,10 +64,12 @@ const AuthPage = () => {
   }, [isAuthenticated, navigate, returnUrl]);
   
   useEffect(() => {
-    setTimeout(() => {
-      setFormReady(true);
-    }, 500);
-  }, []);
+    console.log("Current state:", { 
+      componentMounted, 
+      recaptchaToken: recaptchaToken ? "exists" : "null",
+      ageVerified
+    });
+  }, [componentMounted, recaptchaToken, ageVerified]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +77,7 @@ const AuthPage = () => {
     try {
       await login(loginEmail, loginPassword);
     } catch (error: any) {
+      console.error("Login error:", error);
     }
   };
   
@@ -86,6 +102,7 @@ const AuthPage = () => {
       });
       setVerificationSent(true);
     } catch (error: any) {
+      console.error("Registration error:", error);
     }
   };
   
@@ -96,6 +113,7 @@ const AuthPage = () => {
       await sendPasswordResetEmail(resetEmail);
       setResetEmailSent(true);
     } catch (error: any) {
+      console.error("Password reset error:", error);
     }
   };
   
@@ -311,13 +329,16 @@ const AuthPage = () => {
                       />
                     </div>
                     
-                    {formReady && (
+                    {componentMounted && (
                       <>
                         <div className="flex items-center space-x-2 pt-2">
                           <Checkbox 
                             id="age-verification" 
                             checked={ageVerified}
-                            onCheckedChange={(checked) => setAgeVerified(checked === true)}
+                            onCheckedChange={(checked) => {
+                              console.log("Age verification changed:", checked);
+                              setAgeVerified(checked === true);
+                            }}
                           />
                           <Label 
                             htmlFor="age-verification" 
@@ -342,7 +363,10 @@ const AuthPage = () => {
                         </div>
                         
                         <div className="mt-2">
-                          <Recaptcha onChange={setRecaptchaToken} />
+                          <Recaptcha onChange={(token) => {
+                            console.log("Recaptcha token received in AuthPage:", token ? "valid" : "null");
+                            setRecaptchaToken(token);
+                          }} />
                         </div>
                       </>
                     )}
@@ -354,7 +378,11 @@ const AuthPage = () => {
                       </Alert>
                     )}
                     
-                    <Button type="submit" className="w-full" disabled={isLoading || !recaptchaToken || !ageVerified}>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading || !recaptchaToken || !ageVerified}
+                    >
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
