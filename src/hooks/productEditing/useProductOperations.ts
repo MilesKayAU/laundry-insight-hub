@@ -72,20 +72,15 @@ export function useProductOperations({
     console.log("Current product details to save:", productDetails);
     
     try {
-      // Prepare data for Supabase
       const supabaseData = prepareProductDataForUpdate(productDetails);
       console.log("Prepared data for updates:", supabaseData);
       
-      // Step 1: Update in Supabase database
       const supabaseResult = await updateProductInSupabase(selectedProduct.id, supabaseData);
       
-      // Log Supabase result details
       console.log("Supabase update result:", supabaseResult);
       
-      // Step 2: Update in localStorage with same data
       const localData = {
         ...supabaseData,
-        // Preserve required fields from the original product
         id: selectedProduct.id,
         approved: selectedProduct.approved !== undefined ? selectedProduct.approved : true,
         brandVerified: selectedProduct.brandVerified || false,
@@ -101,13 +96,10 @@ export function useProductOperations({
       
       console.log("Local storage update data:", localData);
       
-      // Step 3: Update in localStorage
       const localStorageResult = updateProductInLocalStorage(selectedProduct.id, localData);
       console.log("Local storage update result:", localStorageResult);
       
-      // Determine operation result
       if (supabaseResult.success || localStorageResult) {
-        // Create success message
         let successMessage = "";
         
         if (supabaseResult.success && localStorageResult) {
@@ -118,24 +110,19 @@ export function useProductOperations({
           successMessage = "Updated in local storage only";
         }
         
-        // Show success toast
         toast({
           title: "Product Updated",
           description: `${productDetails.brand} ${productDetails.name} - ${successMessage}`,
         });
 
-        // Close the dialog
         setIsDialogOpen(false);
 
-        // Execute the success callback if provided
         if (typeof onSuccess === 'function') {
           onSuccess();
         }
         
-        // Trigger a global product refresh event
         window.dispatchEvent(new Event('reload-products'));
       } else {
-        // Handle failure
         const errorMessage = supabaseResult.error || "Failed to update the product";
         console.error("Update failed:", errorMessage);
         
