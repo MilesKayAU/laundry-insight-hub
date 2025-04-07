@@ -74,7 +74,11 @@ export const useProductEditing = (onSuccess?: () => void) => {
   };
 
   const handleSaveChanges = async () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct) {
+      console.error("Cannot save changes: No product selected");
+      return;
+    }
+    
     setIsSaving(true);
     console.log("Starting to save product changes for ID:", selectedProduct.id);
     
@@ -118,69 +122,83 @@ export const useProductEditing = (onSuccess?: () => void) => {
 
       console.log("Product ID being updated:", selectedProduct.id);
       console.log("Updated data being applied:", updatedData);
+      
+      // Initialize success indicators
+      let supabaseUpdateSuccess = false;
+      let localUpdateSuccess = false;
 
-      // Track overall success status
-      let updateSuccess = false;
-
-      // Update in Supabase first
+      // Try to update in Supabase database first
       try {
-        console.log("Updating product in Supabase...");
+        console.log("Updating product in Supabase - preparing data");
+        
+        // Make a clean object with only the columns that exist in the Supabase table
+        const supabaseData = {
+          brand: updatedData.brand,
+          name: updatedData.name,
+          description: updatedData.description,
+          type: updatedData.type,
+          pvastatus: updatedData.pvaStatus,
+          pvapercentage: updatedData.pvaPercentage,
+          country: updatedData.country,
+          websiteurl: updatedData.websiteUrl,
+          videourl: updatedData.videoUrl,
+          imageurl: updatedData.imageUrl,
+          ingredients: updatedData.ingredients,
+          updatedat: new Date().toISOString()
+        };
+        
+        console.log("Supabase update data:", supabaseData);
+        console.log("Product ID for Supabase update:", selectedProduct.id);
+        
         const { data, error } = await supabase
           .from('product_submissions')
-          .update({
-            brand: updatedData.brand,
-            name: updatedData.name,
-            description: updatedData.description,
-            type: updatedData.type,
-            pvastatus: updatedData.pvaStatus,
-            pvapercentage: updatedData.pvaPercentage,
-            country: updatedData.country,
-            websiteurl: updatedData.websiteUrl,
-            videourl: updatedData.videoUrl,
-            imageurl: updatedData.imageUrl,
-            ingredients: updatedData.ingredients,
-            updatedat: new Date().toISOString()
-          })
-          .eq('id', selectedProduct.id);
+          .update(supabaseData)
+          .eq('id', selectedProduct.id)
+          .select();
           
         if (error) {
-          console.error("Error updating product in Supabase:", error);
+          console.error("Supabase update error:", error);
           toast({
-            title: "Supabase Update Error",
-            description: `Failed to update in database: ${error.message}`,
+            title: "Database Update Error",
+            description: error.message,
             variant: "destructive"
           });
         } else {
-          console.log("Successfully updated product in Supabase, data response:", data);
-          updateSuccess = true;
+          console.log("Supabase update successful:", data);
+          supabaseUpdateSuccess = true;
         }
-      }
-      catch (supabaseError) {
+      } catch (supabaseError) {
         console.error("Exception during Supabase update:", supabaseError);
-        // Continue with local update even if Supabase update fails
       }
       
-      // Update the product in localStorage
+      // Try to update in localStorage
       try {
-        const localSuccess = updateProductSubmission(selectedProduct.id, updatedData);
-        if (localSuccess) {
-          console.log("Successfully updated product in local storage");
-          updateSuccess = true;
-        } else {
-          console.error("Failed to update product in local storage");
-        }
+        console.log("Updating product in localStorage");
+        localUpdateSuccess = updateProductSubmission(selectedProduct.id, updatedData);
+        console.log("Local update success:", localUpdateSuccess);
       } catch (localError) {
-        console.error("Exception during local storage update:", localError);
+        console.error("Exception during localStorage update:", localError);
       }
       
-      if (updateSuccess) {
-        // Set success message
+      // Handle success/failure based on results
+      if (supabaseUpdateSuccess || localUpdateSuccess) {
+        // Determine the success message
+        let successMessage = "";
+        
+        if (supabaseUpdateSuccess && localUpdateSuccess) {
+          successMessage = "Updated in database and local storage";
+        } else if (supabaseUpdateSuccess) {
+          successMessage = "Updated in database only";
+        } else {
+          successMessage = "Updated in local storage only";
+        }
+        
+        // Show success message
         toast({
           title: "Product Updated",
-          description: `${updatedData.brand} ${updatedData.name} updated successfully`,
+          description: `${updatedData.brand} ${updatedData.name} - ${successMessage}`,
         });
 
-        console.log("Product update successful, closing dialog");
         // Close the dialog
         setIsDialogOpen(false);
 
