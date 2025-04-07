@@ -72,8 +72,8 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
               </TableHeader>
               <TableBody>
                 {products.map((product) => {
-                  // Get and validate the website URL
-                  const rawWebsiteUrl = product.websiteUrl || '';
+                  // Get and validate the website URL - check both websiteUrl and websiteurl (from Supabase)
+                  const rawWebsiteUrl = product.websiteUrl || product.websiteurl || '';
                   const isUrlValid = rawWebsiteUrl.trim() !== '' && isValidUrl(rawWebsiteUrl);
                   const parsedUrl = parseUrl(rawWebsiteUrl);
                   

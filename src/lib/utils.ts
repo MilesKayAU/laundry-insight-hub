@@ -1,99 +1,73 @@
-
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { ProductSubmission } from "@/lib/textExtractor"
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { ProductSubmission } from "./textExtractor";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-// Improved external link handling with better error handling and logging
+// Function to safely handle external links
 export function getSafeExternalLinkProps({ url }: { url: string }) {
-  // Enhanced URL validation with debugging
-  console.log(`Processing URL in getSafeExternalLinkProps: "${url}"`);
-  
-  // Handle empty or invalid URLs
-  if (!url || url === '#' || url.trim() === '') {
+  console.info("Processing URL in getSafeExternalLinkProps:", url);
+
+  if (!url || url === '#' || !isValidUrl(url)) {
     console.warn("Empty or invalid URL provided to getSafeExternalLinkProps:", url);
     return {
       href: "#",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
-        console.log("Prevented navigation to empty URL");
-      },
-      className: "text-muted-foreground cursor-not-allowed"
+        console.warn("Prevented navigation to invalid URL:", url);
+      }
     };
   }
 
-  // Ensure URL has a protocol
-  let safeUrl = url;
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    safeUrl = `https://${url}`;
-  }
-  
-  console.log(`External link: Original URL: "${url}", Safe URL: "${safeUrl}"`);
-  
   return {
-    href: safeUrl,
+    href: url,
     target: "_blank",
-    rel: "nofollow noopener noreferrer",
-    className: "max-w-full overflow-hidden text-ellipsis hover:underline text-blue-600"
+    rel: "noopener noreferrer",
   };
 }
 
-// Improved URL validation with better debugging
-export function isValidUrl(url: string): boolean {
-  // First check for empty URLs
-  if (!url || url === '#' || url.trim() === '') {
-    console.log(`URL validation failed for "${url}": empty or placeholder`);
-    return false;
-  }
+// Parse and validate URL
+export function parseUrl(url: string) {
+  if (!url || url.trim() === '') return null;
   
   try {
-    // Add protocol if missing for validation purposes
-    let urlToTest = url;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      urlToTest = `https://${url}`;
+    // Handle URLs without protocol
+    if (!url.match(/^[a-zA-Z]+:\/\//)) {
+      url = 'https://' + url;
     }
     
-    // Validate URL format
-    new URL(urlToTest);
-    
-    // Additional validation for domain-like patterns
-    const domainPattern = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?/i;
-    const extractedDomain = url.replace(/^https?:\/\//, '').split('/')[0];
-    
-    if (!domainPattern.test(extractedDomain)) {
-      console.log(`URL validation failed for "${url}": invalid domain pattern`);
-      return false;
-    }
-    
-    console.log(`URL validation succeeded for "${url}"`);
-    return true;
+    const parsedUrl = new URL(url);
+    return parsedUrl;
   } catch (e) {
-    console.warn(`URL validation error for "${url}":`, e);
-    return false;
+    console.warn("Invalid URL format:", url, e);
+    return null;
   }
 }
 
-// Format URLs for display (remove http/https)
-export function formatUrlForDisplay(url: string): string {
-  if (!url || url.trim() === '') {
-    return '';
-  }
-  
-  try {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url.replace(/^https?:\/\//, '');
-    }
-    return url;
-  } catch (e) {
-    console.warn("Error formatting URL for display:", url, e);
-    return url;
-  }
+// Function to validate URLs
+export function isValidUrl(url: string) {
+  return !!parseUrl(url);
 }
 
-// Brand name normalization
+// Function to format URL for display
+export function formatUrlForDisplay(url: string) {
+  const parsedUrl = parseUrl(url);
+  if (!parsedUrl) return url;
+  
+  return parsedUrl.hostname;
+}
+
+// Format a URL safely
+export function formatSafeUrl(url: string) {
+  if (!url || url.trim() === '') return '';
+  
+  const parsedUrl = parseUrl(url);
+  return parsedUrl ? parsedUrl.href : '';
+}
+
+// Normalize brand name 
 export function normalizeBrandName(brand: string): string {
   if (!brand) return '';
   const normalized = brand.trim();
@@ -101,152 +75,105 @@ export function normalizeBrandName(brand: string): string {
   return normalized;
 }
 
-// URL encoding for brand names
-export function encodeBrandNameForUrl(brandName: string): string {
-  if (!brandName) return '';
-  const normalized = normalizeBrandName(brandName);
-  const encoded = encodeURIComponent(normalized);
-  console.log(`Encoded brand name "${normalized}" to "${encoded}" for URL`);
-  return encoded;
-}
-
-// Decoding for brand names from URLs
-export function decodeBrandNameFromUrl(encodedName: string): string {
-  if (!encodedName) return '';
-  try {
-    const decoded = decodeURIComponent(encodedName);
-    const normalized = normalizeBrandName(decoded);
-    console.log(`Decoded URL parameter "${encodedName}" to brand name "${normalized}"`);
-    return normalized;
-  } catch (e) {
-    console.warn(`Error decoding brand name from URL: ${encodedName}`, e);
-    return encodedName.trim();
-  }
-}
-
-// Normalize a string for database comparison
-export function normalizeForDatabaseComparison(value: string): string {
-  if (!value) return '';
-  const normalized = value.toLowerCase().trim();
-  console.log(`Normalized for DB comparison: "${value}" to "${normalized}"`);
-  return normalized;
-}
-
-// Format URLs for safe navigation
-export function formatSafeUrl(url: string): string {
-  if (!url || url.trim() === '') return '';
-  
-  let safeUrl = url.trim();
-  if (!safeUrl.startsWith('http://') && !safeUrl.startsWith('https://')) {
-    safeUrl = `https://${safeUrl}`;
-  }
-  
-  console.log(`Formatted safe URL: "${url}" to "${safeUrl}"`);
-  return safeUrl;
-}
-
-// Create a database query condition for case-insensitive search
-export function createCaseInsensitiveQuery(column: string, value: string): string {
-  const normalized = normalizeForDatabaseComparison(value);
-  return `${column}.ilike.%${normalized}%`;
-}
-
-// Normalize a brand slug for URL comparison
-export function normalizeBrandSlug(slug: string): string {
-  if (!slug) return '';
-  const normalized = slug.trim().toLowerCase().replace(/\s+/g, '-');
-  console.log(`Normalized brand slug: "${slug}" to "${normalized}"`);
-  return normalized;
-}
-
-// Log product URL info for debugging
-export function logProductUrlInfo(product: any, prefix: string = ''): void {
-  if (!product) {
-    console.log(`${prefix} Product is null or undefined`);
-    return;
-  }
-  
-  // Extract the website URL with fallback handling
-  const websiteUrl = product.websiteUrl || '';
-  
-  console.log(`${prefix} Product URL Info:`, {
-    name: product.name || 'No name',
-    brand: product.brand || 'No brand',
-    websiteUrl: websiteUrl,
-    isUrlValid: isValidUrl(websiteUrl),
-    formattedUrl: formatSafeUrl(websiteUrl)
-  });
-}
-
-// NEW - Check if a URL already has http/https prefix
-export function hasProtocol(url: string): boolean {
-  return url.startsWith('http://') || url.startsWith('https://');
-}
-
-// NEW - Cleanly parse a URL string and ensure it's valid
-export function parseUrl(url: string): string | null {
-  if (!url || url.trim() === '') return null;
-  
-  try {
-    let urlToTest = url.trim();
-    if (!hasProtocol(urlToTest)) {
-      urlToTest = `https://${urlToTest}`;
-    }
-    
-    // This will throw if the URL is invalid
-    new URL(urlToTest);
-    return urlToTest;
-  } catch (e) {
-    console.warn(`Failed to parse URL: "${url}"`, e);
-    return null;
-  }
-}
-
-// NEW - Get domain name from URL
-export function getDomainFromUrl(url: string): string {
-  if (!url) return '';
-  
-  try {
-    const parsedUrl = parseUrl(url);
-    if (!parsedUrl) return '';
-    
-    const domain = new URL(parsedUrl).hostname;
-    return domain;
-  } catch (e) {
-    console.warn(`Failed to extract domain from URL: "${url}"`, e);
-    return '';
-  }
-}
-
-// UPDATED - Normalize product data field names with ALL required fields
-// This helps handle inconsistencies between camelCase in TypeScript and lowercase in DB
+// Normalize product field names between Supabase and local storage
 export function normalizeProductFieldNames(product: any): ProductSubmission {
   if (!product) return {} as ProductSubmission;
   
-  return {
+  // Create a normalized object that works with ProductSubmission type
+  const normalized: ProductSubmission = {
     id: product.id || '',
     name: product.name || '',
     brand: product.brand || '',
-    type: product.type || '',
+    type: product.type || 'Detergent',
+    
+    // Handle database (snakecase) vs client (camelcase) naming differences
+    pvaStatus: product.pvastatus || product.pvaStatus || 'needs-verification',
+    pvaPercentage: product.pvapercentage !== undefined ? product.pvapercentage : 
+                   (product.pvaPercentage !== undefined ? product.pvaPercentage : null),
+    
     description: product.description || '',
-    pvaStatus: product.pvaStatus || product.pvastatus || 'needs-verification',
-    pvaPercentage: product.pvaPercentage || product.pvapercentage || null,
     approved: product.approved !== undefined ? product.approved : true,
     country: product.country || 'Global',
-    websiteUrl: product.websiteUrl || product.websiteurl || '',
-    videoUrl: product.videoUrl || product.videourl || '',
-    imageUrl: product.imageUrl || product.imageurl || '',
+    
+    // URL fields - support both naming conventions
+    websiteUrl: product.websiteurl || product.websiteUrl || '',
+    videoUrl: product.videourl || product.videoUrl || '',
+    imageUrl: product.imageurl || product.imageUrl || '',
+    
+    // Make these available in both naming formats for compatibility
+    websiteurl: product.websiteurl || product.websiteUrl || '',
+    videourl: product.videourl || product.videoUrl || '',
+    imageurl: product.imageurl || product.imageUrl || '',
+    
     ingredients: product.ingredients || '',
-    brandVerified: product.brandVerified !== undefined ? product.brandVerified : 
-                  (product.brandverified !== undefined ? product.brandverified : false),
-    brandOwnershipRequested: product.brandOwnershipRequested !== undefined ? product.brandOwnershipRequested : 
-                            (product.brandownershiprequested !== undefined ? product.brandownershiprequested : false),
+    
+    // Use the timestamp fields if they exist
     timestamp: product.timestamp || Date.now(),
-    submittedAt: product.submittedAt || product.createdat || product.submittedat || new Date().toISOString(),
-    dateSubmitted: product.dateSubmitted || product.createdat || product.submittedat || new Date().toISOString(),
-    brandContactEmail: product.brandContactEmail || product.brandcontactemail || '',
-    brandOwnershipRequestDate: product.brandOwnershipRequestDate || product.brandownershiprequestdate || '',
-    brandVerificationDate: product.brandVerificationDate || product.brandverificationdate || '',
-    uploadedBy: product.uploadedBy || product.owner_id || ''
+    dateSubmitted: product.dateSubmitted || product.createdat || new Date().toISOString(),
+    submittedAt: product.submittedAt || product.createdat || new Date().toISOString(),
+    
+    // Other fields
+    brandVerified: product.brandVerified !== undefined ? product.brandVerified : false,
+    brandOwnershipRequested: product.brandOwnershipRequested !== undefined ? 
+                             product.brandOwnershipRequested : false,
+    brandContactEmail: product.brandContactEmail || '',
+    brandOwnershipRequestDate: product.brandOwnershipRequestDate || '',
+    brandVerificationDate: product.brandVerificationDate || '',
+    uploadedBy: product.owner_id || product.uploadedBy || ''
   };
+  
+  return normalized;
+}
+
+// Debug helper to log product URL information
+export function logProductUrlInfo(product: any, context: string) {
+  if (!product) {
+    console.log(`[${context}] No product provided for URL info logging`);
+    return;
+  }
+  
+  console.log(`[${context}] Product URL info for "${product.name}":`, {
+    websiteUrl: product.websiteUrl,
+    websiteurl: product.websiteurl,
+    videoUrl: product.videoUrl,
+    videourl: product.videourl,
+    imageUrl: product.imageUrl,
+    imageurl: product.imageurl
+  });
+}
+
+// Normalize for case-insensitive database comparison
+export function normalizeForDatabaseComparison(text: string): string {
+  if (!text) return '';
+  const normalized = text.toLowerCase().trim();
+  console.log(`Normalized for DB comparison: "${text}" to "${normalized}"`);
+  return normalized;
+}
+
+// Create a case-insensitive query for Supabase
+export function createCaseInsensitiveQuery(columnName: string, value: string) {
+  const normalized = normalizeForDatabaseComparison(value);
+  return `${columnName}.ilike.%${normalized}%`;
+}
+
+// Normalize brand slug for URL usage
+export function normalizeBrandSlug(brandName: string): string {
+  if (!brandName) return '';
+  const normalized = brandName.trim().toLowerCase().replace(/\s+/g, '-');
+  console.log(`Normalized brand slug: "${brandName}" to "${normalized}"`);
+  return normalized;
+}
+
+// Decode brand name from URL parameter
+export function decodeBrandNameFromUrl(encodedBrandName: string): string {
+  if (!encodedBrandName) return '';
+  try {
+    const decoded = decodeURIComponent(encodedBrandName);
+    const normalized = normalizeBrandName(decoded);
+    console.log(`Decoded URL parameter "${encodedBrandName}" to brand name "${normalized}"`);
+    return normalized;
+  } catch (e) {
+    console.warn(`Error decoding brand name from URL: ${encodedBrandName}`, e);
+    return encodedBrandName.trim();
+  }
 }
