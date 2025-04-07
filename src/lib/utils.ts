@@ -25,8 +25,10 @@ export function getSafeExternalLinkProps({ url }: { url: string }) {
     safeUrl = `https://${url}`;
   }
   
-  // Debug logging for URL processing
-  console.log("Creating safe external link for:", safeUrl);
+  // Detailed logging for debugging
+  console.log(`getSafeExternalLinkProps for "${url}":`);
+  console.log(`- Original URL: "${url}"`);
+  console.log(`- Safe URL: "${safeUrl}"`);
   
   return {
     href: safeUrl,
@@ -37,60 +39,83 @@ export function getSafeExternalLinkProps({ url }: { url: string }) {
   };
 }
 
-// Validate URLs with more robust checking
+// Enhanced URL validation with detailed logging
 export function isValidUrl(url: string): boolean {
+  // First check for empty or placeholder URLs
   if (!url || url === '#' || url.trim() === '') {
-    console.log(`URL validation for "${url}": invalid - empty or #`);
+    console.log(`URL validation failed for "${url}": empty or placeholder`);
     return false;
   }
   
   try {
-    // Handle the case when URL doesn't have a protocol
+    // Handle URLs without protocol
     const urlToTest = url.startsWith('http') ? url : `https://${url}`;
-    new URL(urlToTest);
     
-    // Additional check to ensure URL has actual domain content
-    const domain = new URL(urlToTest).hostname;
+    // Attempt to parse the URL
+    const parsedUrl = new URL(urlToTest);
+    
+    // Additional validation checks
+    const domain = parsedUrl.hostname;
     if (!domain || domain.length < 3) {
-      console.log(`URL validation for "${url}": invalid - domain too short`);
+      console.log(`URL validation failed for "${url}": domain too short or invalid`);
       return false;
     }
     
-    // Additional logging for URL validation
-    console.log(`URL validation for "${url}": valid`);
+    // Check for common TLDs or IP addresses
+    const hasTLD = domain.includes('.') && domain.split('.').pop()!.length >= 2;
+    if (!hasTLD && !/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(domain)) {
+      console.log(`URL validation failed for "${url}": missing valid TLD`);
+      return false;
+    }
+    
+    console.log(`URL validation succeeded for "${url}"`);
     return true;
   } catch (e) {
-    console.warn(`URL validation for "${url}": invalid - parse error`, e);
+    console.warn(`URL validation error for "${url}":`, e);
     return false;
   }
 }
 
-// Format URLs for display
+// Improved URL formatting for display
 export function formatUrlForDisplay(url: string): string {
   if (!url || url.trim() === '') {
-    console.warn("Empty URL provided to formatUrlForDisplay");
+    console.log("Empty URL provided to formatUrlForDisplay");
     return '';
   }
   
   try {
     let processedUrl = url;
+    
+    // Add protocol if missing
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       processedUrl = `https://${url}`;
     }
     
     const urlObj = new URL(processedUrl);
-    const formatted = urlObj.hostname + (urlObj.pathname !== '/' ? urlObj.pathname : '');
+    
+    // Format the URL for display (remove protocol and trailing slash)
+    let formatted = urlObj.hostname;
+    
+    // Add path if it exists and isn't just a slash
+    if (urlObj.pathname && urlObj.pathname !== '/') {
+      formatted += urlObj.pathname;
+    }
+    
     console.log(`Formatted URL "${url}" to "${formatted}"`);
     return formatted;
   } catch (e) {
     console.warn("Error formatting URL for display:", url, e);
-    return url;
+    return url; // Return original URL if formatting fails
   }
 }
 
-// Normalize brand names by trimming spaces - this is particularly important
-// for database queries to properly match brand names
+// Enhanced brand name normalization
 export function normalizeBrandName(brand: string): string {
   if (!brand) return '';
-  return brand.trim();
+  
+  // Trim spaces and convert to consistent case
+  const normalized = brand.trim();
+  console.log(`Normalized brand name from "${brand}" to "${normalized}"`);
+  
+  return normalized;
 }

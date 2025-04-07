@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Info } from "lucide-react";
 import { getSafeExternalLinkProps, isValidUrl, formatUrlForDisplay, normalizeBrandName } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProductsListProps {
   products: ProductSubmission[];
@@ -27,13 +28,19 @@ interface ProductsListProps {
 }
 
 const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
-  // Debug logging for entire products array
-  console.log(`ProductsList: Rendering ${products.length} products`);
+  const { toast } = useToast();
+  
+  // Enhanced logging for debugging
+  console.log(`ProductsList: Rendering ${products.length} products with full details`);
+  console.log(`Raw products data:`, JSON.stringify(products, null, 2));
   
   // Deep debug for each product's data
   products.forEach(p => {
     console.log(`Product Details - Name: ${p.name}, Brand: "${p.brand}", WebsiteURL: "${p.websiteUrl}"`);
-    console.log(`Product Object Structure:`, JSON.stringify(p, null, 2));
+    // Log only if a website URL exists
+    if (p.websiteUrl) {
+      console.log(`URL validation for ${p.name}: ${isValidUrl(p.websiteUrl)}`);
+    }
   });
 
   return (
@@ -61,12 +68,15 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
               </TableHeader>
               <TableBody>
                 {products.map((product) => {
-                  // Deep debug for each product's URL
+                  // Enhanced debugging for URL handling
                   const rawUrl = product.websiteUrl || '';
-                  console.log(`Product ${product.name} - Raw URL: "${rawUrl}"`);
-                  console.log(`URL is empty: ${!rawUrl || rawUrl === ''}`);
-                  console.log(`URL has protocol: ${rawUrl.startsWith('http')}`);
-                  console.log(`URL is valid: ${isValidUrl(rawUrl)}`);
+                  const hasValidUrl = isValidUrl(rawUrl);
+                  
+                  console.log(`Product ${product.name} URL processing:`);
+                  console.log(`- Raw URL: "${rawUrl}"`);
+                  console.log(`- URL empty: ${!rawUrl || rawUrl.trim() === ''}`);
+                  console.log(`- URL has protocol: ${rawUrl.startsWith('http')}`);
+                  console.log(`- URL is valid: ${hasValidUrl}`);
                   
                   return (
                     <TableRow key={product.id}>
@@ -91,13 +101,23 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                       </TableCell>
                       <TableCell>{product.country || 'Global'}</TableCell>
                       <TableCell>
-                        {product.websiteUrl && isValidUrl(product.websiteUrl) ? (
+                        {hasValidUrl ? (
                           <a 
-                            {...getSafeExternalLinkProps({ url: product.websiteUrl })}
+                            {...getSafeExternalLinkProps({ url: rawUrl })}
                             className="text-blue-600 hover:underline flex items-center"
+                            onClick={() => {
+                              console.log(`Clicked URL for ${product.name}: ${rawUrl}`);
+                              if (!hasValidUrl) {
+                                toast({
+                                  title: "Invalid URL",
+                                  description: "This product doesn't have a valid website URL.",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
                           >
                             <ExternalLink className="h-4 w-4 mr-1 flex-shrink-0" />
-                            {formatUrlForDisplay(product.websiteUrl)}
+                            {formatUrlForDisplay(rawUrl)}
                           </a>
                         ) : (
                           <span className="text-muted-foreground text-sm">None</span>
@@ -108,7 +128,10 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                           variant="ghost" 
                           size="sm" 
                           className="h-8 w-8 p-0" 
-                          onClick={() => onOpenProductDetail(product)}
+                          onClick={() => {
+                            console.log(`Opening detail dialog for ${product.name}`);
+                            onOpenProductDetail(product);
+                          }}
                         >
                           <Info className="h-4 w-4" />
                           <span className="sr-only">View Details</span>

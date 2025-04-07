@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
 import { getSafeExternalLinkProps, isValidUrl } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProductDetailDialogProps {
   product: ProductSubmission | null;
@@ -25,20 +26,23 @@ const ProductDetailDialog = ({
   open, 
   onOpenChange 
 }: ProductDetailDialogProps) => {
+  const { toast } = useToast();
+  
   if (!product) return null;
   
-  // Extensive logging for debugging
-  console.log("Rendering product detail dialog for:", product.name);
+  // Enhanced logging for debugging
+  console.log("ProductDetailDialog: Rendering product detail for:", product.name);
   console.log("Complete product object:", JSON.stringify(product, null, 2));
-  console.log("Website URL:", product.websiteUrl || 'No website URL');
-  console.log("Video URL:", product.videoUrl || 'No video URL');
   
   // Check URL validity
-  const hasValidWebsiteUrl = isValidUrl(product.websiteUrl || '');
-  const hasValidVideoUrl = isValidUrl(product.videoUrl || '');
+  const websiteUrl = product.websiteUrl || '';
+  const videoUrl = product.videoUrl || '';
   
-  console.log("Website URL is valid:", hasValidWebsiteUrl);
-  console.log("Video URL is valid:", hasValidVideoUrl);
+  const hasValidWebsiteUrl = isValidUrl(websiteUrl);
+  const hasValidVideoUrl = isValidUrl(videoUrl);
+  
+  console.log("Website URL validation:", websiteUrl, hasValidWebsiteUrl);
+  console.log("Video URL validation:", videoUrl, hasValidVideoUrl);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,13 +110,22 @@ const ProductDetailDialog = ({
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right font-medium">Product URL</Label>
             <div className="col-span-3">
-              {hasValidWebsiteUrl && product.websiteUrl ? (
+              {hasValidWebsiteUrl ? (
                 <a 
-                  {...getSafeExternalLinkProps({ url: product.websiteUrl })}
+                  {...getSafeExternalLinkProps({ url: websiteUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
+                  onClick={() => {
+                    if (!hasValidWebsiteUrl) {
+                      toast({
+                        title: "Invalid URL",
+                        description: "This product doesn't have a valid website URL.",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
                 >
                   <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
-                  {product.websiteUrl}
+                  {websiteUrl}
                 </a>
               ) : (
                 <span className="text-muted-foreground">No product URL available</span>
@@ -120,16 +133,16 @@ const ProductDetailDialog = ({
             </div>
           </div>
           
-          {hasValidVideoUrl && product.videoUrl && (
+          {hasValidVideoUrl && (
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right font-medium">Video URL</Label>
               <div className="col-span-3">
                 <a 
-                  {...getSafeExternalLinkProps({ url: product.videoUrl })}
+                  {...getSafeExternalLinkProps({ url: videoUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
                 >
                   <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
-                  {product.videoUrl}
+                  {videoUrl}
                 </a>
               </div>
             </div>
@@ -143,6 +156,10 @@ const ProductDetailDialog = ({
                   src={product.imageUrl} 
                   alt={product.name}
                   className="max-h-40 rounded-md object-contain"
+                  onError={(e) => {
+                    console.log("Image failed to load:", product.imageUrl);
+                    e.currentTarget.src = "/placeholder.svg";
+                  }}
                 />
               </div>
             </div>
@@ -150,10 +167,10 @@ const ProductDetailDialog = ({
         </div>
         
         <DialogFooter className="flex justify-between items-center">
-          {hasValidWebsiteUrl && product.websiteUrl && (
+          {hasValidWebsiteUrl && (
             <Button variant="outline" asChild>
               <a 
-                {...getSafeExternalLinkProps({ url: product.websiteUrl })}
+                {...getSafeExternalLinkProps({ url: websiteUrl })}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Visit Product Page
