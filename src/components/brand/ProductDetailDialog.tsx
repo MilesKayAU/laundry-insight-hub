@@ -85,14 +85,14 @@ const ProductDetailDialog = ({
           {product.ingredients && (
             <div className="grid grid-cols-4 items-start gap-4">
               <Label className="text-right font-medium pt-2">Ingredients</Label>
-              <div className="col-span-3">{product.ingredients}</div>
+              <div className="col-span-3 break-words">{product.ingredients}</div>
             </div>
           )}
           
-          {product.websiteUrl && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right font-medium">Product URL</Label>
-              <div className="col-span-3">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right font-medium">Product URL</Label>
+            <div className="col-span-3">
+              {product.websiteUrl ? (
                 <a 
                   href={product.websiteUrl} 
                   target="_blank" 
@@ -100,11 +100,13 @@ const ProductDetailDialog = ({
                   className="text-blue-600 hover:underline flex items-center"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  View Product Page
+                  {product.websiteUrl}
                 </a>
-              </div>
+              ) : (
+                <span className="text-muted-foreground">No product URL available</span>
+              )}
             </div>
-          )}
+          </div>
           
           {product.videoUrl && (
             <div className="grid grid-cols-4 items-center gap-4">
@@ -117,7 +119,7 @@ const ProductDetailDialog = ({
                   className="text-blue-600 hover:underline flex items-center"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Watch Video
+                  {product.videoUrl}
                 </a>
               </div>
             </div>
@@ -137,8 +139,20 @@ const ProductDetailDialog = ({
           )}
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="flex justify-between items-center">
+          {product.websiteUrl && (
+            <Button variant="outline" asChild>
+              <a 
+                href={product.websiteUrl}
+                target="_blank"
+                rel="nofollow noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Visit Product Page
+              </a>
+            </Button>
+          )}
+          <Button onClick={() => onOpenChange(false)}>
             Close
           </Button>
         </DialogFooter>

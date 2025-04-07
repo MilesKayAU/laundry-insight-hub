@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LinkIcon } from "lucide-react";
+import { ExternalLink, Info, LinkIcon } from "lucide-react";
 
 interface ProductsListProps {
   products: ProductSubmission[];
@@ -45,6 +45,7 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                   <TableHead>PVA Status</TableHead>
                   <TableHead>PVA %</TableHead>
                   <TableHead>Country</TableHead>
+                  <TableHead>URL</TableHead>
                   <TableHead>Details</TableHead>
                 </TableRow>
               </TableHeader>
@@ -72,13 +73,28 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                     </TableCell>
                     <TableCell>{product.country || 'Global'}</TableCell>
                     <TableCell>
+                      {product.websiteUrl ? (
+                        <a 
+                          href={product.websiteUrl} 
+                          target="_blank" 
+                          rel="nofollow noopener noreferrer"
+                          className="text-blue-600 hover:underline flex items-center"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Visit
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">None</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Button 
                         variant="ghost" 
                         size="sm" 
                         className="h-8 w-8 p-0" 
                         onClick={() => onOpenProductDetail(product)}
                       >
-                        <LinkIcon className="h-4 w-4" />
+                        <Info className="h-4 w-4" />
                         <span className="sr-only">View Details</span>
                       </Button>
                     </TableCell>
