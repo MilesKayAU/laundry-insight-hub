@@ -1,3 +1,4 @@
+
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -95,18 +96,18 @@ export function formatUrlForDisplay(url: string): string {
   }
 }
 
-// Enhanced brand name normalization - fixes issue with leading/trailing spaces
+// Enhanced brand name normalization with case insensitivity
 export function normalizeBrandName(brand: string): string {
   if (!brand) return '';
   
-  // Trim spaces and convert to consistent case
+  // Trim spaces and convert to consistent case (lowercase for comparison)
   const normalized = brand.trim();
   console.log(`Normalized brand name from "${brand}" to "${normalized}"`);
   
   return normalized;
 }
 
-// Encoding and decoding for URL parameters - new function to help with URL handling
+// Encoding and decoding for URL parameters
 export function encodeBrandNameForUrl(brandName: string): string {
   if (!brandName) return '';
   
@@ -117,7 +118,7 @@ export function encodeBrandNameForUrl(brandName: string): string {
   return encoded;
 }
 
-// Decoding for URL parameters - new function to help with URL handling
+// Decoding for URL parameters with case insensitivity
 export function decodeBrandNameFromUrl(encodedName: string): string {
   if (!encodedName) return '';
   
@@ -132,4 +133,27 @@ export function decodeBrandNameFromUrl(encodedName: string): string {
     // Try to recover by trimming spaces at least
     return encodedName.trim();
   }
+}
+
+// NEW - Normalize a string for database comparison (lowercase, trim)
+export function normalizeForDatabaseComparison(value: string): string {
+  if (!value) return '';
+  return value.toLowerCase().trim();
+}
+
+// NEW - Format a URL for safe display and navigation
+export function formatSafeUrl(url: string): string {
+  if (!url || url.trim() === '') return '';
+  
+  // Ensure URL has a protocol
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `https://${url}`;
+  }
+  return url;
+}
+
+// NEW - Create a database query condition for case-insensitive search
+export function createCaseInsensitiveQuery(column: string, value: string): string {
+  const normalized = normalizeForDatabaseComparison(value);
+  return `${column}.ilike.%${normalized}%`;
 }

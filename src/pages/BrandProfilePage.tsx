@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -20,7 +19,9 @@ import {
 } from "@/components/brand";
 import { 
   normalizeBrandName, 
-  decodeBrandNameFromUrl
+  decodeBrandNameFromUrl,
+  normalizeForDatabaseComparison,
+  createCaseInsensitiveQuery
 } from "@/lib/utils";
 
 interface BrandProfile {
@@ -54,7 +55,6 @@ const BrandProfilePage = () => {
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // State for dialogs
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
   const [productDetailOpen, setProductDetailOpen] = useState(false);
@@ -62,11 +62,9 @@ const BrandProfilePage = () => {
   useEffect(() => {
     if (!encodedBrandName) return;
     
-    // Fix: Properly decode and normalize the brand name from URL
     const brandName = decodeBrandNameFromUrl(encodedBrandName);
+    const brandNameLowercase = normalizeForDatabaseComparison(brandName);
     
-    // Redirect if the normalized brand name is different from the URL parameter
-    // This fixes URL issues like spaces at the beginning or end
     if (brandName !== encodedBrandName && brandName) {
       console.log(`Redirecting from "${encodedBrandName}" to "${brandName}"`);
       navigate(`/brand/${encodeURIComponent(brandName)}`, { replace: true });
@@ -77,19 +75,18 @@ const BrandProfilePage = () => {
       setLoading(true);
       try {
         console.log(`Fetching data for brand: "${brandName}"`);
+        console.log(`Brand name lowercase for comparison: "${brandNameLowercase}"`);
         console.log(`URL parameter was: "${encodedBrandName}"`);
         
-        // Fetch brand profile from Supabase
         const { data: profileData, error: profileError } = await supabase
           .from('brand_profiles')
           .select('*')
-          .eq('name', brandName)
+          .or(`name.eq.${brandName},name.ilike.${brandNameLowercase}`)
+          .limit(1)
           .single();
         
         if (profileError) {
           console.error('Error fetching brand profile:', profileError);
-          // If brand doesn't exist in database yet, create a placeholder
-          console.log('Brand not found in database, creating placeholder');
           setBrandProfile({
             id: '',
             name: brandName || '',
@@ -105,11 +102,10 @@ const BrandProfilePage = () => {
           setBrandProfile(profileData);
         }
         
-        // Fetch approved product images for this brand
         const { data: imageData, error: imageError } = await supabase
           .from('product_images')
           .select('*')
-          .eq('brand_name', brandName)
+          .or(`brand_name.eq.${brandName},brand_name.ilike.${brandNameLowercase}`)
           .eq('status', 'approved');
         
         if (imageError) {
@@ -119,14 +115,12 @@ const BrandProfilePage = () => {
           setProductImages(imageData || []);
         }
         
-        // The most important query - directly use the exact brand name without manipulation
-        console.log('Querying Supabase for products with brand name:', brandName);
+        console.log('Querying Supabase for products with brand name (multiple approaches):', brandName);
         
-        // More aggressive approach to fetch products with the given brand name
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
           .select('*')
-          .or(`brand.eq.${brandName},brand.ilike.${brandName}`)
+          .or(`brand.eq.${brandName},brand.ilike.${brandNameLowercase}`)
           .eq('approved', true);
           
         if (productError) {
@@ -140,9 +134,7 @@ const BrandProfilePage = () => {
           console.log(`Found ${productData?.length || 0} products in Supabase`);
           console.log('Raw product data:', productData);
           
-          // Transform Supabase data to match our ProductSubmission type
           const transformedProducts: ProductSubmission[] = productData?.map(item => {
-            // Log each product's website URL for debugging
             console.log(`Product ${item.name} website URL:`, item.websiteurl || 'No URL provided');
             
             return {
@@ -164,18 +156,21 @@ const BrandProfilePage = () => {
             };
           }) || [];
           
-          // Also get products from local storage as a fallback
           const allLocalProducts = getProductSubmissions();
-          const brandLocalProducts = allLocalProducts.filter(
-            product => normalizeBrandName(product.brand).toLowerCase() === brandName?.toLowerCase() && product.approved
-          );
+          const brandLocalProducts = allLocalProducts.filter(product => {
+            const productBrand = normalizeForDatabaseComparison(product.brand);
+            const searchBrand = brandNameLowercase;
+            
+            return (
+              productBrand.includes(searchBrand) || 
+              searchBrand.includes(productBrand)
+            ) && product.approved;
+          });
           
           console.log(`Found ${brandLocalProducts.length} products in local storage`);
           
-          // Combine products from both sources
           const combinedProducts: ProductSubmission[] = [...transformedProducts];
           
-          // Add local products that aren't already in the Supabase products
           brandLocalProducts.forEach(localProduct => {
             if (!combinedProducts.some(p => p.id === localProduct.id)) {
               combinedProducts.push(localProduct);
@@ -201,7 +196,6 @@ const BrandProfilePage = () => {
     fetchBrandData();
   }, [encodedBrandName, toast, navigate]);
 
-  // Helper function to convert any string to a valid pvaStatus type
   const mapPvaStatus = (status: string): ProductSubmission['pvaStatus'] => {
     switch (status.toLowerCase()) {
       case 'contains':
@@ -304,7 +298,6 @@ const BrandProfilePage = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Dialogs */}
       <ProductDetailDialog
         product={selectedProduct}
         open={productDetailOpen}

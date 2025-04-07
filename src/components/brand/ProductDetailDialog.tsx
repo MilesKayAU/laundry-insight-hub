@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
-import { getSafeExternalLinkProps, isValidUrl } from "@/lib/utils";
+import { getSafeExternalLinkProps, isValidUrl, formatSafeUrl } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ProductDetailDialogProps {
@@ -41,11 +41,16 @@ const ProductDetailDialog = ({
   const hasValidWebsiteUrl = websiteUrl.trim() !== '' && isValidUrl(websiteUrl);
   const hasValidVideoUrl = videoUrl.trim() !== '' && isValidUrl(videoUrl);
   
+  const formattedWebsiteUrl = hasValidWebsiteUrl ? formatSafeUrl(websiteUrl) : '';
+  const formattedVideoUrl = hasValidVideoUrl ? formatSafeUrl(videoUrl) : '';
+  
   console.log("Product URL validation results:", {
     websiteUrl,
     hasValidWebsiteUrl,
+    formattedWebsiteUrl,
     videoUrl,
-    hasValidVideoUrl
+    hasValidVideoUrl,
+    formattedVideoUrl
   });
   
   return (
@@ -123,7 +128,9 @@ const ProductDetailDialog = ({
                   {websiteUrl}
                 </a>
               ) : (
-                <span className="text-muted-foreground">No product URL available</span>
+                <span className="text-muted-foreground">
+                  {websiteUrl ? 'Invalid product URL' : 'No product URL available'}
+                </span>
               )}
             </div>
           </div>

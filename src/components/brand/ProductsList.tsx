@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Info } from "lucide-react";
-import { getSafeExternalLinkProps, isValidUrl, formatUrlForDisplay } from "@/lib/utils";
+import { getSafeExternalLinkProps, isValidUrl, formatUrlForDisplay, formatSafeUrl } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ProductsListProps {
@@ -37,7 +37,8 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   products.forEach(p => {
     console.log(`Product "${p.name}" URL data:`, {
       websiteUrl: p.websiteUrl || 'None', 
-      isValid: isValidUrl(p.websiteUrl || '')
+      isValid: isValidUrl(p.websiteUrl || ''),
+      formattedUrl: formatSafeUrl(p.websiteUrl || '')
     });
   });
 
@@ -66,11 +67,17 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
               </TableHeader>
               <TableBody>
                 {products.map((product) => {
+                  // Check if URL is valid and format it
                   const hasWebsiteUrl = product.websiteUrl && product.websiteUrl.trim() !== '';
                   const websiteUrl = hasWebsiteUrl ? product.websiteUrl : '';
+                  const isUrlValid = hasWebsiteUrl && isValidUrl(websiteUrl);
                   
                   // More detailed logging for this specific product's URL
-                  console.log(`Rendering product ${product.name} with URL:`, websiteUrl);
+                  console.log(`Rendering product ${product.name} with URL:`, {
+                    original: websiteUrl,
+                    isValid: isUrlValid,
+                    formatted: isUrlValid ? formatSafeUrl(websiteUrl) : ''
+                  });
                   
                   return (
                     <TableRow key={product.id}>
@@ -95,7 +102,7 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                       </TableCell>
                       <TableCell>{product.country || 'Global'}</TableCell>
                       <TableCell>
-                        {hasWebsiteUrl ? (
+                        {isUrlValid ? (
                           <a 
                             {...getSafeExternalLinkProps({ url: websiteUrl })}
                             className="text-blue-600 hover:underline flex items-center"
@@ -104,7 +111,9 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                             {formatUrlForDisplay(websiteUrl)}
                           </a>
                         ) : (
-                          <span className="text-muted-foreground text-sm">None</span>
+                          <span className="text-muted-foreground text-sm">
+                            {hasWebsiteUrl ? 'Invalid URL' : 'None'}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
