@@ -27,6 +27,26 @@ const ProductDetailDialog = ({
 }: ProductDetailDialogProps) => {
   if (!product) return null;
   
+  // Function to validate and format URL with protocol if missing
+  const validateUrl = (url: string): string => {
+    if (!url) return '';
+    
+    try {
+      // Test if it's a valid URL already
+      new URL(url);
+      return url;
+    } catch (e) {
+      // If it fails, it might be missing the protocol
+      if (url.startsWith('www.') || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+        return `https://${url}`;
+      }
+      return url;
+    }
+  };
+  
+  const validWebsiteUrl = validateUrl(product.websiteUrl);
+  const validVideoUrl = validateUrl(product.videoUrl);
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -93,13 +113,13 @@ const ProductDetailDialog = ({
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right font-medium">Product URL</Label>
             <div className="col-span-3">
-              {product.websiteUrl ? (
+              {validWebsiteUrl ? (
                 <a 
-                  {...getSafeExternalLinkProps({ url: product.websiteUrl })}
+                  {...getSafeExternalLinkProps({ url: validWebsiteUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
                 >
                   <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
-                  {product.websiteUrl}
+                  {validWebsiteUrl}
                 </a>
               ) : (
                 <span className="text-muted-foreground">No product URL available</span>
@@ -107,16 +127,16 @@ const ProductDetailDialog = ({
             </div>
           </div>
           
-          {product.videoUrl && (
+          {validVideoUrl && (
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right font-medium">Video URL</Label>
               <div className="col-span-3">
                 <a 
-                  {...getSafeExternalLinkProps({ url: product.videoUrl })}
+                  {...getSafeExternalLinkProps({ url: validVideoUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
                 >
                   <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
-                  {product.videoUrl}
+                  {validVideoUrl}
                 </a>
               </div>
             </div>
@@ -137,10 +157,10 @@ const ProductDetailDialog = ({
         </div>
         
         <DialogFooter className="flex justify-between items-center">
-          {product.websiteUrl && (
+          {validWebsiteUrl && (
             <Button variant="outline" asChild>
               <a 
-                {...getSafeExternalLinkProps({ url: product.websiteUrl })}
+                {...getSafeExternalLinkProps({ url: validWebsiteUrl })}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Visit Product Page

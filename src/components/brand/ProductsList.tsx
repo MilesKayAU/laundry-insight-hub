@@ -31,6 +31,9 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   const truncateUrl = (url: string) => {
     if (!url) return '';
     try {
+      // Log URLs to help debug missing links
+      console.log("Processing URL for display:", url);
+      
       const urlObj = new URL(url);
       let displayUrl = urlObj.hostname;
       if (urlObj.pathname !== '/' && urlObj.pathname.length > 1) {
@@ -40,8 +43,26 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
       }
       return displayUrl;
     } catch (e) {
+      console.warn("Error parsing URL:", url, e);
       // If URL parsing fails, just return a shortened version of the original
       return url.length > 25 ? url.substring(0, 25) + '...' : url;
+    }
+  };
+
+  // Function to validate and format URL with protocol if missing
+  const validateUrl = (url: string): string => {
+    if (!url) return '';
+    
+    try {
+      // Test if it's a valid URL already
+      new URL(url);
+      return url;
+    } catch (e) {
+      // If it fails, it might be missing the protocol
+      if (url.startsWith('www.') || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+        return `https://${url}`;
+      }
+      return url;
     }
   };
 
@@ -69,54 +90,60 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.type}</TableCell>
-                    <TableCell>
-                      {product.pvaStatus === 'contains' && (
-                        <Badge variant="destructive">Contains PVA</Badge>
-                      )}
-                      {product.pvaStatus === 'verified-free' && (
-                        <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
-                      )}
-                      {product.pvaStatus === 'needs-verification' && (
-                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
-                      )}
-                      {product.pvaStatus === 'inconclusive' && (
-                        <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'Unknown'}
-                    </TableCell>
-                    <TableCell>{product.country || 'Global'}</TableCell>
-                    <TableCell>
-                      {product.websiteUrl ? (
-                        <a 
-                          {...getSafeExternalLinkProps({ url: product.websiteUrl })}
-                          className="text-blue-600 hover:underline flex items-center"
+                {products.map((product) => {
+                  // Debug log for each product's website URL
+                  console.log(`Rendering product ${product.name}, URL: ${product.websiteUrl}`);
+                  
+                  const validatedUrl = validateUrl(product.websiteUrl);
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>{product.type}</TableCell>
+                      <TableCell>
+                        {product.pvaStatus === 'contains' && (
+                          <Badge variant="destructive">Contains PVA</Badge>
+                        )}
+                        {product.pvaStatus === 'verified-free' && (
+                          <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
+                        )}
+                        {product.pvaStatus === 'needs-verification' && (
+                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
+                        )}
+                        {product.pvaStatus === 'inconclusive' && (
+                          <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'Unknown'}
+                      </TableCell>
+                      <TableCell>{product.country || 'Global'}</TableCell>
+                      <TableCell>
+                        {validatedUrl ? (
+                          <a 
+                            {...getSafeExternalLinkProps({ url: validatedUrl })}
+                            className="text-blue-600 hover:underline flex items-center"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            {truncateUrl(validatedUrl)}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">None</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0" 
+                          onClick={() => onOpenProductDetail(product)}
                         >
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          {truncateUrl(product.websiteUrl)}
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">None</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0" 
-                        onClick={() => onOpenProductDetail(product)}
-                      >
-                        <Info className="h-4 w-4" />
-                        <span className="sr-only">View Details</span>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          <Info className="h-4 w-4" />
+                          <span className="sr-only">View Details</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -112,25 +113,31 @@ const BrandProfilePage = () => {
           console.error('Error fetching products from Supabase:', productError);
         } else {
           console.log(`Found ${productData?.length || 0} products in Supabase`);
+          console.log('Raw product data sample:', productData?.slice(0, 3));
           
           // Transform Supabase data to match our ProductSubmission type
-          const transformedProducts: ProductSubmission[] = productData?.map(item => ({
-            id: item.id,
-            name: item.name,
-            brand: item.brand,
-            type: item.type,
-            description: item.description || '',
-            pvaStatus: mapPvaStatus(item.pvastatus || 'needs-verification'),
-            pvaPercentage: item.pvapercentage,
-            approved: true,
-            country: item.country || 'Global',
-            websiteUrl: item.websiteurl || '',
-            videoUrl: item.videourl || '',
-            imageUrl: item.imageurl || '',
-            ingredients: item.ingredients || '',
-            brandVerified: false,
-            timestamp: Date.now()
-          })) || [];
+          const transformedProducts: ProductSubmission[] = productData?.map(item => {
+            // Log any website URL to debug missing links issue
+            console.log(`Product ${item.name} website URL:`, item.websiteurl);
+            
+            return {
+              id: item.id,
+              name: item.name,
+              brand: item.brand,
+              type: item.type,
+              description: item.description || '',
+              pvaStatus: mapPvaStatus(item.pvastatus || 'needs-verification'),
+              pvaPercentage: item.pvapercentage,
+              approved: true,
+              country: item.country || 'Global',
+              websiteUrl: item.websiteurl || '',
+              videoUrl: item.videourl || '',
+              imageUrl: item.imageurl || '',
+              ingredients: item.ingredients || '',
+              brandVerified: false,
+              timestamp: Date.now()
+            };
+          }) || [];
           
           // Also get products from local storage as a fallback
           const allLocalProducts = getProductSubmissions();
@@ -151,6 +158,7 @@ const BrandProfilePage = () => {
           });
           
           console.log(`Total combined products: ${combinedProducts.length}`);
+          console.log('Combined products sample:', combinedProducts.slice(0, 3));
           setProducts(combinedProducts);
         }
         
