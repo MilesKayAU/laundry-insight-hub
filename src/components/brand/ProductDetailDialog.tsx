@@ -29,12 +29,12 @@ const ProductDetailDialog = ({
   
   // Log product details for debugging
   console.log("Rendering product detail dialog for:", product.name);
-  console.log("Website URL:", product.websiteUrl);
-  console.log("Video URL:", product.videoUrl);
+  console.log("Website URL:", product.websiteUrl || 'No website URL');
+  console.log("Video URL:", product.videoUrl || 'No video URL');
   
   // Check URL validity
-  const hasValidWebsiteUrl = isValidUrl(product.websiteUrl);
-  const hasValidVideoUrl = isValidUrl(product.videoUrl);
+  const hasValidWebsiteUrl = isValidUrl(product.websiteUrl || '');
+  const hasValidVideoUrl = isValidUrl(product.videoUrl || '');
   
   console.log("Website URL is valid:", hasValidWebsiteUrl);
   console.log("Video URL is valid:", hasValidVideoUrl);
@@ -105,7 +105,7 @@ const ProductDetailDialog = ({
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right font-medium">Product URL</Label>
             <div className="col-span-3">
-              {hasValidWebsiteUrl ? (
+              {hasValidWebsiteUrl && product.websiteUrl ? (
                 <a 
                   {...getSafeExternalLinkProps({ url: product.websiteUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
@@ -119,7 +119,7 @@ const ProductDetailDialog = ({
             </div>
           </div>
           
-          {hasValidVideoUrl && (
+          {hasValidVideoUrl && product.videoUrl && (
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right font-medium">Video URL</Label>
               <div className="col-span-3">
@@ -149,7 +149,7 @@ const ProductDetailDialog = ({
         </div>
         
         <DialogFooter className="flex justify-between items-center">
-          {hasValidWebsiteUrl && (
+          {hasValidWebsiteUrl && product.websiteUrl && (
             <Button variant="outline" asChild>
               <a 
                 {...getSafeExternalLinkProps({ url: product.websiteUrl })}

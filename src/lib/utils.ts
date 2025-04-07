@@ -25,7 +25,7 @@ export function getSafeExternalLinkProps({ url }: { url: string }) {
     safeUrl = `https://${url}`;
   }
   
-  // Log the URL we're creating a link for
+  // Debug logging for URL processing
   console.log("Creating safe external link for:", safeUrl);
   
   return {
@@ -37,20 +37,25 @@ export function getSafeExternalLinkProps({ url }: { url: string }) {
   };
 }
 
-// Add a utility function to validate URLs
+// Validate URLs
 export function isValidUrl(url: string): boolean {
   if (!url || url === '#' || url.trim() === '') return false;
   
   try {
-    // Use URL constructor to validate
-    new URL(url.startsWith('http') ? url : `https://${url}`);
+    // Handle the case when URL doesn't have a protocol
+    const urlToTest = url.startsWith('http') ? url : `https://${url}`;
+    new URL(urlToTest);
+    
+    // Additional logging for URL validation
+    console.log(`URL validation for "${url}": valid`);
     return true;
   } catch (e) {
+    console.warn(`URL validation for "${url}": invalid`, e);
     return false;
   }
 }
 
-// Helper to format URLs for display
+// Format URLs for display
 export function formatUrlForDisplay(url: string): string {
   if (!url || url.trim() === '') return '';
   
@@ -61,9 +66,17 @@ export function formatUrlForDisplay(url: string): string {
     }
     
     const urlObj = new URL(processedUrl);
-    return urlObj.hostname + (urlObj.pathname !== '/' ? urlObj.pathname : '');
+    const formatted = urlObj.hostname + (urlObj.pathname !== '/' ? urlObj.pathname : '');
+    console.log(`Formatted URL "${url}" to "${formatted}"`);
+    return formatted;
   } catch (e) {
     console.warn("Error formatting URL for display:", url, e);
     return url;
   }
+}
+
+// Normalize brand names by trimming spaces
+export function normalizeBrandName(brand: string): string {
+  if (!brand) return '';
+  return brand.trim();
 }

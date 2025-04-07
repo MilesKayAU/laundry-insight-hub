@@ -18,6 +18,7 @@ import {
   ProductDetailDialog,
   ContactBrandDialog
 } from "@/components/brand";
+import { normalizeBrandName } from "@/lib/utils";
 
 interface BrandProfile {
   id: string;
@@ -61,12 +62,13 @@ const BrandProfilePage = () => {
       setLoading(true);
       try {
         console.log(`Fetching data for brand: ${brandName}`);
+        const normalizedBrandName = normalizeBrandName(brandName);
         
         // Fetch brand profile from Supabase
         const { data: profileData, error: profileError } = await supabase
           .from('brand_profiles')
           .select('*')
-          .eq('name', brandName)
+          .eq('name', normalizedBrandName)
           .single();
         
         if (profileError) {
@@ -75,7 +77,7 @@ const BrandProfilePage = () => {
           console.log('Brand not found in database, creating placeholder');
           setBrandProfile({
             id: '',
-            name: brandName || '',
+            name: normalizedBrandName || '',
             description: null,
             website: null,
             contact_email: null,
@@ -92,7 +94,7 @@ const BrandProfilePage = () => {
         const { data: imageData, error: imageError } = await supabase
           .from('product_images')
           .select('*')
-          .eq('brand_name', brandName)
+          .eq('brand_name', normalizedBrandName)
           .eq('status', 'approved');
         
         if (imageError) {
@@ -106,7 +108,7 @@ const BrandProfilePage = () => {
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
           .select('*')
-          .eq('brand', brandName)
+          .or(`brand.eq." ${normalizedBrandName}",brand.eq."${normalizedBrandName}"`)
           .eq('approved', true);
           
         if (productError) {
@@ -118,12 +120,12 @@ const BrandProfilePage = () => {
           // Transform Supabase data to match our ProductSubmission type
           const transformedProducts: ProductSubmission[] = productData?.map(item => {
             // Log any website URL to debug missing links issue
-            console.log(`Product ${item.name} website URL:`, item.websiteurl);
+            console.log(`Product ${item.name} website URL:`, item.websiteurl || 'No URL provided');
             
             return {
               id: item.id,
               name: item.name,
-              brand: item.brand,
+              brand: item.brand ? item.brand.trim() : '',
               type: item.type,
               description: item.description || '',
               pvaStatus: mapPvaStatus(item.pvastatus || 'needs-verification'),
@@ -142,7 +144,7 @@ const BrandProfilePage = () => {
           // Also get products from local storage as a fallback
           const allLocalProducts = getProductSubmissions();
           const brandLocalProducts = allLocalProducts.filter(
-            product => product.brand.toLowerCase() === brandName?.toLowerCase() && product.approved
+            product => normalizeBrandName(product.brand).toLowerCase() === normalizedBrandName?.toLowerCase() && product.approved
           );
           
           console.log(`Found ${brandLocalProducts.length} products in local storage`);
