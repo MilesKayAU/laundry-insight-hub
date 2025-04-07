@@ -414,12 +414,18 @@ export const updateProductSubmission = (productId: string, updatedData: Partial<
       return false;
     }
     
-    // Update the product with new data while preserving other properties
+    // Handle both camelCase and snake_case URL properties
     const updatedProduct = {
       ...allProducts[productIndex],
       ...updatedData,
-      updated_at: Date.now(),
-      updatedat: new Date().toISOString()
+      // Ensure both property formats are updated correctly
+      websiteUrl: updatedData.websiteUrl || updatedData.websiteurl || allProducts[productIndex].websiteUrl || allProducts[productIndex].websiteurl,
+      videoUrl: updatedData.videoUrl || updatedData.videourl || allProducts[productIndex].videoUrl || allProducts[productIndex].videourl,
+      imageUrl: updatedData.imageUrl || updatedData.imageurl || allProducts[productIndex].imageUrl || allProducts[productIndex].imageurl,
+      websiteurl: updatedData.websiteUrl || updatedData.websiteurl || allProducts[productIndex].websiteUrl || allProducts[productIndex].websiteurl,
+      videourl: updatedData.videoUrl || updatedData.videourl || allProducts[productIndex].videoUrl || allProducts[productIndex].videourl,
+      imageurl: updatedData.imageUrl || updatedData.imageurl || allProducts[productIndex].imageUrl || allProducts[productIndex].imageurl,
+      updated_at: Date.now()
     };
     
     console.log("Product before update:", allProducts[productIndex]);

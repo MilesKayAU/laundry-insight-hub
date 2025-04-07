@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
@@ -55,9 +56,9 @@ export const useProductEditing = (onSuccess?: () => void) => {
       brand: product.brand || '',
       name: product.name || '',
       description: product.description || 'This product may contain PVA according to customers - please verify',
-      imageUrl: product.imageUrl || '',
-      videoUrl: product.videoUrl || '',
-      websiteUrl: product.websiteUrl || '',
+      imageUrl: product.imageUrl || product.imageurl || '',
+      videoUrl: product.videoUrl || product.videourl || '',
+      websiteUrl: product.websiteUrl || product.websiteurl || '',
       pvaPercentage: product.pvaPercentage !== null ? String(product.pvaPercentage) : '',
       country: product.country || 'Global',
       ingredients: product.ingredients || '',
@@ -91,6 +92,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
         imageUrl: productDetails.imageUrl,
         videoUrl: productDetails.videoUrl,
         websiteUrl: productDetails.websiteUrl,
+        // Also update the snake_case versions for compatibility
+        websiteurl: productDetails.websiteUrl,
+        videourl: productDetails.videoUrl,
+        imageurl: productDetails.imageUrl,
         pvaPercentage,
         country: productDetails.country,
         ingredients: productDetails.ingredients,
@@ -109,8 +114,6 @@ export const useProductEditing = (onSuccess?: () => void) => {
         brandOwnershipRequestDate: selectedProduct.brandOwnershipRequestDate || '',
         brandVerificationDate: selectedProduct.brandVerificationDate || '',
         uploadedBy: selectedProduct.uploadedBy || ''
-        
-        // Removed 'updatedat' property as it's not in the ProductSubmission interface
       };
 
       console.log("Product ID being updated:", selectedProduct.id);
@@ -134,7 +137,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
             videourl: updatedData.videoUrl,
             imageurl: updatedData.imageUrl,
             ingredients: updatedData.ingredients,
-            updatedat: new Date().toISOString() // This is okay here as it's the Supabase column name
+            updatedat: new Date().toISOString()
           })
           .eq('id', selectedProduct.id);
           
