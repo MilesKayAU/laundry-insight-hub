@@ -103,9 +103,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
         : null;
       
       // Validate pvaStatus is a valid enum value
-      const pvaStatus = ['contains', 'verified-free', 'needs-verification', 'inconclusive'].includes(productDetails.pvaStatus)
-        ? productDetails.pvaStatus as 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive'
-        : 'needs-verification';
+      const validPvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive' = 
+        ['contains', 'verified-free', 'needs-verification', 'inconclusive'].includes(productDetails.pvaStatus)
+          ? productDetails.pvaStatus
+          : 'needs-verification';
         
       // Prepare data for Supabase (simplified - the service handles field name mapping)
       const supabaseData = {
@@ -113,7 +114,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
         name: productDetails.name,
         description: productDetails.description,
         type: productDetails.type,
-        pvaStatus,
+        pvaStatus: validPvaStatus,
         pvaPercentage,
         country: productDetails.country,
         websiteUrl: productDetails.websiteUrl,

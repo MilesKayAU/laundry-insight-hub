@@ -21,7 +21,10 @@ jobs:
 
     - name: SSH and Deploy with PM2
       run: |
+        echo "🔄 Starting deployment process..."
         sshpass -p 'Freelancer2025!!' ssh -o StrictHostKeyChecking=no root@69.62.73.39 << 'EOF'
+          set -e  # Exit immediately if a command exits with non-zero status
+          
           echo "📁 Switching to project directory..."
           cd /root/laundry-insight-hub
 
@@ -29,19 +32,33 @@ jobs:
           git pull origin main --force
           
           echo "📦 Installing dependencies..."
-          npm i
+          npm i --no-audit --no-fund --no-optional
           
-          echo "🧹 Clearing build cache..."
-          rm -rf .cache dist build .next
+          echo "🧹 Clearing build cache thoroughly..."
+          rm -rf .cache dist build .next node_modules/.cache
 
-          echo "🏗️ Building the application..."
-          npm run build
-
-          echo "🗑️ Clearing PM2 cache..."
+          echo "🗑️ Stopping PM2 process..."
+          pm2 stop laundryhub || echo "Process was not running"
+          
+          echo "🗑️ Clearing PM2 logs..."
           pm2 flush laundryhub
+          
+          echo "🏗️ Building the application with detailed output..."
+          NODE_ENV=production npm run build
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ Build failed! Exiting deployment."
+            exit 1
+          fi
 
-          echo "♻️ Restarting app via PM2..."
-          pm2 restart laundryhub --update-env
+          echo "♻️ Starting app with PM2..."
+          pm2 start laundryhub --update-env || pm2 start npm --name "laundryhub" -- start
+          
+          echo "📊 PM2 status:"
+          pm2 status laundryhub
+          
+          echo "📜 Recent PM2 logs:"
+          pm2 logs laundryhub --lines 20 || echo "No logs available"
 
           echo "✅ Deploy complete."
         EOF
