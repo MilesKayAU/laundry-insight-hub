@@ -17,7 +17,18 @@ export async function updateProductInSupabase(
     const normalizedData: Record<string, any> = {};
     
     // Explicitly map camelCase to snake_case for known fields
-    if ('pvaStatus' in productData) normalizedData.pvastatus = productData.pvaStatus;
+    if ('pvaStatus' in productData) {
+      // Validate pvaStatus is one of the allowed values
+      const status = productData.pvaStatus;
+      if (status === 'contains' || status === 'verified-free' || status === 'needs-verification' || status === 'inconclusive') {
+        normalizedData.pvastatus = status;
+      } else {
+        // Default to needs-verification if invalid
+        normalizedData.pvastatus = 'needs-verification';
+        console.warn(`Invalid pvaStatus value: ${status}, defaulting to 'needs-verification'`);
+      }
+    }
+    
     if ('pvaPercentage' in productData) normalizedData.pvapercentage = productData.pvaPercentage;
     if ('websiteUrl' in productData) normalizedData.websiteurl = productData.websiteUrl;
     if ('videoUrl' in productData) normalizedData.videourl = productData.videoUrl;
@@ -93,10 +104,19 @@ export function updateProductInLocalStorage(
         
         console.log(`DataService: Found product in '${key}' at index ${productIndex}`);
         
+        // Ensure the pvaStatus is a valid value
+        let pvaStatus = updatedProduct.pvaStatus;
+        if (pvaStatus && !['contains', 'verified-free', 'needs-verification', 'inconclusive'].includes(pvaStatus)) {
+          console.warn(`Invalid pvaStatus: ${pvaStatus}, defaulting to 'needs-verification'`);
+          pvaStatus = 'needs-verification';
+        }
+        
         // Update the product, preserving existing fields
         products[productIndex] = {
           ...products[productIndex],
           ...updatedProduct,
+          // Ensure pvaStatus is a valid value
+          pvaStatus: pvaStatus || products[productIndex].pvaStatus,
           // Ensure both camelCase and snake_case URL fields are updated
           websiteUrl: updatedProduct.websiteUrl || updatedProduct.websiteurl || products[productIndex].websiteUrl || products[productIndex].websiteurl,
           websiteurl: updatedProduct.websiteUrl || updatedProduct.websiteurl || products[productIndex].websiteUrl || products[productIndex].websiteurl,

@@ -15,7 +15,7 @@ interface ProductDetails {
   pvaPercentage: string;
   country: string;
   ingredients: string;
-  pvaStatus: string;
+  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
   type: string;
 }
 
@@ -34,7 +34,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
     pvaPercentage: '',
     country: '',
     ingredients: '',
-    pvaStatus: '',
+    pvaStatus: 'needs-verification',
     type: ''
   });
 
@@ -51,6 +51,16 @@ export const useProductEditing = (onSuccess?: () => void) => {
     }
 
     setSelectedProduct(product);
+    
+    // Ensure pvaStatus is one of the allowed values
+    let validPvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive' = 'needs-verification';
+    if (product.pvaStatus === 'contains' || 
+        product.pvaStatus === 'verified-free' || 
+        product.pvaStatus === 'needs-verification' || 
+        product.pvaStatus === 'inconclusive') {
+      validPvaStatus = product.pvaStatus;
+    }
+    
     setProductDetails({
       brand: product.brand || '',
       name: product.name || '',
@@ -61,7 +71,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       pvaPercentage: product.pvaPercentage !== null ? String(product.pvaPercentage) : '',
       country: product.country || 'Global',
       ingredients: product.ingredients || '',
-      pvaStatus: product.pvaStatus || 'needs-verification',
+      pvaStatus: validPvaStatus,
       type: product.type || 'Detergent'
     });
     setIsDialogOpen(true);
@@ -116,7 +126,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       console.log("Supabase update result:", supabaseResult);
       
       // Step 2: Update in localStorage with same data  
-      const localData: Partial<ProductSubmission> = {
+      const localData = {
         ...supabaseData,
         // Preserve required fields from the original product
         id: selectedProduct.id,
@@ -135,7 +145,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       console.log("Local storage update data:", localData);
       
       // Step 3: Update in localStorage
-      const localStorageResult = updateProductInLocalStorage(selectedProduct.id, localData);
+      const localStorageResult = updateProductInLocalStorage(selectedProduct.id, localData as Partial<ProductSubmission>);
       console.log("Local storage update result:", localStorageResult);
       
       // Determine operation result
