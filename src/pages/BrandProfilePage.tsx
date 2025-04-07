@@ -63,6 +63,7 @@ const BrandProfilePage = () => {
       try {
         console.log(`Fetching data for brand: ${brandName}`);
         const normalizedBrandName = normalizeBrandName(brandName);
+        console.log(`Normalized brand name: "${normalizedBrandName}"`);
         
         // Fetch brand profile from Supabase
         const { data: profileData, error: profileError } = await supabase
@@ -104,11 +105,12 @@ const BrandProfilePage = () => {
           setProductImages(imageData || []);
         }
         
-        // Fetch products directly from Supabase
+        // Modified query to handle potential leading/trailing spaces in brand names
+        // Using multiple OR conditions to be more inclusive
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
           .select('*')
-          .or(`brand.eq." ${normalizedBrandName}",brand.eq."${normalizedBrandName}"`)
+          .or(`brand.ilike.${normalizedBrandName},brand.ilike. ${normalizedBrandName},brand.ilike.${normalizedBrandName} `)
           .eq('approved', true);
           
         if (productError) {

@@ -75,7 +75,8 @@ export function formatUrlForDisplay(url: string): string {
   }
 }
 
-// Normalize brand names by trimming spaces
+// Normalize brand names by trimming spaces - this is particularly important
+// for database queries to properly match brand names
 export function normalizeBrandName(brand: string): string {
   if (!brand) return '';
   return brand.trim();
