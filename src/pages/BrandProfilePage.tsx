@@ -58,6 +58,7 @@ const BrandProfilePage = () => {
   const [products, setProducts] = useState<ProductSubmission[]>([]);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSource, setLoadingSource] = useState<string>("initial");
   
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
@@ -84,6 +85,7 @@ const BrandProfilePage = () => {
     
     const fetchBrandData = async () => {
       setLoading(true);
+      setLoadingSource("fetchBrandData");
       try {
         console.log(`Fetching data for brand: "${brandName}"`);
         
@@ -130,7 +132,7 @@ const BrandProfilePage = () => {
         
         console.log('Querying Supabase for products with brand name:', brandName);
         
-        // UPDATED: Use proper column aliasing in the Supabase query
+        // IMPROVED: Use proper column aliasing and explicitly include all necessary fields
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
           .select(`
@@ -139,13 +141,13 @@ const BrandProfilePage = () => {
             brand,
             type,
             description,
-            pvaStatus:pvastatus,
-            pvaPercentage:pvapercentage,
+            pvastatus,
+            pvapercentage,
             approved,
             country,
-            websiteUrl:websiteurl,
-            videoUrl:videourl,
-            imageUrl:imageurl,
+            websiteurl,
+            videourl,
+            imageurl,
             ingredients,
             owner_id,
             createdat,
@@ -165,48 +167,60 @@ const BrandProfilePage = () => {
           console.log(`Found ${productData?.length || 0} products in Supabase`);
           console.log('Raw product data from Supabase:', productData);
           
-          // Transform the data to match ProductSubmission type using normalizeProductFieldNames
-          const normalizedProducts = (productData || []).map(product => normalizeProductFieldNames(product));
-          console.log('Normalized products:', normalizedProducts);
-          setProducts(normalizedProducts);
+          if (productData && productData.length > 0) {
+            // Transform the data to match ProductSubmission type using normalizeProductFieldNames
+            const normalizedProducts = productData.map(product => normalizeProductFieldNames(product));
+            console.log('Normalized products:', normalizedProducts);
+            setProducts(normalizedProducts);
+          }
           
-          // Also try a more flexible query with just the brand name (without approved filter)
-          console.log('Trying secondary query without approved filter...');
-          const { data: allProductData, error: allProductError } = await supabase
-            .from('product_submissions')
-            .select(`
-              id,
-              name,
-              brand,
-              type,
-              description,
-              pvaStatus:pvastatus,
-              pvaPercentage:pvapercentage,
-              approved,
-              country,
-              websiteUrl:websiteurl,
-              videoUrl:videourl,
-              imageUrl:imageurl,
-              ingredients,
-              owner_id,
-              createdat,
-              updatedat
-            `)
-            .ilike('brand', brandName);
-            
-          if (allProductError) {
-            console.error('Error in secondary product query:', allProductError);
-          } else {
-            console.log(`Secondary query found ${allProductData?.length || 0} total products (including unapproved)`);
-            
-            // If we found products with the second query but not the first, they might be unapproved
-            if (allProductData?.length > 0 && productData?.length === 0) {
-              console.log('Products exist but might be unapproved. Sample:', allProductData[0]);
+          // Try a more flexible query with just the brand name (without approved filter) as a fallback
+          if (!productData || productData.length === 0) {
+            console.log('Trying secondary query without approved filter...');
+            const { data: allProductData, error: allProductError } = await supabase
+              .from('product_submissions')
+              .select(`
+                id,
+                name,
+                brand,
+                type,
+                description,
+                pvastatus,
+                pvapercentage,
+                approved,
+                country,
+                websiteurl,
+                videourl,
+                imageurl,
+                ingredients,
+                owner_id,
+                createdat,
+                updatedat
+              `)
+              .ilike('brand', brandName);
+              
+            if (allProductError) {
+              console.error('Error in secondary product query:', allProductError);
+            } else {
+              console.log(`Secondary query found ${allProductData?.length || 0} total products (including unapproved)`);
+              
+              // Only use these products if we don't have any from the previous query
+              if (allProductData && allProductData.length > 0 && (!productData || productData.length === 0)) {
+                console.log('Using secondary query results as fallback');
+                const approvedProducts = allProductData.filter(p => p.approved);
+                if (approvedProducts.length > 0) {
+                  // Transform the data to match ProductSubmission type
+                  const normalizedProducts = approvedProducts.map(product => normalizeProductFieldNames(product));
+                  console.log('Normalized products from secondary query:', normalizedProducts);
+                  setProducts(normalizedProducts);
+                }
+              }
             }
           }
           
-          // Get products from local storage as a fallback only if needed
-          if (!productData?.length) {
+          // Get products from local storage as a LAST resort fallback
+          if (products.length === 0) {
+            console.log('No products found in Supabase, checking local storage');
             const allLocalProducts = getProductSubmissions();
             console.log(`Got ${allLocalProducts.length} total products from local storage`);
             
@@ -230,15 +244,16 @@ const BrandProfilePage = () => {
             console.log(`Found ${brandLocalProducts.length} products in local storage for brand "${brandName}"`);
             
             if (brandLocalProducts.length) {
+              console.log('Using local storage products as fallback');
               setProducts(brandLocalProducts);
             }
           }
         }
         
-        // Special handling for EcoKaps (since we can see it in the database from your screenshot)
-        if (brandName === 'EcoKaps' && products.length === 0) {
-          console.log('Attempting direct query for EcoKaps products...');
-          const { data: ecoKapsData, error: ecoKapsError } = await supabase
+        // ADDED: Perform a final diagnostic direct query using exact match on brand name
+        if (products.length === 0) {
+          console.log(`Attempting direct exact match query for "${brandName}" products...`);
+          const { data: exactMatchData, error: exactMatchError } = await supabase
             .from('product_submissions')
             .select(`
               id,
@@ -246,34 +261,54 @@ const BrandProfilePage = () => {
               brand,
               type,
               description,
-              pvaStatus:pvastatus,
-              pvaPercentage:pvapercentage,
+              pvastatus,
+              pvapercentage,
               approved,
               country,
-              websiteUrl:websiteurl,
-              videoUrl:videourl,
-              imageUrl:imageurl,
+              websiteurl,
+              videourl,
+              imageurl,
               ingredients,
               owner_id,
               createdat,
               updatedat
             `)
-            .eq('brand', 'EcoKaps');
+            .eq('brand', brandName);
             
-          if (ecoKapsError) {
-            console.error('Error in EcoKaps specific query:', ecoKapsError);
+          if (exactMatchError) {
+            console.error('Error in exact match query:', exactMatchError);
           } else {
-            console.log(`Direct EcoKaps query found ${ecoKapsData?.length || 0} products`);
-            if (ecoKapsData?.length > 0) {
-              console.log('EcoKaps products:', ecoKapsData);
+            console.log(`Exact match query found ${exactMatchData?.length || 0} products`);
+            if (exactMatchData && exactMatchData.length > 0) {
+              console.log('Exact match products:', exactMatchData);
               
-              // If we found products here but not in the earlier query, update state
-              if (ecoKapsData.length > 0 && products.length === 0) {
-                // Transform the data to match ProductSubmission type
-                const normalizedProducts = ecoKapsData.map(product => normalizeProductFieldNames(product));
-                console.log('Normalized EcoKaps products:', normalizedProducts);
-                setProducts(normalizedProducts);
-              }
+              // Transform the data to match ProductSubmission type
+              const normalizedProducts = exactMatchData.map(product => normalizeProductFieldNames(product));
+              console.log('Normalized exact match products:', normalizedProducts);
+              setProducts(normalizedProducts);
+            }
+          }
+        }
+
+        // ADDED: Final case-insensitive check with different method
+        if (products.length === 0) {
+          console.log(`Attempting case-insensitive function query for "${brandName}"...`);
+          const { data: lowerData, error: lowerError } = await supabase
+            .from('product_submissions')
+            .select('*')
+            .filter('brand', 'ilike', `%${brandName}%`);
+            
+          if (lowerError) {
+            console.error('Error in case-insensitive filter query:', lowerError);
+          } else {
+            console.log(`Case-insensitive filter found ${lowerData?.length || 0} products`);
+            if (lowerData && lowerData.length > 0) {
+              console.log('Case-insensitive products:', lowerData);
+              
+              // Transform the data to match ProductSubmission type
+              const normalizedProducts = lowerData.map(product => normalizeProductFieldNames(product));
+              console.log('Normalized case-insensitive products:', normalizedProducts);
+              setProducts(normalizedProducts);
             }
           }
         }
@@ -291,20 +326,7 @@ const BrandProfilePage = () => {
     };
     
     fetchBrandData();
-  }, [encodedBrandName, toast, navigate, products.length]);
-
-  const mapPvaStatus = (status: string): ProductSubmission['pvaStatus'] => {
-    switch (status.toLowerCase()) {
-      case 'contains':
-        return 'contains';
-      case 'verified-free':
-        return 'verified-free';
-      case 'inconclusive':
-        return 'inconclusive';
-      default:
-        return 'needs-verification';
-    }
-  };
+  }, [encodedBrandName, toast, navigate]);
 
   const openProductDetail = (product: ProductSubmission) => {
     console.log('Opening product detail:', product);
@@ -317,7 +339,7 @@ const BrandProfilePage = () => {
     return (
       <div className="container mx-auto py-10 px-4 flex justify-center items-center">
         <div className="text-center">
-          <p className="text-muted-foreground">Loading brand information...</p>
+          <p className="text-muted-foreground">Loading brand information... ({loadingSource})</p>
         </div>
       </div>
     );
@@ -361,7 +383,7 @@ const BrandProfilePage = () => {
         </TabsList>
         
         <TabsContent value="products">
-          {products.length > 0 ? (
+          {products && products.length > 0 ? (
             <ProductsList 
               products={products}
               onOpenProductDetail={openProductDetail}
@@ -369,7 +391,12 @@ const BrandProfilePage = () => {
           ) : (
             <div className="text-center py-10 text-muted-foreground bg-white rounded-md shadow p-6">
               <p>No products found for {brandProfile.name}</p>
-              <p className="mt-2 text-sm">Please check back later or contribute data about this brand.</p>
+              <p className="mt-2 text-sm">
+                Please check back later or contribute data about this brand.
+              </p>
+              <div className="mt-2 text-xs text-gray-500">
+                (Brand slug: {encodedBrandName})
+              </div>
               <Link to="/contribute" className="mt-4 inline-block">
                 <button className="bg-primary text-white px-4 py-2 mt-2 rounded text-sm">
                   Contribute Product Data

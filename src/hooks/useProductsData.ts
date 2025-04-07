@@ -45,13 +45,13 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
         brand,
         type,
         description,
-        pvaStatus:pvastatus,
-        pvaPercentage:pvapercentage,
+        pvastatus,
+        pvapercentage,
         approved,
         country,
-        websiteUrl:websiteurl,
-        videoUrl:videourl,
-        imageUrl:imageurl,
+        websiteurl,
+        videourl,
+        imageurl,
         ingredients,
         owner_id,
         createdat,
@@ -312,6 +312,7 @@ export const useProductsData = (selectedCountry: string) => {
             websiteurl: updatedData.websiteUrl,  // snake_case column name
             videourl: updatedData.videoUrl,  // snake_case column name
             imageurl: updatedData.imageUrl,  // snake_case column name
+            ingredients: updatedData.ingredients,
             updatedat: new Date().toISOString()
           })
           .eq('id', productId);
@@ -327,7 +328,7 @@ export const useProductsData = (selectedCountry: string) => {
         queryClient.invalidateQueries({ queryKey: ['supabaseProducts'] });
         refetch();
         
-        // Also trigger a global refresh
+        // Also trigger a global product refresh event
         window.dispatchEvent(new Event('reload-products'));
       } catch (dbError) {
         console.error("Failed to update product in Supabase:", dbError);
