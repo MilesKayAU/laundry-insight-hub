@@ -119,14 +119,14 @@ const BrandProfilePage = () => {
           setProductImages(imageData || []);
         }
         
-        // Multiple approaches to query to account for spacing variation issues
+        // The most important query - directly use the exact brand name without manipulation
         console.log('Querying Supabase for products with brand name:', brandName);
         
-        // Use multiple ilike conditions to handle spacing variations and exact match
+        // More aggressive approach to fetch products with the given brand name
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
           .select('*')
-          .or(`brand.ilike.${brandName},brand.eq.${brandName}`)
+          .or(`brand.eq.${brandName},brand.ilike.${brandName}`)
           .eq('approved', true);
           
         if (productError) {
@@ -142,7 +142,7 @@ const BrandProfilePage = () => {
           
           // Transform Supabase data to match our ProductSubmission type
           const transformedProducts: ProductSubmission[] = productData?.map(item => {
-            // Log any website URL to debug missing links issue
+            // Log each product's website URL for debugging
             console.log(`Product ${item.name} website URL:`, item.websiteurl || 'No URL provided');
             
             return {

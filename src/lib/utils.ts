@@ -1,4 +1,3 @@
-
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -7,6 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getSafeExternalLinkProps({ url }: { url: string }) {
+  // Enhanced URL validation and logging
   if (!url || url === '#' || url.trim() === '') {
     console.warn("Empty or invalid URL provided to getSafeExternalLinkProps:", url);
     return {
@@ -48,23 +48,22 @@ export function isValidUrl(url: string): boolean {
   }
   
   try {
-    // Handle URLs without protocol
-    const urlToTest = url.startsWith('http') ? url : `https://${url}`;
-    
-    // Attempt to parse the URL
-    const parsedUrl = new URL(urlToTest);
-    
-    // Additional validation checks
-    const domain = parsedUrl.hostname;
-    if (!domain || domain.length < 3) {
-      console.log(`URL validation failed for "${url}": domain too short or invalid`);
-      return false;
+    // Handle URLs without protocol by adding one for validation purposes
+    let urlToTest = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      urlToTest = `https://${url}`;
     }
     
-    // Check for common TLDs or IP addresses
-    const hasTLD = domain.includes('.') && domain.split('.').pop()!.length >= 2;
-    if (!hasTLD && !/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(domain)) {
-      console.log(`URL validation failed for "${url}": missing valid TLD`);
+    // Attempt to parse the URL
+    new URL(urlToTest);
+    
+    // Additional validation to check for domain-like patterns
+    // This handles cases where technically valid URLs might not be real websites
+    const domainPattern = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?/i;
+    const extractedDomain = url.replace(/^https?:\/\//, '').split('/')[0];
+    
+    if (!domainPattern.test(extractedDomain)) {
+      console.log(`URL validation failed for "${url}": invalid domain pattern`);
       return false;
     }
     
@@ -84,25 +83,12 @@ export function formatUrlForDisplay(url: string): string {
   }
   
   try {
-    let processedUrl = url;
-    
-    // Add protocol if missing
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      processedUrl = `https://${url}`;
+    // For basic cases, just return the URL without http/https
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url.replace(/^https?:\/\//, '');
     }
     
-    const urlObj = new URL(processedUrl);
-    
-    // Format the URL for display (remove protocol and trailing slash)
-    let formatted = urlObj.hostname;
-    
-    // Add path if it exists and isn't just a slash
-    if (urlObj.pathname && urlObj.pathname !== '/') {
-      formatted += urlObj.pathname;
-    }
-    
-    console.log(`Formatted URL "${url}" to "${formatted}"`);
-    return formatted;
+    return url;
   } catch (e) {
     console.warn("Error formatting URL for display:", url, e);
     return url; // Return original URL if formatting fails

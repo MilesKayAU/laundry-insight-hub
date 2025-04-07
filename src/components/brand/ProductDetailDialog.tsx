@@ -32,17 +32,21 @@ const ProductDetailDialog = ({
   
   // Enhanced logging for debugging
   console.log("ProductDetailDialog: Rendering product detail for:", product.name);
-  console.log("Complete product object:", JSON.stringify(product, null, 2));
+  console.log("Complete product data:", product);
   
-  // Check URL validity
+  // Better URL validation and preparation
   const websiteUrl = product.websiteUrl || '';
   const videoUrl = product.videoUrl || '';
   
-  const hasValidWebsiteUrl = isValidUrl(websiteUrl);
-  const hasValidVideoUrl = isValidUrl(videoUrl);
+  const hasValidWebsiteUrl = websiteUrl.trim() !== '' && isValidUrl(websiteUrl);
+  const hasValidVideoUrl = videoUrl.trim() !== '' && isValidUrl(videoUrl);
   
-  console.log("Website URL validation:", websiteUrl, hasValidWebsiteUrl);
-  console.log("Video URL validation:", videoUrl, hasValidVideoUrl);
+  console.log("Product URL validation results:", {
+    websiteUrl,
+    hasValidWebsiteUrl,
+    videoUrl,
+    hasValidVideoUrl
+  });
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,16 +118,6 @@ const ProductDetailDialog = ({
                 <a 
                   {...getSafeExternalLinkProps({ url: websiteUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
-                  onClick={(e) => {
-                    if (!hasValidWebsiteUrl) {
-                      e.preventDefault();
-                      toast({
-                        title: "Invalid URL",
-                        description: "This product doesn't have a valid website URL.",
-                        variant: "destructive"
-                      });
-                    }
-                  }}
                 >
                   <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
                   {websiteUrl}

@@ -31,16 +31,14 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   const { toast } = useToast();
   
   // Enhanced logging for debugging
-  console.log(`ProductsList: Rendering ${products.length} products with full details`);
-  console.log(`Raw products data:`, JSON.stringify(products, null, 2));
+  console.log(`ProductsList: Rendering ${products.length} products`);
   
-  // Deep debug for each product's data
+  // Better URL debugging
   products.forEach(p => {
-    console.log(`Product Details - Name: ${p.name}, Brand: "${p.brand}", WebsiteURL: "${p.websiteUrl}"`);
-    // Log only if a website URL exists
-    if (p.websiteUrl) {
-      console.log(`URL validation for ${p.name}: ${isValidUrl(p.websiteUrl)}`);
-    }
+    console.log(`Product "${p.name}" URL data:`, {
+      websiteUrl: p.websiteUrl || 'None', 
+      isValid: isValidUrl(p.websiteUrl || '')
+    });
   });
 
   return (
@@ -68,15 +66,11 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
               </TableHeader>
               <TableBody>
                 {products.map((product) => {
-                  // Enhanced debugging for URL handling
-                  const rawUrl = product.websiteUrl || '';
-                  const hasValidUrl = isValidUrl(rawUrl);
+                  const hasWebsiteUrl = product.websiteUrl && product.websiteUrl.trim() !== '';
+                  const websiteUrl = hasWebsiteUrl ? product.websiteUrl : '';
                   
-                  console.log(`Product ${product.name} URL processing:`);
-                  console.log(`- Raw URL: "${rawUrl}"`);
-                  console.log(`- URL empty: ${!rawUrl || rawUrl.trim() === ''}`);
-                  console.log(`- URL has protocol: ${rawUrl.startsWith('http')}`);
-                  console.log(`- URL is valid: ${hasValidUrl}`);
+                  // More detailed logging for this specific product's URL
+                  console.log(`Rendering product ${product.name} with URL:`, websiteUrl);
                   
                   return (
                     <TableRow key={product.id}>
@@ -101,24 +95,13 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                       </TableCell>
                       <TableCell>{product.country || 'Global'}</TableCell>
                       <TableCell>
-                        {hasValidUrl ? (
+                        {hasWebsiteUrl ? (
                           <a 
-                            {...getSafeExternalLinkProps({ url: rawUrl })}
+                            {...getSafeExternalLinkProps({ url: websiteUrl })}
                             className="text-blue-600 hover:underline flex items-center"
-                            onClick={(e) => {
-                              console.log(`Clicked URL for ${product.name}: ${rawUrl}`);
-                              if (!hasValidUrl) {
-                                e.preventDefault();
-                                toast({
-                                  title: "Invalid URL",
-                                  description: "This product doesn't have a valid website URL.",
-                                  variant: "destructive"
-                                });
-                              }
-                            }}
                           >
                             <ExternalLink className="h-4 w-4 mr-1 flex-shrink-0" />
-                            {formatUrlForDisplay(rawUrl)}
+                            {formatUrlForDisplay(websiteUrl)}
                           </a>
                         ) : (
                           <span className="text-muted-foreground text-sm">None</span>
