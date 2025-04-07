@@ -1,3 +1,4 @@
+
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ProductSubmission } from "./textExtractor";
@@ -100,7 +101,7 @@ export function normalizeProductFieldNames(product: any): ProductSubmission {
     videoUrl: product.videourl || product.videoUrl || '',
     imageUrl: product.imageurl || product.imageUrl || '',
     
-    // Make these available in both naming formats for compatibility
+    // Support both naming formats for database compatibility
     websiteurl: product.websiteurl || product.websiteUrl || '',
     videourl: product.videourl || product.videoUrl || '',
     imageurl: product.imageurl || product.imageUrl || '',

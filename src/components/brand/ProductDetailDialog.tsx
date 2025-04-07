@@ -168,7 +168,7 @@ const ProductDetailDialog = ({
               <Label className="text-right font-medium pt-2">Product Image</Label>
               <div className="col-span-3">
                 <img 
-                  src={product.imageUrl} 
+                  src={product.imageUrl}
                   alt={product.name}
                   className="max-h-40 rounded-md object-contain"
                   onError={(e) => {

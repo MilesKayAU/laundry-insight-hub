@@ -72,6 +72,10 @@ export interface ProductSubmission {
   pvaPercentage: number | null;
   country?: string;
   websiteUrl?: string;
+  // Add snake_case variants for compatibility with Supabase
+  websiteurl?: string;
+  videourl?: string;
+  imageurl?: string;
   comments?: string;
   brandVerified: boolean;
   brandOwnershipRequested?: boolean;

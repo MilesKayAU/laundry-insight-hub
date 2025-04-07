@@ -42,7 +42,7 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   
   // Debug each product's URL data
   products.forEach((product, index) => {
-    const websiteUrl = product.websiteUrl || '';
+    const websiteUrl = product.websiteUrl || product.websiteurl || '';
     console.log(`Product ${index + 1}: ${product.name}, URL: "${websiteUrl}", Valid: ${isValidUrl(websiteUrl)}`);
     logProductUrlInfo(product, "ProductsList");
   });
