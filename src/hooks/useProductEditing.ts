@@ -1,9 +1,7 @@
-
 import { useState } from 'react';
-import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor';
+import { ProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { normalizeProductFieldNames } from '@/lib/utils';
+import { updateProductInSupabase, updateProductInLocalStorage, deleteProduct } from '@/lib/dataService';
 
 // Define the ProductDetails interface to match the one in ProductDetailsDialog
 interface ProductDetails {
@@ -63,54 +61,82 @@ export const useProductEditing = (onSuccess?: () => void) => {
       country: product.country || 'Global',
       ingredients: product.ingredients || '',
       pvaStatus: product.pvaStatus || 'needs-verification',
-      type: product.type || 'Detergent' // Default type for new products
+      type: product.type || 'Detergent'
     });
     setIsDialogOpen(true);
   };
 
   const handleDetailsChange = (details: Partial<ProductDetails>) => {
-    console.log("Updating product details:", details);
     setProductDetails(prev => ({ ...prev, ...details }));
   };
 
   const handleSaveChanges = async () => {
     if (!selectedProduct) {
       console.error("Cannot save changes: No product selected");
+      toast({
+        title: "Error",
+        description: "No product selected for saving",
+        variant: "destructive"
+      });
       return;
     }
     
     setIsSaving(true);
-    console.log("Starting to save product changes for ID:", selectedProduct.id);
+    console.log("Starting save process for product ID:", selectedProduct.id);
     
     try {
       // Format the percentage value
       const pvaPercentage = productDetails.pvaPercentage ? 
         parseFloat(productDetails.pvaPercentage) : null;
       
-      // Prepare updated product data ensuring all required fields are preserved
-      const updatedData: Partial<ProductSubmission> = {
+      // Prepare Supabase-specific data format (snake_case)
+      const supabaseData = {
+        brand: productDetails.brand,
+        name: productDetails.name,
+        description: productDetails.description,
+        type: productDetails.type,
+        pvastatus: productDetails.pvaStatus,
+        pvapercentage: pvaPercentage,
+        country: productDetails.country,
+        websiteurl: productDetails.websiteUrl,
+        videourl: productDetails.videoUrl,
+        imageurl: productDetails.imageUrl,
+        ingredients: productDetails.ingredients,
+        updatedat: new Date().toISOString()
+      };
+      
+      console.log("Prepared Supabase data:", supabaseData);
+      
+      // Step 1: Update in Supabase database
+      const supabaseResult = await updateProductInSupabase(selectedProduct.id, supabaseData);
+      
+      // Step 2: Prepare local storage data (includes both camelCase and snake_case)
+      const localData: Partial<ProductSubmission> = {
         // Fields from form
         brand: productDetails.brand,
         name: productDetails.name,
         description: productDetails.description,
+        
+        // URLs in both formats
         imageUrl: productDetails.imageUrl,
         videoUrl: productDetails.videoUrl,
         websiteUrl: productDetails.websiteUrl,
-        // Also update the snake_case versions for compatibility
-        websiteurl: productDetails.websiteUrl,
-        videourl: productDetails.videoUrl,
         imageurl: productDetails.imageUrl,
-        pvaPercentage,
+        videourl: productDetails.videoUrl,
+        websiteurl: productDetails.websiteUrl,
+        
+        // Other fields
+        pvaPercentage: pvaPercentage,
         country: productDetails.country,
         ingredients: productDetails.ingredients,
         pvaStatus: productDetails.pvaStatus as any,
         type: productDetails.type,
         
-        // CRITICAL: Preserve all these required fields from the original product
+        // Preserve required fields
         id: selectedProduct.id,
         approved: selectedProduct.approved !== undefined ? selectedProduct.approved : true,
-        brandVerified: selectedProduct.brandVerified !== undefined ? selectedProduct.brandVerified : false,
-        brandOwnershipRequested: selectedProduct.brandOwnershipRequested !== undefined ? selectedProduct.brandOwnershipRequested : false,
+        brandVerified: selectedProduct.brandVerified || false,
+        brandOwnershipRequested: selectedProduct.brandOwnershipRequested || false,
         timestamp: selectedProduct.timestamp || Date.now(),
         submittedAt: selectedProduct.submittedAt || new Date().toISOString(),
         dateSubmitted: selectedProduct.dateSubmitted || new Date().toISOString(),
@@ -119,84 +145,27 @@ export const useProductEditing = (onSuccess?: () => void) => {
         brandVerificationDate: selectedProduct.brandVerificationDate || '',
         uploadedBy: selectedProduct.uploadedBy || ''
       };
-
-      console.log("Product ID being updated:", selectedProduct.id);
-      console.log("Updated data being applied:", updatedData);
       
-      // Initialize success indicators
-      let supabaseUpdateSuccess = false;
-      let localUpdateSuccess = false;
-
-      // Try to update in Supabase database first
-      try {
-        console.log("Updating product in Supabase - preparing data");
-        
-        // Make a clean object with only the columns that exist in the Supabase table
-        const supabaseData = {
-          brand: updatedData.brand,
-          name: updatedData.name,
-          description: updatedData.description,
-          type: updatedData.type,
-          pvastatus: updatedData.pvaStatus,
-          pvapercentage: updatedData.pvaPercentage,
-          country: updatedData.country,
-          websiteurl: updatedData.websiteUrl,
-          videourl: updatedData.videoUrl,
-          imageurl: updatedData.imageUrl,
-          ingredients: updatedData.ingredients,
-          updatedat: new Date().toISOString()
-        };
-        
-        console.log("Supabase update data:", supabaseData);
-        console.log("Product ID for Supabase update:", selectedProduct.id);
-        
-        const { data, error } = await supabase
-          .from('product_submissions')
-          .update(supabaseData)
-          .eq('id', selectedProduct.id)
-          .select();
-          
-        if (error) {
-          console.error("Supabase update error:", error);
-          toast({
-            title: "Database Update Error",
-            description: error.message,
-            variant: "destructive"
-          });
-        } else {
-          console.log("Supabase update successful:", data);
-          supabaseUpdateSuccess = true;
-        }
-      } catch (supabaseError) {
-        console.error("Exception during Supabase update:", supabaseError);
-      }
+      // Step 3: Update in localStorage
+      const localStorageResult = updateProductInLocalStorage(selectedProduct.id, localData);
       
-      // Try to update in localStorage
-      try {
-        console.log("Updating product in localStorage");
-        localUpdateSuccess = updateProductSubmission(selectedProduct.id, updatedData);
-        console.log("Local update success:", localUpdateSuccess);
-      } catch (localError) {
-        console.error("Exception during localStorage update:", localError);
-      }
-      
-      // Handle success/failure based on results
-      if (supabaseUpdateSuccess || localUpdateSuccess) {
-        // Determine the success message
+      // Determine operation result
+      if (supabaseResult.success || localStorageResult) {
+        // Create success message
         let successMessage = "";
         
-        if (supabaseUpdateSuccess && localUpdateSuccess) {
+        if (supabaseResult.success && localStorageResult) {
           successMessage = "Updated in database and local storage";
-        } else if (supabaseUpdateSuccess) {
+        } else if (supabaseResult.success) {
           successMessage = "Updated in database only";
-        } else {
+        } else if (localStorageResult) {
           successMessage = "Updated in local storage only";
         }
         
-        // Show success message
+        // Show success toast
         toast({
           title: "Product Updated",
-          description: `${updatedData.brand} ${updatedData.name} - ${successMessage}`,
+          description: `${productDetails.brand} ${productDetails.name} - ${successMessage}`,
         });
 
         // Close the dialog
@@ -204,17 +173,19 @@ export const useProductEditing = (onSuccess?: () => void) => {
 
         // Execute the success callback if provided
         if (typeof onSuccess === 'function') {
-          console.log("Calling success callback");
           onSuccess();
         }
         
         // Trigger a global product refresh event
         window.dispatchEvent(new Event('reload-products'));
       } else {
-        console.error("Both local and Supabase updates failed");
+        // Handle failure
+        const errorMessage = supabaseResult.error || "Failed to update the product";
+        console.error("Update failed:", errorMessage);
+        
         toast({
           title: "Update Failed",
-          description: "Failed to update the product. Please try again.",
+          description: errorMessage,
           variant: "destructive"
         });
       }
@@ -222,7 +193,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       console.error("Error saving product changes:", error);
       toast({
         title: "Error",
-        description: "An error occurred while saving changes",
+        description: "An unexpected error occurred while saving changes",
         variant: "destructive"
       });
     } finally {
@@ -231,82 +202,32 @@ export const useProductEditing = (onSuccess?: () => void) => {
   };
 
   const handleDeleteProduct = async (productId: string): Promise<boolean> => {
-    console.log("Starting robust deletion process for product ID:", productId);
-    
-    // Track deletion success
-    let deleteSuccess = false;
+    console.log("Starting deletion process for product ID:", productId);
     
     try {
-      // Step 1: Call the force_delete_product RPC function with an explicit type assertion
-      console.log("Calling force_delete_product RPC function for product:", productId);
-      const { data: rpcResult, error: rpcError } = await supabase.rpc(
-        'force_delete_product' as any, // Use type assertion to bypass type checking
-        { product_id: productId }
-      );
+      const result = await deleteProduct(productId);
       
-      if (rpcError) {
-        console.error("Error calling force_delete_product RPC:", rpcError);
-        
-        // Fall back to direct deletion if RPC fails
-        console.log("Falling back to direct deletion");
-        const { error: deleteError } = await supabase
-          .from('product_submissions')
-          .delete()
-          .eq('id', productId);
-          
-        if (deleteError) {
-          console.error("Direct deletion also failed:", deleteError);
-        } else {
-          console.log("Direct deletion succeeded");
-          deleteSuccess = true;
-        }
+      if (result.success) {
+        toast({
+          title: "Product Deleted",
+          description: "The product has been successfully removed",
+        });
+        return true;
       } else {
-        console.log("RPC result:", rpcResult);
-        if (rpcResult === true) {
-          console.log("Product successfully deleted via RPC");
-          deleteSuccess = true;
-        } else {
-          console.warn("RPC returned false, product may not have been deleted");
-        }
+        toast({
+          title: "Deletion Failed",
+          description: result.error || "Failed to delete the product",
+          variant: "destructive"
+        });
+        return false;
       }
-      
-      // Step 2: Clean up local storage regardless of Supabase result
-      try {
-        console.log("Cleaning up product from local storage:", productId);
-        
-        // Get all products from localStorage
-        const productsString = localStorage.getItem('product_submissions') || localStorage.getItem('products') || '[]';
-        const allProducts = JSON.parse(productsString);
-        
-        // Check if product exists before attempting to filter
-        const productExists = allProducts.some((p: any) => p.id === productId);
-        
-        if (productExists) {
-          console.log("Product found in localStorage, removing...");
-          
-          // Filter out the product
-          const filteredProducts = allProducts.filter((p: any) => p.id !== productId);
-          
-          // Save updated products to both possible storage keys
-          localStorage.setItem('product_submissions', JSON.stringify(filteredProducts));
-          localStorage.setItem('products', JSON.stringify(filteredProducts));
-          
-          console.log(`Product removed from localStorage. Count before: ${allProducts.length}, after: ${filteredProducts.length}`);
-          
-          // Local storage cleanup is also a success indicator
-          if (!deleteSuccess) {
-            deleteSuccess = true;
-          }
-        } else {
-          console.log("Product not found in localStorage");
-        }
-      } catch (localError) {
-        console.error("Error cleaning up localStorage:", localError);
-      }
-            
-      return deleteSuccess;
     } catch (error) {
       console.error("Unexpected error during product deletion:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred during deletion",
+        variant: "destructive"
+      });
       return false;
     }
   };

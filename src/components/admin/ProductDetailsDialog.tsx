@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const ImagePreview = ({ url }: { url: string }) => {
   if (!url) return null;
@@ -60,17 +61,32 @@ const ProductDetailsDialog = ({
   onSave,
   onDelete
 }: ProductDetailsDialogProps) => {
+  const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
   const handleSave = async () => {
+    // Basic validation
+    if (!details.brand || !details.name) {
+      toast({
+        title: "Validation Error",
+        description: "Brand and product name are required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSaving(true);
     try {
-      console.log("Saving product details with the following data:", details);
       await onSave();
     } catch (error) {
       console.error("Error saving product:", error);
+      toast({
+        title: "Save Error",
+        description: "An unexpected error occurred while saving",
+        variant: "destructive"
+      });
     } finally {
       setIsSaving(false);
     }
@@ -88,6 +104,11 @@ const ProductDetailsDialog = ({
       }
     } catch (error) {
       console.error("Error deleting product:", error);
+      toast({
+        title: "Delete Error",
+        description: "An unexpected error occurred during deletion",
+        variant: "destructive"
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -124,8 +145,6 @@ const ProductDetailsDialog = ({
     'Italy',
     'Other'
   ];
-  
-  console.log("Rendering dialog with details:", details);
   
   return (
     <>
