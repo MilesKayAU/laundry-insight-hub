@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Info, LinkIcon } from "lucide-react";
-import { getSafeExternalLinkProps } from "@/lib/utils";
+import { ExternalLink, Info } from "lucide-react";
+import { getSafeExternalLinkProps, isValidUrl } from "@/lib/utils";
 
 interface ProductsListProps {
   products: ProductSubmission[];
@@ -29,12 +29,19 @@ interface ProductsListProps {
 const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   // Function to truncate URL for display
   const truncateUrl = (url: string) => {
-    if (!url) return '';
+    if (!url || url.trim() === '') return '';
+    
+    // Log URLs to help debug missing links
+    console.log("Processing URL for display:", url);
+    
     try {
-      // Log URLs to help debug missing links
-      console.log("Processing URL for display:", url);
+      // Make sure URL has protocol
+      let processedUrl = url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        processedUrl = `https://${url}`;
+      }
       
-      const urlObj = new URL(url);
+      const urlObj = new URL(processedUrl);
       let displayUrl = urlObj.hostname;
       if (urlObj.pathname !== '/' && urlObj.pathname.length > 1) {
         displayUrl += urlObj.pathname.length > 15 
@@ -46,23 +53,6 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
       console.warn("Error parsing URL:", url, e);
       // If URL parsing fails, just return a shortened version of the original
       return url.length > 25 ? url.substring(0, 25) + '...' : url;
-    }
-  };
-
-  // Function to validate and format URL with protocol if missing
-  const validateUrl = (url: string): string => {
-    if (!url) return '';
-    
-    try {
-      // Test if it's a valid URL already
-      new URL(url);
-      return url;
-    } catch (e) {
-      // If it fails, it might be missing the protocol
-      if (url.startsWith('www.') || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-        return `https://${url}`;
-      }
-      return url;
     }
   };
 
@@ -92,9 +82,8 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
               <TableBody>
                 {products.map((product) => {
                   // Debug log for each product's website URL
-                  console.log(`Rendering product ${product.name}, URL: ${product.websiteUrl}`);
+                  console.log(`Rendering product ${product.name}, URL: [${product.websiteUrl}], Valid: ${isValidUrl(product.websiteUrl)}`);
                   
-                  const validatedUrl = validateUrl(product.websiteUrl);
                   return (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
@@ -118,13 +107,13 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                       </TableCell>
                       <TableCell>{product.country || 'Global'}</TableCell>
                       <TableCell>
-                        {validatedUrl ? (
+                        {isValidUrl(product.websiteUrl) ? (
                           <a 
-                            {...getSafeExternalLinkProps({ url: validatedUrl })}
+                            {...getSafeExternalLinkProps({ url: product.websiteUrl })}
                             className="text-blue-600 hover:underline flex items-center"
                           >
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            {truncateUrl(validatedUrl)}
+                            <ExternalLink className="h-4 w-4 mr-1 flex-shrink-0" />
+                            {truncateUrl(product.websiteUrl)}
                           </a>
                         ) : (
                           <span className="text-muted-foreground text-sm">None</span>
