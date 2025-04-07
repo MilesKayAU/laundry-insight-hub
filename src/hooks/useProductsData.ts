@@ -73,8 +73,10 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
       return [];
     }
     
-    // With proper aliasing, we should be able to use the data directly
-    return data;
+    // Normalize the data to match our ProductSubmission type with required fields
+    const normalizedData = data.map(item => normalizeProductFieldNames(item));
+    
+    return normalizedData;
   } catch (error) {
     console.error("Exception fetching products from Supabase:", error);
     throw error; // Rethrow to let React Query handle the error state

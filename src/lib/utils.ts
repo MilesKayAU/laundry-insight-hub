@@ -1,4 +1,3 @@
-
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ProductSubmission } from "@/lib/textExtractor"
@@ -224,10 +223,10 @@ export function normalizeProductFieldNames(product: any): ProductSubmission {
   if (!product) return {} as ProductSubmission;
   
   return {
-    id: product.id,
-    name: product.name,
-    brand: product.brand,
-    type: product.type,
+    id: product.id || '',
+    name: product.name || '',
+    brand: product.brand || '',
+    type: product.type || '',
     description: product.description || '',
     pvaStatus: product.pvaStatus || product.pvastatus || 'needs-verification',
     pvaPercentage: product.pvaPercentage || product.pvapercentage || null,
@@ -238,7 +237,8 @@ export function normalizeProductFieldNames(product: any): ProductSubmission {
     imageUrl: product.imageUrl || product.imageurl || '',
     ingredients: product.ingredients || '',
     brandVerified: product.brandVerified || false,
-    timestamp: product.timestamp || Date.now()
+    brandOwnershipRequested: product.brandOwnershipRequested || false,
+    timestamp: product.timestamp || Date.now(),
+    submittedAt: product.submittedAt || product.createdat || new Date().toISOString()
   };
 }
-

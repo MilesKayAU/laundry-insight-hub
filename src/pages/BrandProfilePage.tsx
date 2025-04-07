@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -164,8 +165,9 @@ const BrandProfilePage = () => {
           console.log(`Found ${productData?.length || 0} products in Supabase`);
           console.log('Raw product data from Supabase:', productData);
           
-          // Set the products directly - aliasing should have already handled the property naming
-          setProducts(productData || []);
+          // Transform the data to match ProductSubmission type using normalizeProductFieldNames
+          const normalizedProducts = (productData || []).map(product => normalizeProductFieldNames(product));
+          setProducts(normalizedProducts);
           
           // Also try a more flexible query with just the brand name (without approved filter)
           console.log('Trying secondary query without approved filter...');
@@ -266,7 +268,9 @@ const BrandProfilePage = () => {
               
               // If we found products here but not in the earlier query, update state
               if (ecoKapsData.length > 0 && products.length === 0) {
-                setProducts(ecoKapsData);
+                // Transform the data to match ProductSubmission type
+                const normalizedProducts = ecoKapsData.map(product => normalizeProductFieldNames(product));
+                setProducts(normalizedProducts);
               }
             }
           }
