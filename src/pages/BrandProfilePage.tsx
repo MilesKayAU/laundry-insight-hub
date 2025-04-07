@@ -39,7 +39,8 @@ import {
   ExternalLink, 
   Image as ImageIcon,
   Upload,
-  BarChart
+  BarChart,
+  Link as LinkIcon
 } from "lucide-react";
 import { 
   getProductSubmissions, 
@@ -83,6 +84,10 @@ const BrandProfilePage = () => {
     company: "",
     message: ""
   });
+
+  // State for product detail dialog
+  const [selectedProduct, setSelectedProduct] = useState<ProductSubmission | null>(null);
+  const [productDetailOpen, setProductDetailOpen] = useState(false);
   
   useEffect(() => {
     if (!brandName) return;
@@ -143,6 +148,11 @@ const BrandProfilePage = () => {
     
     fetchBrandData();
   }, [brandName]);
+
+  const openProductDetail = (product: ProductSubmission) => {
+    setSelectedProduct(product);
+    setProductDetailOpen(true);
+  };
   
   const handleContactSubmit = async () => {
     if (!brandProfile?.id) {
@@ -303,6 +313,7 @@ const BrandProfilePage = () => {
                         <TableHead>PVA Status</TableHead>
                         <TableHead>PVA %</TableHead>
                         <TableHead>Country</TableHead>
+                        <TableHead>Details</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -328,6 +339,17 @@ const BrandProfilePage = () => {
                             {product.pvaPercentage !== null ? `${product.pvaPercentage}%` : 'Unknown'}
                           </TableCell>
                           <TableCell>{product.country || 'Global'}</TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0" 
+                              onClick={() => openProductDetail(product)}
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                              <span className="sr-only">View Details</span>
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -479,6 +501,125 @@ const BrandProfilePage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Product Detail Dialog */}
+      <Dialog open={productDetailOpen} onOpenChange={setProductDetailOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{selectedProduct?.name}</DialogTitle>
+            <DialogDescription>
+              Detailed information about this product
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right font-medium">Brand</Label>
+              <div className="col-span-3">{selectedProduct?.brand}</div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right font-medium">Product Type</Label>
+              <div className="col-span-3">{selectedProduct?.type}</div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right font-medium">PVA Status</Label>
+              <div className="col-span-3">
+                {selectedProduct?.pvaStatus === 'contains' && (
+                  <Badge variant="destructive">Contains PVA</Badge>
+                )}
+                {selectedProduct?.pvaStatus === 'verified-free' && (
+                  <Badge variant="outline" className="bg-green-100 text-green-800">Verified Free</Badge>
+                )}
+                {selectedProduct?.pvaStatus === 'needs-verification' && (
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Needs Verification</Badge>
+                )}
+                {selectedProduct?.pvaStatus === 'inconclusive' && (
+                  <Badge variant="outline" className="bg-gray-100 text-gray-800">Inconclusive</Badge>
+                )}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right font-medium">PVA Percentage</Label>
+              <div className="col-span-3">{selectedProduct?.pvaPercentage !== null ? `${selectedProduct.pvaPercentage}%` : 'Unknown'}</div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right font-medium">Country</Label>
+              <div className="col-span-3">{selectedProduct?.country || 'Global'}</div>
+            </div>
+            
+            {selectedProduct?.description && (
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right font-medium pt-2">Description</Label>
+                <div className="col-span-3">{selectedProduct.description}</div>
+              </div>
+            )}
+            
+            {selectedProduct?.ingredients && (
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right font-medium pt-2">Ingredients</Label>
+                <div className="col-span-3">{selectedProduct.ingredients}</div>
+              </div>
+            )}
+            
+            {selectedProduct?.websiteUrl && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right font-medium">Product URL</Label>
+                <div className="col-span-3">
+                  <a 
+                    href={selectedProduct.websiteUrl} 
+                    target="_blank" 
+                    rel="nofollow noopener noreferrer"
+                    className="text-blue-600 hover:underline flex items-center"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Product Page
+                  </a>
+                </div>
+              </div>
+            )}
+            
+            {selectedProduct?.videoUrl && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right font-medium">Video URL</Label>
+                <div className="col-span-3">
+                  <a 
+                    href={selectedProduct.videoUrl} 
+                    target="_blank" 
+                    rel="nofollow noopener noreferrer"
+                    className="text-blue-600 hover:underline flex items-center"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Watch Video
+                  </a>
+                </div>
+              </div>
+            )}
+            
+            {selectedProduct?.imageUrl && (
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right font-medium pt-2">Product Image</Label>
+                <div className="col-span-3">
+                  <img 
+                    src={selectedProduct.imageUrl} 
+                    alt={selectedProduct.name}
+                    className="max-h-40 rounded-md object-contain"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProductDetailOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
