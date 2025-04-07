@@ -37,27 +37,40 @@ export function getSafeExternalLinkProps({ url }: { url: string }) {
   };
 }
 
-// Validate URLs
+// Validate URLs with more robust checking
 export function isValidUrl(url: string): boolean {
-  if (!url || url === '#' || url.trim() === '') return false;
+  if (!url || url === '#' || url.trim() === '') {
+    console.log(`URL validation for "${url}": invalid - empty or #`);
+    return false;
+  }
   
   try {
     // Handle the case when URL doesn't have a protocol
     const urlToTest = url.startsWith('http') ? url : `https://${url}`;
     new URL(urlToTest);
     
+    // Additional check to ensure URL has actual domain content
+    const domain = new URL(urlToTest).hostname;
+    if (!domain || domain.length < 3) {
+      console.log(`URL validation for "${url}": invalid - domain too short`);
+      return false;
+    }
+    
     // Additional logging for URL validation
     console.log(`URL validation for "${url}": valid`);
     return true;
   } catch (e) {
-    console.warn(`URL validation for "${url}": invalid`, e);
+    console.warn(`URL validation for "${url}": invalid - parse error`, e);
     return false;
   }
 }
 
 // Format URLs for display
 export function formatUrlForDisplay(url: string): string {
-  if (!url || url.trim() === '') return '';
+  if (!url || url.trim() === '') {
+    console.warn("Empty URL provided to formatUrlForDisplay");
+    return '';
+  }
   
   try {
     let processedUrl = url;

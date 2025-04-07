@@ -29,8 +29,11 @@ interface ProductsListProps {
 const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   // Debug logging for entire products array
   console.log(`ProductsList: Rendering ${products.length} products`);
+  
+  // Deep debug for each product's data
   products.forEach(p => {
-    console.log(`Product: ${p.name}, Brand: "${p.brand}", WebsiteURL: "${p.websiteUrl}"`);
+    console.log(`Product Details - Name: ${p.name}, Brand: "${p.brand}", WebsiteURL: "${p.websiteUrl}"`);
+    console.log(`Product Object Structure:`, JSON.stringify(p, null, 2));
   });
 
   return (
@@ -58,8 +61,12 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
               </TableHeader>
               <TableBody>
                 {products.map((product) => {
-                  // Debug log for each product's website URL
-                  console.log(`Rendering product ${product.name}, URL: [${product.websiteUrl}], Valid: ${isValidUrl(product.websiteUrl || '')}`);
+                  // Deep debug for each product's URL
+                  const rawUrl = product.websiteUrl || '';
+                  console.log(`Product ${product.name} - Raw URL: "${rawUrl}"`);
+                  console.log(`URL is empty: ${!rawUrl || rawUrl === ''}`);
+                  console.log(`URL has protocol: ${rawUrl.startsWith('http')}`);
+                  console.log(`URL is valid: ${isValidUrl(rawUrl)}`);
                   
                   return (
                     <TableRow key={product.id}>

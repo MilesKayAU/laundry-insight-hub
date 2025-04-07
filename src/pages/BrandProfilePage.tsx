@@ -105,8 +105,8 @@ const BrandProfilePage = () => {
           setProductImages(imageData || []);
         }
         
-        // Modified query to handle potential leading/trailing spaces in brand names
-        // Using multiple OR conditions to be more inclusive
+        // Multiple approaches to query to account for spacing variation issues
+        console.log('Querying Supabase for products with brand name:', normalizedBrandName);
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
           .select('*')

@@ -27,8 +27,9 @@ const ProductDetailDialog = ({
 }: ProductDetailDialogProps) => {
   if (!product) return null;
   
-  // Log product details for debugging
+  // Extensive logging for debugging
   console.log("Rendering product detail dialog for:", product.name);
+  console.log("Complete product object:", JSON.stringify(product, null, 2));
   console.log("Website URL:", product.websiteUrl || 'No website URL');
   console.log("Video URL:", product.videoUrl || 'No video URL');
   
