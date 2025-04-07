@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ResearchLink } from './utils';
+import { getSafeExternalLinkProps } from "@/lib/utils";
 
 interface ResearchLinkTableProps {
   links: ResearchLink[];
@@ -89,9 +90,7 @@ const ResearchLinkTable: React.FC<ResearchLinkTableProps> = ({
                 </TableCell>
                 <TableCell>
                   <a 
-                    href={link.url} 
-                    target="_blank" 
-                    rel="nofollow noopener noreferrer"
+                    {...getSafeExternalLinkProps({ url: link.url })}
                     className="flex items-center text-blue-600 hover:underline"
                   >
                     <ExternalLink className="h-3 w-3 mr-1" />

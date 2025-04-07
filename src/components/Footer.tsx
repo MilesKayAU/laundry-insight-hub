@@ -1,6 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Mail, Github, Twitter, ShieldCheck } from "lucide-react";
+import { getSafeExternalLinkProps } from "@/lib/utils";
 
 // Custom link component that scrolls to top on click
 const ScrollTopLink = ({ to, children, className }) => {
@@ -18,14 +19,12 @@ const ScrollTopLink = ({ to, children, className }) => {
   );
 };
 
-// New component for external links with proper SEO attributes
+// Component for external links with proper SEO attributes
 const ExternalLink = ({ href, children, className }) => {
   return (
     <a 
-      href={href} 
+      {...getSafeExternalLinkProps({ url: href })}
       className={className}
-      target="_blank" 
-      rel="nofollow noopener noreferrer"
     >
       {children}
     </a>

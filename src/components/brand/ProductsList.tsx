@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Info, LinkIcon } from "lucide-react";
+import { getSafeExternalLinkProps } from "@/lib/utils";
 
 interface ProductsListProps {
   products: ProductSubmission[];
@@ -75,9 +76,7 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                     <TableCell>
                       {product.websiteUrl ? (
                         <a 
-                          href={product.websiteUrl} 
-                          target="_blank" 
-                          rel="nofollow noopener noreferrer"
+                          {...getSafeExternalLinkProps({ url: product.websiteUrl })}
                           className="text-blue-600 hover:underline flex items-center"
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />

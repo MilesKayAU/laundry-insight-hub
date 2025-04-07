@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
+import { getSafeExternalLinkProps } from "@/lib/utils";
 
 interface ProductDetailDialogProps {
   product: ProductSubmission | null;
@@ -94,9 +95,7 @@ const ProductDetailDialog = ({
             <div className="col-span-3">
               {product.websiteUrl ? (
                 <a 
-                  href={product.websiteUrl} 
-                  target="_blank" 
-                  rel="nofollow noopener noreferrer"
+                  {...getSafeExternalLinkProps({ url: product.websiteUrl })}
                   className="text-blue-600 hover:underline flex items-center"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
@@ -113,9 +112,7 @@ const ProductDetailDialog = ({
               <Label className="text-right font-medium">Video URL</Label>
               <div className="col-span-3">
                 <a 
-                  href={product.videoUrl} 
-                  target="_blank" 
-                  rel="nofollow noopener noreferrer"
+                  {...getSafeExternalLinkProps({ url: product.videoUrl })}
                   className="text-blue-600 hover:underline flex items-center"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
@@ -143,9 +140,7 @@ const ProductDetailDialog = ({
           {product.websiteUrl && (
             <Button variant="outline" asChild>
               <a 
-                href={product.websiteUrl}
-                target="_blank"
-                rel="nofollow noopener noreferrer"
+                {...getSafeExternalLinkProps({ url: product.websiteUrl })}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Visit Product Page

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { 
   Card, 
@@ -15,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PaginationControls from "@/components/database/PaginationControls";
+import { getSafeExternalLinkProps } from "@/lib/utils";
 
 interface ResearchLink {
   id: string;
@@ -216,9 +216,7 @@ const ResearchPage = () => {
                   <div className="flex justify-end">
                     <Button variant="outline" asChild>
                       <a 
-                        href={research.url} 
-                        target="_blank" 
-                        rel="nofollow noopener noreferrer"
+                        {...getSafeExternalLinkProps({ url: research.url })}
                         className="flex items-center"
                       >
                         <ExternalLinkIcon className="h-4 w-4 mr-2" />
