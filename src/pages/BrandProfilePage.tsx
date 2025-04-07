@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -115,13 +114,13 @@ const BrandProfilePage = () => {
           console.log(`Found ${productData?.length || 0} products in Supabase`);
           
           // Transform Supabase data to match our ProductSubmission type
-          const transformedProducts = productData?.map(item => ({
+          const transformedProducts: ProductSubmission[] = productData?.map(item => ({
             id: item.id,
             name: item.name,
             brand: item.brand,
             type: item.type,
             description: item.description || '',
-            pvaStatus: item.pvastatus || 'needs-verification',
+            pvaStatus: mapPvaStatus(item.pvastatus || 'needs-verification'),
             pvaPercentage: item.pvapercentage,
             approved: true,
             country: item.country || 'Global',
@@ -142,7 +141,7 @@ const BrandProfilePage = () => {
           console.log(`Found ${brandLocalProducts.length} products in local storage`);
           
           // Combine products from both sources
-          const combinedProducts = [...transformedProducts];
+          const combinedProducts: ProductSubmission[] = [...transformedProducts];
           
           // Add local products that aren't already in the Supabase products
           brandLocalProducts.forEach(localProduct => {
@@ -169,6 +168,20 @@ const BrandProfilePage = () => {
     
     fetchBrandData();
   }, [brandName, toast]);
+
+  // Helper function to convert any string to a valid pvaStatus type
+  const mapPvaStatus = (status: string): ProductSubmission['pvaStatus'] => {
+    switch (status.toLowerCase()) {
+      case 'contains':
+        return 'contains';
+      case 'verified-free':
+        return 'verified-free';
+      case 'inconclusive':
+        return 'inconclusive';
+      default:
+        return 'needs-verification';
+    }
+  };
 
   const openProductDetail = (product: ProductSubmission) => {
     console.log('Opening product detail:', product);
