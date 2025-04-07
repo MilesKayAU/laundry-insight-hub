@@ -19,7 +19,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Info } from "lucide-react";
-import { getSafeExternalLinkProps, isValidUrl, formatUrlForDisplay, formatSafeUrl } from "@/lib/utils";
+import { 
+  getSafeExternalLinkProps, 
+  isValidUrl, 
+  formatUrlForDisplay, 
+  formatSafeUrl,
+  logProductUrlInfo
+} from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ProductsListProps {
@@ -33,14 +39,8 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   // Enhanced logging for debugging
   console.log(`ProductsList: Rendering ${products.length} products`);
   
-  // Better URL debugging
-  products.forEach(p => {
-    console.log(`Product "${p.name}" URL data:`, {
-      websiteUrl: p.websiteUrl || 'None', 
-      isValid: isValidUrl(p.websiteUrl || ''),
-      formattedUrl: formatSafeUrl(p.websiteUrl || '')
-    });
-  });
+  // Debug each product's URL data
+  products.forEach(product => logProductUrlInfo(product, "ProductsList"));
 
   return (
     <Card className="shadow-lg">
@@ -72,11 +72,12 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                   const websiteUrl = hasWebsiteUrl ? product.websiteUrl : '';
                   const isUrlValid = hasWebsiteUrl && isValidUrl(websiteUrl);
                   
-                  // More detailed logging for this specific product's URL
-                  console.log(`Rendering product ${product.name} with URL:`, {
-                    original: websiteUrl,
-                    isValid: isUrlValid,
-                    formatted: isUrlValid ? formatSafeUrl(websiteUrl) : ''
+                  // More detailed logging for URLs
+                  console.log(`Rendering product URL for "${product.name}":`, {
+                    hasWebsiteUrl,
+                    websiteUrl,
+                    isUrlValid,
+                    formattedUrl: isUrlValid ? formatSafeUrl(websiteUrl) : 'Invalid URL'
                   });
                   
                   return (
@@ -106,13 +107,16 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                           <a 
                             {...getSafeExternalLinkProps({ url: websiteUrl })}
                             className="text-blue-600 hover:underline flex items-center"
+                            onClick={() => {
+                              console.log(`Clicking URL: ${websiteUrl}`);
+                            }}
                           >
                             <ExternalLink className="h-4 w-4 mr-1 flex-shrink-0" />
                             {formatUrlForDisplay(websiteUrl)}
                           </a>
                         ) : (
                           <span className="text-muted-foreground text-sm">
-                            {hasWebsiteUrl ? 'Invalid URL' : 'None'}
+                            {hasWebsiteUrl ? `Invalid URL: ${websiteUrl}` : 'None'}
                           </span>
                         )}
                       </TableCell>

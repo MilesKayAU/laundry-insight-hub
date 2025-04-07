@@ -157,3 +157,25 @@ export function createCaseInsensitiveQuery(column: string, value: string): strin
   const normalized = normalizeForDatabaseComparison(value);
   return `${column}.ilike.%${normalized}%`;
 }
+
+// NEW - Normalize a brand slug for URL and DB comparison
+export function normalizeBrandSlug(slug: string): string {
+  if (!slug) return '';
+  return slug.trim().toLowerCase().replace(/\s+/g, '-');
+}
+
+// NEW - Debug utility to log product's URL info
+export function logProductUrlInfo(product: any, prefix: string = ''): void {
+  if (!product) {
+    console.log(`${prefix} Product is null or undefined`);
+    return;
+  }
+  
+  console.log(`${prefix} Product URL Info:`, {
+    name: product.name || 'No name',
+    brand: product.brand || 'No brand',
+    websiteUrl: product.websiteUrl || 'No website URL',
+    isUrlValid: isValidUrl(product.websiteUrl || ''),
+    formattedUrl: formatSafeUrl(product.websiteUrl || '')
+  });
+}

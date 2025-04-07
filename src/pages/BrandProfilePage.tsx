@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -21,7 +22,9 @@ import {
   normalizeBrandName, 
   decodeBrandNameFromUrl,
   normalizeForDatabaseComparison,
-  createCaseInsensitiveQuery
+  createCaseInsensitiveQuery,
+  normalizeBrandSlug,
+  logProductUrlInfo
 } from "@/lib/utils";
 
 interface BrandProfile {
@@ -63,7 +66,14 @@ const BrandProfilePage = () => {
     if (!encodedBrandName) return;
     
     const brandName = decodeBrandNameFromUrl(encodedBrandName);
+    const normalizedBrandSlug = normalizeBrandSlug(brandName);
     const brandNameLowercase = normalizeForDatabaseComparison(brandName);
+    
+    console.log("Brand Profile Page - Request Information:");
+    console.log(`- Requested Brand Slug: "${encodedBrandName}"`);
+    console.log(`- Decoded Brand Name: "${brandName}"`);
+    console.log(`- Normalized Brand Slug: "${normalizedBrandSlug}"`);
+    console.log(`- Normalized for DB comparison: "${brandNameLowercase}"`);
     
     if (brandName !== encodedBrandName && brandName) {
       console.log(`Redirecting from "${encodedBrandName}" to "${brandName}"`);
@@ -75,18 +85,19 @@ const BrandProfilePage = () => {
       setLoading(true);
       try {
         console.log(`Fetching data for brand: "${brandName}"`);
-        console.log(`Brand name lowercase for comparison: "${brandNameLowercase}"`);
-        console.log(`URL parameter was: "${encodedBrandName}"`);
         
+        // First, fetch the brand profile using ilike for case-insensitive comparison
         const { data: profileData, error: profileError } = await supabase
           .from('brand_profiles')
           .select('*')
-          .or(`name.eq.${brandName},name.ilike.${brandNameLowercase}`)
+          .ilike('name', brandName)
           .limit(1)
           .single();
         
         if (profileError) {
           console.error('Error fetching brand profile:', profileError);
+          
+          // Create a placeholder profile since the brand doesn't exist in the database
           setBrandProfile({
             id: '',
             name: brandName || '',
@@ -102,10 +113,11 @@ const BrandProfilePage = () => {
           setBrandProfile(profileData);
         }
         
+        // Fetch product images using ilike for case-insensitive comparison
         const { data: imageData, error: imageError } = await supabase
           .from('product_images')
           .select('*')
-          .or(`brand_name.eq.${brandName},brand_name.ilike.${brandNameLowercase}`)
+          .ilike('brand_name', brandName)
           .eq('status', 'approved');
         
         if (imageError) {
@@ -115,12 +127,13 @@ const BrandProfilePage = () => {
           setProductImages(imageData || []);
         }
         
-        console.log('Querying Supabase for products with brand name (multiple approaches):', brandName);
+        console.log('Querying Supabase for products with brand name:', brandName);
         
+        // Fetch products using ilike for case-insensitive comparison of the brand field
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
           .select('*')
-          .or(`brand.eq.${brandName},brand.ilike.${brandNameLowercase}`)
+          .ilike('brand', brandName)
           .eq('approved', true);
           
         if (productError) {
@@ -132,12 +145,13 @@ const BrandProfilePage = () => {
           });
         } else {
           console.log(`Found ${productData?.length || 0} products in Supabase`);
-          console.log('Raw product data:', productData);
+          console.log('Raw product data from Supabase:', productData);
           
+          // Transform the data into the expected ProductSubmission format
           const transformedProducts: ProductSubmission[] = productData?.map(item => {
             console.log(`Product ${item.name} website URL:`, item.websiteurl || 'No URL provided');
             
-            return {
+            const product = {
               id: item.id,
               name: item.name,
               brand: item.brand ? item.brand.trim() : '',
@@ -154,21 +168,37 @@ const BrandProfilePage = () => {
               brandVerified: false,
               timestamp: Date.now()
             };
+            
+            // Log detailed URL information for each product
+            logProductUrlInfo(product, `Product from Supabase: ${item.name}`);
+            
+            return product;
           }) || [];
           
+          // Also get products from local storage as a fallback
           const allLocalProducts = getProductSubmissions();
+          console.log(`Got ${allLocalProducts.length} total products from local storage`);
+          
+          // Filter local products by brand name using case-insensitive comparison
           const brandLocalProducts = allLocalProducts.filter(product => {
             const productBrand = normalizeForDatabaseComparison(product.brand);
             const searchBrand = brandNameLowercase;
             
-            return (
+            const isMatch = (
               productBrand.includes(searchBrand) || 
               searchBrand.includes(productBrand)
             ) && product.approved;
+            
+            if (isMatch) {
+              logProductUrlInfo(product, `Local product match: ${product.name}`);
+            }
+            
+            return isMatch;
           });
           
-          console.log(`Found ${brandLocalProducts.length} products in local storage`);
+          console.log(`Found ${brandLocalProducts.length} products in local storage for brand "${brandName}"`);
           
+          // Combine products from Supabase and local storage, avoiding duplicates
           const combinedProducts: ProductSubmission[] = [...transformedProducts];
           
           brandLocalProducts.forEach(localProduct => {
@@ -177,7 +207,13 @@ const BrandProfilePage = () => {
             }
           });
           
-          console.log(`Total combined products: ${combinedProducts.length}`);
+          console.log(`Total combined products for brand "${brandName}": ${combinedProducts.length}`);
+          
+          // Final product list debug
+          combinedProducts.forEach(p => {
+            logProductUrlInfo(p, `Final product list: ${p.name}`);
+          });
+          
           setProducts(combinedProducts);
         }
         
@@ -211,6 +247,7 @@ const BrandProfilePage = () => {
 
   const openProductDetail = (product: ProductSubmission) => {
     console.log('Opening product detail:', product);
+    logProductUrlInfo(product, 'Opening detail for');
     setSelectedProduct(product);
     setProductDetailOpen(true);
   };

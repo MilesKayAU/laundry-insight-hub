@@ -12,7 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
-import { getSafeExternalLinkProps, isValidUrl, formatSafeUrl } from "@/lib/utils";
+import { 
+  getSafeExternalLinkProps, 
+  isValidUrl, 
+  formatSafeUrl,
+  logProductUrlInfo
+} from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ProductDetailDialogProps {
@@ -32,7 +37,7 @@ const ProductDetailDialog = ({
   
   // Enhanced logging for debugging
   console.log("ProductDetailDialog: Rendering product detail for:", product.name);
-  console.log("Complete product data:", product);
+  logProductUrlInfo(product, "ProductDetailDialog");
   
   // Better URL validation and preparation
   const websiteUrl = product.websiteUrl || '';
@@ -123,13 +128,16 @@ const ProductDetailDialog = ({
                 <a 
                   {...getSafeExternalLinkProps({ url: websiteUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
+                  onClick={() => {
+                    console.log(`Clicked product URL: ${websiteUrl}`);
+                  }}
                 >
                   <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
                   {websiteUrl}
                 </a>
               ) : (
                 <span className="text-muted-foreground">
-                  {websiteUrl ? 'Invalid product URL' : 'No product URL available'}
+                  {websiteUrl ? `Invalid product URL: ${websiteUrl}` : 'No product URL available'}
                 </span>
               )}
             </div>
@@ -142,6 +150,9 @@ const ProductDetailDialog = ({
                 <a 
                   {...getSafeExternalLinkProps({ url: videoUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
+                  onClick={() => {
+                    console.log(`Clicked video URL: ${videoUrl}`);
+                  }}
                 >
                   <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
                   {videoUrl}
@@ -173,6 +184,9 @@ const ProductDetailDialog = ({
             <Button variant="outline" asChild>
               <a 
                 {...getSafeExternalLinkProps({ url: websiteUrl })}
+                onClick={() => {
+                  console.log(`Navigating to product page: ${websiteUrl}`);
+                }}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Visit Product Page
