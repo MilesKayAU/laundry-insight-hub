@@ -75,6 +75,7 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
     
     // Normalize the data to match our ProductSubmission type with required fields
     const normalizedData = data.map(item => normalizeProductFieldNames(item));
+    console.log("Normalized data sample:", normalizedData.slice(0, 3));
     
     return normalizedData;
   } catch (error) {

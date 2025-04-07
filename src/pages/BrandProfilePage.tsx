@@ -167,6 +167,7 @@ const BrandProfilePage = () => {
           
           // Transform the data to match ProductSubmission type using normalizeProductFieldNames
           const normalizedProducts = (productData || []).map(product => normalizeProductFieldNames(product));
+          console.log('Normalized products:', normalizedProducts);
           setProducts(normalizedProducts);
           
           // Also try a more flexible query with just the brand name (without approved filter)
@@ -270,6 +271,7 @@ const BrandProfilePage = () => {
               if (ecoKapsData.length > 0 && products.length === 0) {
                 // Transform the data to match ProductSubmission type
                 const normalizedProducts = ecoKapsData.map(product => normalizeProductFieldNames(product));
+                console.log('Normalized EcoKaps products:', normalizedProducts);
                 setProducts(normalizedProducts);
               }
             }

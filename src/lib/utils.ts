@@ -1,3 +1,4 @@
+
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ProductSubmission } from "@/lib/textExtractor"
@@ -217,7 +218,7 @@ export function getDomainFromUrl(url: string): string {
   }
 }
 
-// NEW - Normalize product data field names
+// UPDATED - Normalize product data field names with ALL required fields
 // This helps handle inconsistencies between camelCase in TypeScript and lowercase in DB
 export function normalizeProductFieldNames(product: any): ProductSubmission {
   if (!product) return {} as ProductSubmission;
@@ -236,9 +237,16 @@ export function normalizeProductFieldNames(product: any): ProductSubmission {
     videoUrl: product.videoUrl || product.videourl || '',
     imageUrl: product.imageUrl || product.imageurl || '',
     ingredients: product.ingredients || '',
-    brandVerified: product.brandVerified || false,
-    brandOwnershipRequested: product.brandOwnershipRequested || false,
+    brandVerified: product.brandVerified !== undefined ? product.brandVerified : 
+                  (product.brandverified !== undefined ? product.brandverified : false),
+    brandOwnershipRequested: product.brandOwnershipRequested !== undefined ? product.brandOwnershipRequested : 
+                            (product.brandownershiprequested !== undefined ? product.brandownershiprequested : false),
     timestamp: product.timestamp || Date.now(),
-    submittedAt: product.submittedAt || product.createdat || new Date().toISOString()
+    submittedAt: product.submittedAt || product.createdat || product.submittedat || new Date().toISOString(),
+    dateSubmitted: product.dateSubmitted || product.createdat || product.submittedat || new Date().toISOString(),
+    brandContactEmail: product.brandContactEmail || product.brandcontactemail || '',
+    brandOwnershipRequestDate: product.brandOwnershipRequestDate || product.brandownershiprequestdate || '',
+    brandVerificationDate: product.brandVerificationDate || product.brandverificationdate || '',
+    uploadedBy: product.uploadedBy || product.owner_id || ''
   };
 }
