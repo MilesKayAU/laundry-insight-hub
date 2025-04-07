@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeProductFieldNames } from '@/lib/utils';
 
 // Define the ProductDetails interface to match the one in ProductDetailsDialog
 interface ProductDetails {
@@ -94,7 +95,17 @@ export const useProductEditing = (onSuccess?: () => void) => {
         country: productDetails.country,
         ingredients: productDetails.ingredients,
         pvaStatus: productDetails.pvaStatus as any,
-        type: productDetails.type
+        type: productDetails.type,
+        // Preserve existing values for required fields if they exist
+        brandVerified: selectedProduct.brandVerified,
+        brandOwnershipRequested: selectedProduct.brandOwnershipRequested,
+        timestamp: selectedProduct.timestamp || Date.now(),
+        submittedAt: selectedProduct.submittedAt || new Date().toISOString(),
+        dateSubmitted: selectedProduct.dateSubmitted || new Date().toISOString(),
+        brandContactEmail: selectedProduct.brandContactEmail || '',
+        brandOwnershipRequestDate: selectedProduct.brandOwnershipRequestDate || '',
+        brandVerificationDate: selectedProduct.brandVerificationDate || '',
+        uploadedBy: selectedProduct.uploadedBy || ''
       };
 
       console.log("Product ID being updated:", selectedProduct.id);
