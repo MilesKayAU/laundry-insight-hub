@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { ProductSubmission, updateProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
@@ -109,10 +108,9 @@ export const useProductEditing = (onSuccess?: () => void) => {
         brandContactEmail: selectedProduct.brandContactEmail || '',
         brandOwnershipRequestDate: selectedProduct.brandOwnershipRequestDate || '',
         brandVerificationDate: selectedProduct.brandVerificationDate || '',
-        uploadedBy: selectedProduct.uploadedBy || '',
+        uploadedBy: selectedProduct.uploadedBy || ''
         
-        // Add updated timestamp for tracking modifications
-        updatedat: new Date().toISOString()
+        // Removed 'updatedat' property as it's not in the ProductSubmission interface
       };
 
       console.log("Product ID being updated:", selectedProduct.id);
@@ -136,7 +134,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
             videourl: updatedData.videoUrl,
             imageurl: updatedData.imageUrl,
             ingredients: updatedData.ingredients,
-            updatedat: new Date().toISOString()
+            updatedat: new Date().toISOString() // This is okay here as it's the Supabase column name
           })
           .eq('id', selectedProduct.id);
           
