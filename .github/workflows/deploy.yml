@@ -32,7 +32,10 @@ jobs:
           npm i
           
           echo "🧹 Clearing build cache..."
-          rm -rf .cache dist build
+          rm -rf .cache dist build .next
+
+          echo "🏗️ Building the application..."
+          npm run build
 
           echo "🗑️ Clearing PM2 cache..."
           pm2 flush laundryhub

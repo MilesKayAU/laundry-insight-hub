@@ -102,14 +102,19 @@ export const useProductEditing = (onSuccess?: () => void) => {
         ? parseFloat(productDetails.pvaPercentage) 
         : null;
       
+      // Validate pvaStatus is a valid enum value
+      const pvaStatus = ['contains', 'verified-free', 'needs-verification', 'inconclusive'].includes(productDetails.pvaStatus)
+        ? productDetails.pvaStatus as 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive'
+        : 'needs-verification';
+        
       // Prepare data for Supabase (simplified - the service handles field name mapping)
       const supabaseData = {
         brand: productDetails.brand,
         name: productDetails.name,
         description: productDetails.description,
         type: productDetails.type,
-        pvaStatus: productDetails.pvaStatus,
-        pvaPercentage: pvaPercentage,
+        pvaStatus,
+        pvaPercentage,
         country: productDetails.country,
         websiteUrl: productDetails.websiteUrl,
         videoUrl: productDetails.videoUrl,
@@ -125,7 +130,7 @@ export const useProductEditing = (onSuccess?: () => void) => {
       // Log Supabase result details
       console.log("Supabase update result:", supabaseResult);
       
-      // Step 2: Update in localStorage with same data  
+      // Step 2: Update in localStorage with same data
       const localData = {
         ...supabaseData,
         // Preserve required fields from the original product
