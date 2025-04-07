@@ -48,7 +48,7 @@ const ProductDetailDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{product.name}</DialogTitle>
+          <DialogTitle className="text-xl">{product.name}</DialogTitle>
           <DialogDescription>
             Detailed information about this product
           </DialogDescription>
@@ -114,8 +114,9 @@ const ProductDetailDialog = ({
                 <a 
                   {...getSafeExternalLinkProps({ url: websiteUrl })}
                   className="text-blue-600 hover:underline flex items-center break-all"
-                  onClick={() => {
+                  onClick={(e) => {
                     if (!hasValidWebsiteUrl) {
+                      e.preventDefault();
                       toast({
                         title: "Invalid URL",
                         description: "This product doesn't have a valid website URL.",

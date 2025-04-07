@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +18,10 @@ import {
   ProductDetailDialog,
   ContactBrandDialog
 } from "@/components/brand";
-import { normalizeBrandName } from "@/lib/utils";
+import { 
+  normalizeBrandName, 
+  decodeBrandNameFromUrl
+} from "@/lib/utils";
 
 interface BrandProfile {
   id: string;
@@ -41,9 +44,10 @@ interface ProductImage {
 }
 
 const BrandProfilePage = () => {
-  const { brandName } = useParams<{ brandName: string }>();
+  const { brandName: encodedBrandName } = useParams<{ brandName: string }>();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   
   const [brandProfile, setBrandProfile] = useState<BrandProfile | null>(null);
   const [products, setProducts] = useState<ProductSubmission[]>([]);
@@ -56,20 +60,30 @@ const BrandProfilePage = () => {
   const [productDetailOpen, setProductDetailOpen] = useState(false);
   
   useEffect(() => {
-    if (!brandName) return;
+    if (!encodedBrandName) return;
+    
+    // Fix: Properly decode and normalize the brand name from URL
+    const brandName = decodeBrandNameFromUrl(encodedBrandName);
+    
+    // Redirect if the normalized brand name is different from the URL parameter
+    // This fixes URL issues like spaces at the beginning or end
+    if (brandName !== encodedBrandName && brandName) {
+      console.log(`Redirecting from "${encodedBrandName}" to "${brandName}"`);
+      navigate(`/brand/${encodeURIComponent(brandName)}`, { replace: true });
+      return;
+    }
     
     const fetchBrandData = async () => {
       setLoading(true);
       try {
-        console.log(`Fetching data for brand: ${brandName}`);
-        const normalizedBrandName = normalizeBrandName(brandName);
-        console.log(`Normalized brand name: "${normalizedBrandName}"`);
+        console.log(`Fetching data for brand: "${brandName}"`);
+        console.log(`URL parameter was: "${encodedBrandName}"`);
         
         // Fetch brand profile from Supabase
         const { data: profileData, error: profileError } = await supabase
           .from('brand_profiles')
           .select('*')
-          .eq('name', normalizedBrandName)
+          .eq('name', brandName)
           .single();
         
         if (profileError) {
@@ -78,7 +92,7 @@ const BrandProfilePage = () => {
           console.log('Brand not found in database, creating placeholder');
           setBrandProfile({
             id: '',
-            name: normalizedBrandName || '',
+            name: brandName || '',
             description: null,
             website: null,
             contact_email: null,
@@ -95,7 +109,7 @@ const BrandProfilePage = () => {
         const { data: imageData, error: imageError } = await supabase
           .from('product_images')
           .select('*')
-          .eq('brand_name', normalizedBrandName)
+          .eq('brand_name', brandName)
           .eq('status', 'approved');
         
         if (imageError) {
@@ -106,18 +120,25 @@ const BrandProfilePage = () => {
         }
         
         // Multiple approaches to query to account for spacing variation issues
-        console.log('Querying Supabase for products with brand name:', normalizedBrandName);
+        console.log('Querying Supabase for products with brand name:', brandName);
+        
+        // Use multiple ilike conditions to handle spacing variations and exact match
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
           .select('*')
-          .or(`brand.ilike.${normalizedBrandName},brand.ilike. ${normalizedBrandName},brand.ilike.${normalizedBrandName} `)
+          .or(`brand.ilike.${brandName},brand.eq.${brandName}`)
           .eq('approved', true);
           
         if (productError) {
           console.error('Error fetching products from Supabase:', productError);
+          toast({
+            title: "Database Error",
+            description: "Could not fetch product data from the database.",
+            variant: "destructive"
+          });
         } else {
           console.log(`Found ${productData?.length || 0} products in Supabase`);
-          console.log('Raw product data sample:', productData?.slice(0, 3));
+          console.log('Raw product data:', productData);
           
           // Transform Supabase data to match our ProductSubmission type
           const transformedProducts: ProductSubmission[] = productData?.map(item => {
@@ -146,7 +167,7 @@ const BrandProfilePage = () => {
           // Also get products from local storage as a fallback
           const allLocalProducts = getProductSubmissions();
           const brandLocalProducts = allLocalProducts.filter(
-            product => normalizeBrandName(product.brand).toLowerCase() === normalizedBrandName?.toLowerCase() && product.approved
+            product => normalizeBrandName(product.brand).toLowerCase() === brandName?.toLowerCase() && product.approved
           );
           
           console.log(`Found ${brandLocalProducts.length} products in local storage`);
@@ -162,7 +183,6 @@ const BrandProfilePage = () => {
           });
           
           console.log(`Total combined products: ${combinedProducts.length}`);
-          console.log('Combined products sample:', combinedProducts.slice(0, 3));
           setProducts(combinedProducts);
         }
         
@@ -179,7 +199,7 @@ const BrandProfilePage = () => {
     };
     
     fetchBrandData();
-  }, [brandName, toast]);
+  }, [encodedBrandName, toast, navigate]);
 
   // Helper function to convert any string to a valid pvaStatus type
   const mapPvaStatus = (status: string): ProductSubmission['pvaStatus'] => {

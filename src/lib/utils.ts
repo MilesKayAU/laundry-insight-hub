@@ -109,7 +109,7 @@ export function formatUrlForDisplay(url: string): string {
   }
 }
 
-// Enhanced brand name normalization
+// Enhanced brand name normalization - fixes issue with leading/trailing spaces
 export function normalizeBrandName(brand: string): string {
   if (!brand) return '';
   
@@ -118,4 +118,32 @@ export function normalizeBrandName(brand: string): string {
   console.log(`Normalized brand name from "${brand}" to "${normalized}"`);
   
   return normalized;
+}
+
+// Encoding and decoding for URL parameters - new function to help with URL handling
+export function encodeBrandNameForUrl(brandName: string): string {
+  if (!brandName) return '';
+  
+  const normalized = normalizeBrandName(brandName);
+  const encoded = encodeURIComponent(normalized);
+  console.log(`Encoded brand name "${normalized}" to "${encoded}" for URL`);
+  
+  return encoded;
+}
+
+// Decoding for URL parameters - new function to help with URL handling
+export function decodeBrandNameFromUrl(encodedName: string): string {
+  if (!encodedName) return '';
+  
+  try {
+    const decoded = decodeURIComponent(encodedName);
+    const normalized = normalizeBrandName(decoded);
+    console.log(`Decoded URL parameter "${encodedName}" to brand name "${normalized}"`);
+    
+    return normalized;
+  } catch (e) {
+    console.warn(`Error decoding brand name from URL: ${encodedName}`, e);
+    // Try to recover by trimming spaces at least
+    return encodedName.trim();
+  }
 }

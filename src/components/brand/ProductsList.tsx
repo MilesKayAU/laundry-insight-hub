@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Info } from "lucide-react";
-import { getSafeExternalLinkProps, isValidUrl, formatUrlForDisplay, normalizeBrandName } from "@/lib/utils";
+import { getSafeExternalLinkProps, isValidUrl, formatUrlForDisplay } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ProductsListProps {
@@ -44,7 +44,7 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   });
 
   return (
-    <Card>
+    <Card className="shadow-lg">
       <CardHeader>
         <CardTitle>Products</CardTitle>
         <CardDescription>
@@ -57,13 +57,13 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>PVA Status</TableHead>
-                  <TableHead>PVA %</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>URL</TableHead>
-                  <TableHead>Details</TableHead>
+                  <TableHead className="font-semibold">Product</TableHead>
+                  <TableHead className="font-semibold">Type</TableHead>
+                  <TableHead className="font-semibold">PVA Status</TableHead>
+                  <TableHead className="font-semibold">PVA %</TableHead>
+                  <TableHead className="font-semibold">Country</TableHead>
+                  <TableHead className="font-semibold">URL</TableHead>
+                  <TableHead className="font-semibold">Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -105,9 +105,10 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                           <a 
                             {...getSafeExternalLinkProps({ url: rawUrl })}
                             className="text-blue-600 hover:underline flex items-center"
-                            onClick={() => {
+                            onClick={(e) => {
                               console.log(`Clicked URL for ${product.name}: ${rawUrl}`);
                               if (!hasValidUrl) {
+                                e.preventDefault();
                                 toast({
                                   title: "Invalid URL",
                                   description: "This product doesn't have a valid website URL.",
@@ -144,8 +145,14 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
             </Table>
           </div>
         ) : (
-          <div className="text-center py-10 text-muted-foreground">
-            No products available for this brand
+          <div className="text-center py-10 text-muted-foreground bg-gray-50 rounded-md border">
+            <p className="text-lg font-medium">No products available for this brand</p>
+            <p className="mt-2 text-sm">Products may be pending verification or not yet in our database.</p>
+            <Link to="/contribute" className="mt-4 inline-block">
+              <Button variant="outline" size="sm" className="mt-2">
+                Contribute Product Data
+              </Button>
+            </Link>
           </div>
         )}
       </CardContent>
