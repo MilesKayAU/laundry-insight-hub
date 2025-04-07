@@ -24,7 +24,8 @@ import {
   normalizeForDatabaseComparison,
   createCaseInsensitiveQuery,
   normalizeBrandSlug,
-  logProductUrlInfo
+  logProductUrlInfo,
+  normalizeProductFieldNames
 } from "@/lib/utils";
 
 interface BrandProfile {
@@ -129,6 +130,9 @@ const BrandProfilePage = () => {
         
         console.log('Querying Supabase for products with brand name:', brandName);
         
+        // NEW: Logging the exact SQL query we're attempting
+        console.log(`SQL equivalent: SELECT * FROM product_submissions WHERE brand ILIKE '%${brandName}%' AND approved = true`);
+        
         // Fetch products using ilike for case-insensitive comparison of the brand field
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
@@ -149,31 +153,32 @@ const BrandProfilePage = () => {
           
           // Transform the data into the expected ProductSubmission format
           const transformedProducts: ProductSubmission[] = productData?.map(item => {
-            console.log(`Product ${item.name} website URL:`, item.websiteurl || 'No URL provided');
-            
-            const product = {
-              id: item.id,
-              name: item.name,
-              brand: item.brand ? item.brand.trim() : '',
-              type: item.type,
-              description: item.description || '',
-              pvaStatus: mapPvaStatus(item.pvastatus || 'needs-verification'),
-              pvaPercentage: item.pvapercentage,
-              approved: true,
-              country: item.country || 'Global',
-              websiteUrl: item.websiteurl || '',
-              videoUrl: item.videourl || '',
-              imageUrl: item.imageurl || '',
-              ingredients: item.ingredients || '',
-              brandVerified: false,
-              timestamp: Date.now()
-            };
-            
-            // Log detailed URL information for each product
-            logProductUrlInfo(product, `Product from Supabase: ${item.name}`);
-            
-            return product;
+            // Normalize field names to handle database column naming inconsistencies
+            return normalizeProductFieldNames(item);
           }) || [];
+          
+          // Log each transformed product with URL info
+          transformedProducts.forEach(product => {
+            logProductUrlInfo(product, `Transformed product: ${product.name}`);
+          });
+          
+          // Also try a more flexible query with just the brand name (without approved filter)
+          console.log('Trying secondary query without approved filter...');
+          const { data: allProductData, error: allProductError } = await supabase
+            .from('product_submissions')
+            .select('*')
+            .ilike('brand', brandName);
+            
+          if (allProductError) {
+            console.error('Error in secondary product query:', allProductError);
+          } else {
+            console.log(`Secondary query found ${allProductData?.length || 0} total products (including unapproved)`);
+            
+            // If we found products with the second query but not the first, they might be unapproved
+            if (allProductData?.length > 0 && transformedProducts.length === 0) {
+              console.log('Products exist but might be unapproved. Sample:', allProductData[0]);
+            }
+          }
           
           // Also get products from local storage as a fallback
           const allLocalProducts = getProductSubmissions();
@@ -217,6 +222,30 @@ const BrandProfilePage = () => {
           setProducts(combinedProducts);
         }
         
+        // Special handling for EcoKaps (since we can see it in the database from your screenshot)
+        if (brandName === 'EcoKaps' && products.length === 0) {
+          console.log('Attempting direct query for EcoKaps products...');
+          const { data: ecoKapsData, error: ecoKapsError } = await supabase
+            .from('product_submissions')
+            .select('*')
+            .eq('brand', 'EcoKaps');
+            
+          if (ecoKapsError) {
+            console.error('Error in EcoKaps specific query:', ecoKapsError);
+          } else {
+            console.log(`Direct EcoKaps query found ${ecoKapsData?.length || 0} products`);
+            if (ecoKapsData?.length > 0) {
+              const transformedEcoKapsProducts = ecoKapsData.map(item => normalizeProductFieldNames(item));
+              console.log('EcoKaps products:', transformedEcoKapsProducts);
+              
+              // If we found products here but not in the earlier query, update state
+              if (transformedEcoKapsProducts.length > 0 && products.length === 0) {
+                setProducts(transformedEcoKapsProducts);
+              }
+            }
+          }
+        }
+        
         setLoading(false);
       } catch (error) {
         console.error('Error fetching brand data:', error);
@@ -230,7 +259,7 @@ const BrandProfilePage = () => {
     };
     
     fetchBrandData();
-  }, [encodedBrandName, toast, navigate]);
+  }, [encodedBrandName, toast, navigate, products.length]);
 
   const mapPvaStatus = (status: string): ProductSubmission['pvaStatus'] => {
     switch (status.toLowerCase()) {

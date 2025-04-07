@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { isLiveDataOnlyMode } from "@/utils/supabaseUtils";
+import { normalizeProductFieldNames } from "@/lib/utils";
 
 // Define custom typing for product submissions from Supabase
 type SupabaseProductSubmission = {
@@ -56,22 +57,7 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
     }
     
     // Transform the Supabase data to match our ProductSubmission type
-    const transformedData = data.map(item => ({
-      id: item.id,
-      name: item.name,
-      brand: item.brand,
-      type: item.type,
-      description: item.description || '',
-      pvaStatus: item.pvastatus || 'needs-verification',
-      pvaPercentage: item.pvapercentage || null,
-      approved: typeof item.approved === 'boolean' ? item.approved : false, // Default to false if not specified
-      country: item.country || 'Global',
-      websiteUrl: item.websiteurl || '',
-      videoUrl: item.videourl || '',
-      imageUrl: item.imageurl || '',
-      brandVerified: false,
-      timestamp: Date.now()
-    }));
+    const transformedData = data.map(item => normalizeProductFieldNames(item));
     
     console.log("Transformed Supabase data count:", transformedData.length);
     console.log("Approval status after transform:", transformedData.slice(0, 10).map(item => `${item.brand} ${item.name}: ${item.approved}`));
@@ -296,6 +282,7 @@ export const useProductsData = (selectedCountry: string) => {
       
       // First update in Supabase if possible
       try {
+        // Transform field names to match the database column names
         const { error } = await supabase
           .from('product_submissions')
           .update({
