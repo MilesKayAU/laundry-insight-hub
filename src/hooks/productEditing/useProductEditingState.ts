@@ -1,14 +1,9 @@
 
 import { useState } from 'react';
 import { ProductDetails, EditingState } from './types';
-import { mapProductToDetails } from './utils';
 import { useToast } from '@/hooks/use-toast';
 
-export function useProductEditingState(): EditingState & {
-  setSelectedProduct: (product: any) => void;
-  setProductDetails: (details: ProductDetails) => void;
-  setIsSaving: (saving: boolean) => void;
-} {
+export function useProductEditingState(): EditingState {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);

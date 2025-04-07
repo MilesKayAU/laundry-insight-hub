@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { updateProductInSupabase, updateProductInLocalStorage, deleteProduct } from '@/lib/dataService';
 import { prepareProductDataForUpdate, mapProductToDetails } from './utils';
@@ -9,7 +8,7 @@ interface UseProductOperationsProps {
   productDetails: ProductDetails;
   setIsDialogOpen: (open: boolean) => void;
   setSelectedProduct: (product: any) => void;
-  setProductDetails: (details: ProductDetails) => void;
+  setProductDetails: (details: ProductDetails | ((prev: ProductDetails) => ProductDetails)) => void;
   setIsSaving: (saving: boolean) => void;
   onSuccess?: () => void;
 }
@@ -190,7 +189,6 @@ export function useProductOperations({
   };
 
   return {
-    setIsDialogOpen,
     handleViewDetails,
     handleDetailsChange,
     handleSaveChanges,

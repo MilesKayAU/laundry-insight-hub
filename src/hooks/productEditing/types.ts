@@ -18,14 +18,17 @@ export interface EditingState {
   selectedProduct: any | null;
   isSaving: boolean;
   productDetails: ProductDetails;
+  setIsDialogOpen: (open: boolean) => void;
+  setSelectedProduct: (product: any) => void;
+  setProductDetails: (details: ProductDetails | ((prev: ProductDetails) => ProductDetails)) => void;
+  setIsSaving: (saving: boolean) => void;
 }
 
 export interface ProductEditingActions {
-  setIsDialogOpen: (open: boolean) => void;
   handleViewDetails: (product: any) => void;
   handleDetailsChange: (details: Partial<ProductDetails>) => void;
   handleSaveChanges: () => Promise<void>;
   handleDeleteProduct: (productId: string) => Promise<boolean>;
 }
 
-export type ProductEditingHookReturn = EditingState & ProductEditingActions;
+export type ProductEditingHookReturn = Omit<EditingState, 'setSelectedProduct' | 'setProductDetails' | 'setIsSaving'> & ProductEditingActions;
