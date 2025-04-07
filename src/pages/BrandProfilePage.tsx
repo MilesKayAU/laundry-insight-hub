@@ -60,6 +60,8 @@ const BrandProfilePage = () => {
     const fetchBrandData = async () => {
       setLoading(true);
       try {
+        console.log(`Fetching data for brand: ${brandName}`);
+        
         // Fetch brand profile from Supabase
         const { data: profileData, error: profileError } = await supabase
           .from('brand_profiles')
@@ -68,6 +70,7 @@ const BrandProfilePage = () => {
           .single();
         
         if (profileError) {
+          console.error('Error fetching brand profile:', profileError);
           // If brand doesn't exist in database yet, create a placeholder
           console.log('Brand not found in database, creating placeholder');
           setBrandProfile({
@@ -81,6 +84,7 @@ const BrandProfilePage = () => {
             updated_at: new Date().toISOString()
           });
         } else {
+          console.log('Brand profile found:', profileData);
           setBrandProfile(profileData);
         }
         
@@ -94,27 +98,80 @@ const BrandProfilePage = () => {
         if (imageError) {
           console.error('Error fetching product images:', imageError);
         } else {
+          console.log(`Found ${imageData?.length || 0} product images`);
           setProductImages(imageData || []);
         }
         
-        // Get product data from local storage
-        const allProducts = getProductSubmissions();
-        const brandProducts = allProducts.filter(
-          product => product.brand.toLowerCase() === brandName?.toLowerCase() && product.approved
-        );
-        setProducts(brandProducts);
+        // Fetch products directly from Supabase
+        const { data: productData, error: productError } = await supabase
+          .from('product_submissions')
+          .select('*')
+          .eq('brand', brandName)
+          .eq('approved', true);
+          
+        if (productError) {
+          console.error('Error fetching products from Supabase:', productError);
+        } else {
+          console.log(`Found ${productData?.length || 0} products in Supabase`);
+          
+          // Transform Supabase data to match our ProductSubmission type
+          const transformedProducts = productData?.map(item => ({
+            id: item.id,
+            name: item.name,
+            brand: item.brand,
+            type: item.type,
+            description: item.description || '',
+            pvaStatus: item.pvastatus || 'needs-verification',
+            pvaPercentage: item.pvapercentage,
+            approved: true,
+            country: item.country || 'Global',
+            websiteUrl: item.websiteurl || '',
+            videoUrl: item.videourl || '',
+            imageUrl: item.imageurl || '',
+            ingredients: item.ingredients || '',
+            brandVerified: false,
+            timestamp: Date.now()
+          })) || [];
+          
+          // Also get products from local storage as a fallback
+          const allLocalProducts = getProductSubmissions();
+          const brandLocalProducts = allLocalProducts.filter(
+            product => product.brand.toLowerCase() === brandName?.toLowerCase() && product.approved
+          );
+          
+          console.log(`Found ${brandLocalProducts.length} products in local storage`);
+          
+          // Combine products from both sources
+          const combinedProducts = [...transformedProducts];
+          
+          // Add local products that aren't already in the Supabase products
+          brandLocalProducts.forEach(localProduct => {
+            if (!combinedProducts.some(p => p.id === localProduct.id)) {
+              combinedProducts.push(localProduct);
+            }
+          });
+          
+          console.log(`Total combined products: ${combinedProducts.length}`);
+          setProducts(combinedProducts);
+        }
         
         setLoading(false);
       } catch (error) {
         console.error('Error fetching brand data:', error);
+        toast({
+          title: "Error loading brand data",
+          description: "There was a problem loading the brand information. Please try again.",
+          variant: "destructive"
+        });
         setLoading(false);
       }
     };
     
     fetchBrandData();
-  }, [brandName]);
+  }, [brandName, toast]);
 
   const openProductDetail = (product: ProductSubmission) => {
+    console.log('Opening product detail:', product);
     setSelectedProduct(product);
     setProductDetailOpen(true);
   };
@@ -167,10 +224,22 @@ const BrandProfilePage = () => {
         </TabsList>
         
         <TabsContent value="products">
-          <ProductsList 
-            products={products}
-            onOpenProductDetail={openProductDetail}
-          />
+          {products.length > 0 ? (
+            <ProductsList 
+              products={products}
+              onOpenProductDetail={openProductDetail}
+            />
+          ) : (
+            <div className="text-center py-10 text-muted-foreground bg-white rounded-md shadow p-6">
+              <p>No products found for {brandProfile.name}</p>
+              <p className="mt-2 text-sm">Please check back later or contribute data about this brand.</p>
+              <Link to="/contribute" className="mt-4 inline-block">
+                <button className="bg-primary text-white px-4 py-2 mt-2 rounded text-sm">
+                  Contribute Product Data
+                </button>
+              </Link>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="gallery">

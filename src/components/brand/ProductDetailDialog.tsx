@@ -96,9 +96,9 @@ const ProductDetailDialog = ({
               {product.websiteUrl ? (
                 <a 
                   {...getSafeExternalLinkProps({ url: product.websiteUrl })}
-                  className="text-blue-600 hover:underline flex items-center"
+                  className="text-blue-600 hover:underline flex items-center break-all"
                 >
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
                   {product.websiteUrl}
                 </a>
               ) : (
@@ -113,9 +113,9 @@ const ProductDetailDialog = ({
               <div className="col-span-3">
                 <a 
                   {...getSafeExternalLinkProps({ url: product.videoUrl })}
-                  className="text-blue-600 hover:underline flex items-center"
+                  className="text-blue-600 hover:underline flex items-center break-all"
                 >
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
                   {product.videoUrl}
                 </a>
               </div>

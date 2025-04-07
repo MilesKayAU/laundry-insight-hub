@@ -27,6 +27,24 @@ interface ProductsListProps {
 }
 
 const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
+  // Function to truncate URL for display
+  const truncateUrl = (url: string) => {
+    if (!url) return '';
+    try {
+      const urlObj = new URL(url);
+      let displayUrl = urlObj.hostname;
+      if (urlObj.pathname !== '/' && urlObj.pathname.length > 1) {
+        displayUrl += urlObj.pathname.length > 15 
+          ? urlObj.pathname.substring(0, 15) + '...' 
+          : urlObj.pathname;
+      }
+      return displayUrl;
+    } catch (e) {
+      // If URL parsing fails, just return a shortened version of the original
+      return url.length > 25 ? url.substring(0, 25) + '...' : url;
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -80,7 +98,7 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                           className="text-blue-600 hover:underline flex items-center"
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />
-                          Visit
+                          {truncateUrl(product.websiteUrl)}
                         </a>
                       ) : (
                         <span className="text-muted-foreground text-sm">None</span>
