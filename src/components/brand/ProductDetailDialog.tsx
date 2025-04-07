@@ -40,9 +40,9 @@ const ProductDetailDialog = ({
   console.log("ProductDetailDialog: Rendering product detail for:", product.name);
   logProductUrlInfo(product, "ProductDetailDialog");
   
-  // Better URL validation and preparation - handle both property naming styles
-  const websiteUrl = product.websiteUrl || product.websiteurl || '';
-  const videoUrl = product.videoUrl || product.videourl || '';
+  // Better URL validation and preparation - use correct property names
+  const websiteUrl = product.websiteUrl || '';
+  const videoUrl = product.videoUrl || '';
   
   // Validate URLs
   const parsedWebsiteUrl = parseUrl(websiteUrl);

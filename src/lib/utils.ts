@@ -1,6 +1,7 @@
 
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { ProductSubmission } from "@/lib/textExtractor"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -166,7 +167,7 @@ export function logProductUrlInfo(product: any, prefix: string = ''): void {
   }
   
   // Extract the website URL with fallback handling
-  const websiteUrl = product.websiteUrl || product.websiteurl || '';
+  const websiteUrl = product.websiteUrl || '';
   
   console.log(`${prefix} Product URL Info:`, {
     name: product.name || 'No name',
@@ -216,3 +217,28 @@ export function getDomainFromUrl(url: string): string {
     return '';
   }
 }
+
+// NEW - Normalize product data field names
+// This helps handle inconsistencies between camelCase in TypeScript and lowercase in DB
+export function normalizeProductFieldNames(product: any): ProductSubmission {
+  if (!product) return {} as ProductSubmission;
+  
+  return {
+    id: product.id,
+    name: product.name,
+    brand: product.brand,
+    type: product.type,
+    description: product.description || '',
+    pvaStatus: product.pvaStatus || product.pvastatus || 'needs-verification',
+    pvaPercentage: product.pvaPercentage || product.pvapercentage || null,
+    approved: product.approved !== undefined ? product.approved : true,
+    country: product.country || 'Global',
+    websiteUrl: product.websiteUrl || product.websiteurl || '',
+    videoUrl: product.videoUrl || product.videourl || '',
+    imageUrl: product.imageUrl || product.imageurl || '',
+    ingredients: product.ingredients || '',
+    brandVerified: product.brandVerified || false,
+    timestamp: product.timestamp || Date.now()
+  };
+}
+

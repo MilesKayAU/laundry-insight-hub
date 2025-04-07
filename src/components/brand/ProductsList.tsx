@@ -73,7 +73,7 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
               <TableBody>
                 {products.map((product) => {
                   // Get and validate the website URL
-                  const rawWebsiteUrl = product.websiteUrl || product.websiteurl || '';
+                  const rawWebsiteUrl = product.websiteUrl || '';
                   const isUrlValid = rawWebsiteUrl.trim() !== '' && isValidUrl(rawWebsiteUrl);
                   const parsedUrl = parseUrl(rawWebsiteUrl);
                   
