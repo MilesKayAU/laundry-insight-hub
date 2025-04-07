@@ -62,6 +62,7 @@ const ProductDetailsDialog = ({
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      console.log("Saving product details with the following data:", details);
       await onSave();
     } catch (error) {
       console.error("Error saving product:", error);

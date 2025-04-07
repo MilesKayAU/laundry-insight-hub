@@ -83,8 +83,9 @@ export const useProductEditing = (onSuccess?: () => void) => {
       const pvaPercentage = productDetails.pvaPercentage ? 
         parseFloat(productDetails.pvaPercentage) : null;
       
-      // Prepare updated product data ensuring all fields are included
+      // Prepare updated product data ensuring all required fields are preserved
       const updatedData: Partial<ProductSubmission> = {
+        // Fields from form
         brand: productDetails.brand,
         name: productDetails.name,
         description: productDetails.description,
@@ -96,16 +97,22 @@ export const useProductEditing = (onSuccess?: () => void) => {
         ingredients: productDetails.ingredients,
         pvaStatus: productDetails.pvaStatus as any,
         type: productDetails.type,
-        // Preserve existing values for required fields if they exist
-        brandVerified: selectedProduct.brandVerified,
-        brandOwnershipRequested: selectedProduct.brandOwnershipRequested,
+        
+        // CRITICAL: Preserve all these required fields from the original product
+        id: selectedProduct.id,
+        approved: selectedProduct.approved !== undefined ? selectedProduct.approved : true,
+        brandVerified: selectedProduct.brandVerified !== undefined ? selectedProduct.brandVerified : false,
+        brandOwnershipRequested: selectedProduct.brandOwnershipRequested !== undefined ? selectedProduct.brandOwnershipRequested : false,
         timestamp: selectedProduct.timestamp || Date.now(),
         submittedAt: selectedProduct.submittedAt || new Date().toISOString(),
         dateSubmitted: selectedProduct.dateSubmitted || new Date().toISOString(),
         brandContactEmail: selectedProduct.brandContactEmail || '',
         brandOwnershipRequestDate: selectedProduct.brandOwnershipRequestDate || '',
         brandVerificationDate: selectedProduct.brandVerificationDate || '',
-        uploadedBy: selectedProduct.uploadedBy || ''
+        uploadedBy: selectedProduct.uploadedBy || '',
+        
+        // Add updated timestamp for tracking modifications
+        updatedat: new Date().toISOString()
       };
 
       console.log("Product ID being updated:", selectedProduct.id);
@@ -140,11 +147,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
             description: `Failed to update in database: ${error.message}`,
             variant: "destructive"
           });
-          throw error;
+        } else {
+          console.log("Successfully updated product in Supabase, data response:", data);
+          supabaseSuccess = true;
         }
-        
-        console.log("Successfully updated product in Supabase, data response:", data);
-        supabaseSuccess = true;
       }
       catch (error) {
         console.error("Failed to update product in Supabase:", error);
