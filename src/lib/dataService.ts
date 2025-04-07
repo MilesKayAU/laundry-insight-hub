@@ -13,9 +13,34 @@ export async function updateProductInSupabase(
   try {
     console.log("DataService: Updating product in Supabase:", { productId, data: productData });
     
+    // Ensure all fields use snake_case format expected by Supabase
+    const normalizedData: Record<string, any> = {};
+    
+    // Explicitly map camelCase to snake_case for known fields
+    if ('pvaStatus' in productData) normalizedData.pvastatus = productData.pvaStatus;
+    if ('pvaPercentage' in productData) normalizedData.pvapercentage = productData.pvaPercentage;
+    if ('websiteUrl' in productData) normalizedData.websiteurl = productData.websiteUrl;
+    if ('videoUrl' in productData) normalizedData.videourl = productData.videoUrl;
+    if ('imageUrl' in productData) normalizedData.imageurl = productData.imageUrl;
+    
+    // Copy all other fields directly
+    Object.entries(productData).forEach(([key, value]) => {
+      // Skip fields we've already mapped
+      if (!['pvaStatus', 'pvaPercentage', 'websiteUrl', 'videoUrl', 'imageUrl'].includes(key)) {
+        // For any other camelCase properties, convert to snake_case
+        const snakeCaseKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
+        normalizedData[snakeCaseKey] = value;
+      }
+    });
+    
+    // Add updated timestamp
+    normalizedData.updatedat = new Date().toISOString();
+    
+    console.log("DataService: Normalized data for Supabase:", normalizedData);
+    
     const { data, error } = await supabase
       .from('product_submissions')
-      .update(productData)
+      .update(normalizedData)
       .eq('id', productId)
       .select();
     
@@ -73,12 +98,12 @@ export function updateProductInLocalStorage(
           ...products[productIndex],
           ...updatedProduct,
           // Ensure both camelCase and snake_case URL fields are updated
-          websiteUrl: updatedProduct.websiteUrl || updatedProduct.websiteurl,
-          websiteurl: updatedProduct.websiteUrl || updatedProduct.websiteurl,
-          videoUrl: updatedProduct.videoUrl || updatedProduct.videourl,
-          videourl: updatedProduct.videoUrl || updatedProduct.videourl,
-          imageUrl: updatedProduct.imageUrl || updatedProduct.imageurl,
-          imageurl: updatedProduct.imageUrl || updatedProduct.imageurl
+          websiteUrl: updatedProduct.websiteUrl || updatedProduct.websiteurl || products[productIndex].websiteUrl || products[productIndex].websiteurl,
+          websiteurl: updatedProduct.websiteUrl || updatedProduct.websiteurl || products[productIndex].websiteUrl || products[productIndex].websiteurl,
+          videoUrl: updatedProduct.videoUrl || updatedProduct.videourl || products[productIndex].videoUrl || products[productIndex].videourl,
+          videourl: updatedProduct.videoUrl || updatedProduct.videourl || products[productIndex].videoUrl || products[productIndex].videourl,
+          imageUrl: updatedProduct.imageUrl || updatedProduct.imageurl || products[productIndex].imageUrl || products[productIndex].imageurl,
+          imageurl: updatedProduct.imageUrl || updatedProduct.imageurl || products[productIndex].imageUrl || products[productIndex].imageurl
         };
         
         // Save back to localStorage

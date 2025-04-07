@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ProductSubmission } from '@/lib/textExtractor';
 import { useToast } from '@/hooks/use-toast';
@@ -83,56 +84,41 @@ export const useProductEditing = (onSuccess?: () => void) => {
     
     setIsSaving(true);
     console.log("Starting save process for product ID:", selectedProduct.id);
+    console.log("Current product details to save:", productDetails);
     
     try {
       // Format the percentage value
-      const pvaPercentage = productDetails.pvaPercentage ? 
-        parseFloat(productDetails.pvaPercentage) : null;
+      const pvaPercentage = productDetails.pvaPercentage 
+        ? parseFloat(productDetails.pvaPercentage) 
+        : null;
       
-      // Prepare Supabase-specific data format (snake_case)
+      // Prepare data for Supabase (simplified - the service handles field name mapping)
       const supabaseData = {
         brand: productDetails.brand,
         name: productDetails.name,
         description: productDetails.description,
         type: productDetails.type,
-        pvastatus: productDetails.pvaStatus,
-        pvapercentage: pvaPercentage,
+        pvaStatus: productDetails.pvaStatus,
+        pvaPercentage: pvaPercentage,
         country: productDetails.country,
-        websiteurl: productDetails.websiteUrl,
-        videourl: productDetails.videoUrl,
-        imageurl: productDetails.imageUrl,
-        ingredients: productDetails.ingredients,
-        updatedat: new Date().toISOString()
+        websiteUrl: productDetails.websiteUrl,
+        videoUrl: productDetails.videoUrl,
+        imageUrl: productDetails.imageUrl,
+        ingredients: productDetails.ingredients
       };
       
-      console.log("Prepared Supabase data:", supabaseData);
+      console.log("Prepared data for updates:", supabaseData);
       
       // Step 1: Update in Supabase database
       const supabaseResult = await updateProductInSupabase(selectedProduct.id, supabaseData);
       
-      // Step 2: Prepare local storage data (includes both camelCase and snake_case)
+      // Log Supabase result details
+      console.log("Supabase update result:", supabaseResult);
+      
+      // Step 2: Update in localStorage with same data  
       const localData: Partial<ProductSubmission> = {
-        // Fields from form
-        brand: productDetails.brand,
-        name: productDetails.name,
-        description: productDetails.description,
-        
-        // URLs in both formats
-        imageUrl: productDetails.imageUrl,
-        videoUrl: productDetails.videoUrl,
-        websiteUrl: productDetails.websiteUrl,
-        imageurl: productDetails.imageUrl,
-        videourl: productDetails.videoUrl,
-        websiteurl: productDetails.websiteUrl,
-        
-        // Other fields
-        pvaPercentage: pvaPercentage,
-        country: productDetails.country,
-        ingredients: productDetails.ingredients,
-        pvaStatus: productDetails.pvaStatus as any,
-        type: productDetails.type,
-        
-        // Preserve required fields
+        ...supabaseData,
+        // Preserve required fields from the original product
         id: selectedProduct.id,
         approved: selectedProduct.approved !== undefined ? selectedProduct.approved : true,
         brandVerified: selectedProduct.brandVerified || false,
@@ -146,8 +132,11 @@ export const useProductEditing = (onSuccess?: () => void) => {
         uploadedBy: selectedProduct.uploadedBy || ''
       };
       
+      console.log("Local storage update data:", localData);
+      
       // Step 3: Update in localStorage
       const localStorageResult = updateProductInLocalStorage(selectedProduct.id, localData);
+      console.log("Local storage update result:", localStorageResult);
       
       // Determine operation result
       if (supabaseResult.success || localStorageResult) {
