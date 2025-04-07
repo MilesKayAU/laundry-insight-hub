@@ -24,6 +24,7 @@ import {
   isValidUrl, 
   formatUrlForDisplay, 
   formatSafeUrl,
+  parseUrl,
   logProductUrlInfo
 } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
@@ -40,7 +41,11 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
   console.log(`ProductsList: Rendering ${products.length} products`);
   
   // Debug each product's URL data
-  products.forEach(product => logProductUrlInfo(product, "ProductsList"));
+  products.forEach((product, index) => {
+    const websiteUrl = product.websiteUrl || '';
+    console.log(`Product ${index + 1}: ${product.name}, URL: "${websiteUrl}", Valid: ${isValidUrl(websiteUrl)}`);
+    logProductUrlInfo(product, "ProductsList");
+  });
 
   return (
     <Card className="shadow-lg">
@@ -67,17 +72,15 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
               </TableHeader>
               <TableBody>
                 {products.map((product) => {
-                  // Check if URL is valid and format it
-                  const hasWebsiteUrl = product.websiteUrl && product.websiteUrl.trim() !== '';
-                  const websiteUrl = hasWebsiteUrl ? product.websiteUrl : '';
-                  const isUrlValid = hasWebsiteUrl && isValidUrl(websiteUrl);
+                  // Get and validate the website URL
+                  const rawWebsiteUrl = product.websiteUrl || product.websiteurl || '';
+                  const isUrlValid = rawWebsiteUrl.trim() !== '' && isValidUrl(rawWebsiteUrl);
+                  const parsedUrl = parseUrl(rawWebsiteUrl);
                   
-                  // More detailed logging for URLs
-                  console.log(`Rendering product URL for "${product.name}":`, {
-                    hasWebsiteUrl,
-                    websiteUrl,
-                    isUrlValid,
-                    formattedUrl: isUrlValid ? formatSafeUrl(websiteUrl) : 'Invalid URL'
+                  console.log(`Rendering URL for ${product.name}:`, {
+                    raw: rawWebsiteUrl,
+                    valid: isUrlValid,
+                    parsed: parsedUrl
                   });
                   
                   return (
@@ -103,20 +106,20 @@ const ProductsList = ({ products, onOpenProductDetail }: ProductsListProps) => {
                       </TableCell>
                       <TableCell>{product.country || 'Global'}</TableCell>
                       <TableCell>
-                        {isUrlValid ? (
+                        {isUrlValid && parsedUrl ? (
                           <a 
-                            {...getSafeExternalLinkProps({ url: websiteUrl })}
+                            {...getSafeExternalLinkProps({ url: rawWebsiteUrl })}
                             className="text-blue-600 hover:underline flex items-center"
                             onClick={() => {
-                              console.log(`Clicking URL: ${websiteUrl}`);
+                              console.log(`Clicking URL: ${rawWebsiteUrl}`);
                             }}
                           >
                             <ExternalLink className="h-4 w-4 mr-1 flex-shrink-0" />
-                            {formatUrlForDisplay(websiteUrl)}
+                            {formatUrlForDisplay(rawWebsiteUrl)}
                           </a>
                         ) : (
                           <span className="text-muted-foreground text-sm">
-                            {hasWebsiteUrl ? `Invalid URL: ${websiteUrl}` : 'None'}
+                            {rawWebsiteUrl.trim() !== '' ? `Invalid URL: ${rawWebsiteUrl}` : 'None'}
                           </span>
                         )}
                       </TableCell>

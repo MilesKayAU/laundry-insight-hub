@@ -16,6 +16,7 @@ import {
   getSafeExternalLinkProps, 
   isValidUrl, 
   formatSafeUrl,
+  parseUrl,
   logProductUrlInfo
 } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
@@ -39,23 +40,24 @@ const ProductDetailDialog = ({
   console.log("ProductDetailDialog: Rendering product detail for:", product.name);
   logProductUrlInfo(product, "ProductDetailDialog");
   
-  // Better URL validation and preparation
-  const websiteUrl = product.websiteUrl || '';
-  const videoUrl = product.videoUrl || '';
+  // Better URL validation and preparation - handle both property naming styles
+  const websiteUrl = product.websiteUrl || product.websiteurl || '';
+  const videoUrl = product.videoUrl || product.videourl || '';
   
-  const hasValidWebsiteUrl = websiteUrl.trim() !== '' && isValidUrl(websiteUrl);
-  const hasValidVideoUrl = videoUrl.trim() !== '' && isValidUrl(videoUrl);
+  // Validate URLs
+  const parsedWebsiteUrl = parseUrl(websiteUrl);
+  const parsedVideoUrl = parseUrl(videoUrl);
   
-  const formattedWebsiteUrl = hasValidWebsiteUrl ? formatSafeUrl(websiteUrl) : '';
-  const formattedVideoUrl = hasValidVideoUrl ? formatSafeUrl(videoUrl) : '';
+  const hasValidWebsiteUrl = !!parsedWebsiteUrl;
+  const hasValidVideoUrl = !!parsedVideoUrl;
   
   console.log("Product URL validation results:", {
     websiteUrl,
     hasValidWebsiteUrl,
-    formattedWebsiteUrl,
+    parsedWebsiteUrl,
     videoUrl,
     hasValidVideoUrl,
-    formattedVideoUrl
+    parsedVideoUrl
   });
   
   return (
@@ -137,7 +139,7 @@ const ProductDetailDialog = ({
                 </a>
               ) : (
                 <span className="text-muted-foreground">
-                  {websiteUrl ? `Invalid product URL: ${websiteUrl}` : 'No product URL available'}
+                  {websiteUrl.trim() !== '' ? `Invalid product URL: ${websiteUrl}` : 'No product URL available'}
                 </span>
               )}
             </div>
