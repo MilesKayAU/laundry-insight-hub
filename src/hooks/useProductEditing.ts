@@ -119,8 +119,10 @@ export const useProductEditing = (onSuccess?: () => void) => {
       console.log("Product ID being updated:", selectedProduct.id);
       console.log("Updated data being applied:", updatedData);
 
+      // Track overall success status
+      let updateSuccess = false;
+
       // Update in Supabase first
-      let supabaseSuccess = false;
       try {
         console.log("Updating product in Supabase...");
         const { data, error } = await supabase
@@ -150,31 +152,32 @@ export const useProductEditing = (onSuccess?: () => void) => {
           });
         } else {
           console.log("Successfully updated product in Supabase, data response:", data);
-          supabaseSuccess = true;
+          updateSuccess = true;
         }
       }
-      catch (error) {
-        console.error("Failed to update product in Supabase:", error);
+      catch (supabaseError) {
+        console.error("Exception during Supabase update:", supabaseError);
         // Continue with local update even if Supabase update fails
       }
       
       // Update the product in localStorage
-      const success = updateProductSubmission(selectedProduct.id, updatedData);
-      
-      if (success || supabaseSuccess) {
-        // Set more specific toast message based on where the update succeeded
-        let successMessage = "";
-        if (supabaseSuccess) {
-          successMessage = success 
-            ? "Product updated successfully in both database and local storage." 
-            : "Product updated in database but local update failed.";
+      try {
+        const localSuccess = updateProductSubmission(selectedProduct.id, updatedData);
+        if (localSuccess) {
+          console.log("Successfully updated product in local storage");
+          updateSuccess = true;
         } else {
-          successMessage = "Product updated in local storage only. Database update failed.";
+          console.error("Failed to update product in local storage");
         }
-        
+      } catch (localError) {
+        console.error("Exception during local storage update:", localError);
+      }
+      
+      if (updateSuccess) {
+        // Set success message
         toast({
           title: "Product Updated",
-          description: `${updatedData.brand} ${updatedData.name} - ${successMessage}`,
+          description: `${updatedData.brand} ${updatedData.name} updated successfully`,
         });
 
         console.log("Product update successful, closing dialog");
