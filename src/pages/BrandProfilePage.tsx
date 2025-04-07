@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
@@ -130,13 +129,27 @@ const BrandProfilePage = () => {
         
         console.log('Querying Supabase for products with brand name:', brandName);
         
-        // NEW: Logging the exact SQL query we're attempting
-        console.log(`SQL equivalent: SELECT * FROM product_submissions WHERE brand ILIKE '%${brandName}%' AND approved = true`);
-        
-        // Fetch products using ilike for case-insensitive comparison of the brand field
+        // UPDATED: Use proper column aliasing in the Supabase query
         const { data: productData, error: productError } = await supabase
           .from('product_submissions')
-          .select('*')
+          .select(`
+            id,
+            name,
+            brand,
+            type,
+            description,
+            pvaStatus:pvastatus,
+            pvaPercentage:pvapercentage,
+            approved,
+            country,
+            websiteUrl:websiteurl,
+            videoUrl:videourl,
+            imageUrl:imageurl,
+            ingredients,
+            owner_id,
+            createdat,
+            updatedat
+          `)
           .ilike('brand', brandName)
           .eq('approved', true);
           
@@ -151,22 +164,31 @@ const BrandProfilePage = () => {
           console.log(`Found ${productData?.length || 0} products in Supabase`);
           console.log('Raw product data from Supabase:', productData);
           
-          // Transform the data into the expected ProductSubmission format
-          const transformedProducts: ProductSubmission[] = productData?.map(item => {
-            // Normalize field names to handle database column naming inconsistencies
-            return normalizeProductFieldNames(item);
-          }) || [];
-          
-          // Log each transformed product with URL info
-          transformedProducts.forEach(product => {
-            logProductUrlInfo(product, `Transformed product: ${product.name}`);
-          });
+          // Set the products directly - aliasing should have already handled the property naming
+          setProducts(productData || []);
           
           // Also try a more flexible query with just the brand name (without approved filter)
           console.log('Trying secondary query without approved filter...');
           const { data: allProductData, error: allProductError } = await supabase
             .from('product_submissions')
-            .select('*')
+            .select(`
+              id,
+              name,
+              brand,
+              type,
+              description,
+              pvaStatus:pvastatus,
+              pvaPercentage:pvapercentage,
+              approved,
+              country,
+              websiteUrl:websiteurl,
+              videoUrl:videourl,
+              imageUrl:imageurl,
+              ingredients,
+              owner_id,
+              createdat,
+              updatedat
+            `)
             .ilike('brand', brandName);
             
           if (allProductError) {
@@ -175,51 +197,39 @@ const BrandProfilePage = () => {
             console.log(`Secondary query found ${allProductData?.length || 0} total products (including unapproved)`);
             
             // If we found products with the second query but not the first, they might be unapproved
-            if (allProductData?.length > 0 && transformedProducts.length === 0) {
+            if (allProductData?.length > 0 && productData?.length === 0) {
               console.log('Products exist but might be unapproved. Sample:', allProductData[0]);
             }
           }
           
-          // Also get products from local storage as a fallback
-          const allLocalProducts = getProductSubmissions();
-          console.log(`Got ${allLocalProducts.length} total products from local storage`);
-          
-          // Filter local products by brand name using case-insensitive comparison
-          const brandLocalProducts = allLocalProducts.filter(product => {
-            const productBrand = normalizeForDatabaseComparison(product.brand);
-            const searchBrand = brandNameLowercase;
+          // Get products from local storage as a fallback only if needed
+          if (!productData?.length) {
+            const allLocalProducts = getProductSubmissions();
+            console.log(`Got ${allLocalProducts.length} total products from local storage`);
             
-            const isMatch = (
-              productBrand.includes(searchBrand) || 
-              searchBrand.includes(productBrand)
-            ) && product.approved;
+            // Filter local products by brand name using case-insensitive comparison
+            const brandLocalProducts = allLocalProducts.filter(product => {
+              const productBrand = normalizeForDatabaseComparison(product.brand);
+              const searchBrand = brandNameLowercase;
+              
+              const isMatch = (
+                productBrand.includes(searchBrand) || 
+                searchBrand.includes(productBrand)
+              ) && product.approved;
+              
+              if (isMatch) {
+                logProductUrlInfo(product, `Local product match: ${product.name}`);
+              }
+              
+              return isMatch;
+            });
             
-            if (isMatch) {
-              logProductUrlInfo(product, `Local product match: ${product.name}`);
+            console.log(`Found ${brandLocalProducts.length} products in local storage for brand "${brandName}"`);
+            
+            if (brandLocalProducts.length) {
+              setProducts(brandLocalProducts);
             }
-            
-            return isMatch;
-          });
-          
-          console.log(`Found ${brandLocalProducts.length} products in local storage for brand "${brandName}"`);
-          
-          // Combine products from Supabase and local storage, avoiding duplicates
-          const combinedProducts: ProductSubmission[] = [...transformedProducts];
-          
-          brandLocalProducts.forEach(localProduct => {
-            if (!combinedProducts.some(p => p.id === localProduct.id)) {
-              combinedProducts.push(localProduct);
-            }
-          });
-          
-          console.log(`Total combined products for brand "${brandName}": ${combinedProducts.length}`);
-          
-          // Final product list debug
-          combinedProducts.forEach(p => {
-            logProductUrlInfo(p, `Final product list: ${p.name}`);
-          });
-          
-          setProducts(combinedProducts);
+          }
         }
         
         // Special handling for EcoKaps (since we can see it in the database from your screenshot)
@@ -227,7 +237,24 @@ const BrandProfilePage = () => {
           console.log('Attempting direct query for EcoKaps products...');
           const { data: ecoKapsData, error: ecoKapsError } = await supabase
             .from('product_submissions')
-            .select('*')
+            .select(`
+              id,
+              name,
+              brand,
+              type,
+              description,
+              pvaStatus:pvastatus,
+              pvaPercentage:pvapercentage,
+              approved,
+              country,
+              websiteUrl:websiteurl,
+              videoUrl:videourl,
+              imageUrl:imageurl,
+              ingredients,
+              owner_id,
+              createdat,
+              updatedat
+            `)
             .eq('brand', 'EcoKaps');
             
           if (ecoKapsError) {
@@ -235,12 +262,11 @@ const BrandProfilePage = () => {
           } else {
             console.log(`Direct EcoKaps query found ${ecoKapsData?.length || 0} products`);
             if (ecoKapsData?.length > 0) {
-              const transformedEcoKapsProducts = ecoKapsData.map(item => normalizeProductFieldNames(item));
-              console.log('EcoKaps products:', transformedEcoKapsProducts);
+              console.log('EcoKaps products:', ecoKapsData);
               
               // If we found products here but not in the earlier query, update state
-              if (transformedEcoKapsProducts.length > 0 && products.length === 0) {
-                setProducts(transformedEcoKapsProducts);
+              if (ecoKapsData.length > 0 && products.length === 0) {
+                setProducts(ecoKapsData);
               }
             }
           }

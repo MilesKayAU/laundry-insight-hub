@@ -39,7 +39,24 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
     // Always fetch all products from Supabase first, to ensure we have everything
     const { data, error } = await supabase
       .from('product_submissions')
-      .select('*');
+      .select(`
+        id,
+        name,
+        brand,
+        type,
+        description,
+        pvaStatus:pvastatus,
+        pvaPercentage:pvapercentage,
+        approved,
+        country,
+        websiteUrl:websiteurl,
+        videoUrl:videourl,
+        imageUrl:imageurl,
+        ingredients,
+        owner_id,
+        createdat,
+        updatedat
+      `);
     
     if (error) {
       console.error("Error fetching products from Supabase:", error);
@@ -56,13 +73,8 @@ const fetchProductsFromSupabase = async (isAuthenticated: boolean) => {
       return [];
     }
     
-    // Transform the Supabase data to match our ProductSubmission type
-    const transformedData = data.map(item => normalizeProductFieldNames(item));
-    
-    console.log("Transformed Supabase data count:", transformedData.length);
-    console.log("Approval status after transform:", transformedData.slice(0, 10).map(item => `${item.brand} ${item.name}: ${item.approved}`));
-    
-    return transformedData;
+    // With proper aliasing, we should be able to use the data directly
+    return data;
   } catch (error) {
     console.error("Exception fetching products from Supabase:", error);
     throw error; // Rethrow to let React Query handle the error state
@@ -282,7 +294,7 @@ export const useProductsData = (selectedCountry: string) => {
       
       // First update in Supabase if possible
       try {
-        // Transform field names to match the database column names
+        // Transform field names to match the database column names (inverse of our aliasing)
         const { error } = await supabase
           .from('product_submissions')
           .update({
@@ -290,13 +302,13 @@ export const useProductsData = (selectedCountry: string) => {
             brand: updatedData.brand,
             description: updatedData.description,
             type: updatedData.type,
-            pvastatus: updatedData.pvaStatus,
-            pvapercentage: updatedData.pvaPercentage,
+            pvastatus: updatedData.pvaStatus,  // snake_case column name
+            pvapercentage: updatedData.pvaPercentage,  // snake_case column name
             approved: updatedData.approved,
             country: updatedData.country,
-            websiteurl: updatedData.websiteUrl,
-            videourl: updatedData.videoUrl,
-            imageurl: updatedData.imageUrl,
+            websiteurl: updatedData.websiteUrl,  // snake_case column name
+            videourl: updatedData.videoUrl,  // snake_case column name
+            imageurl: updatedData.imageUrl,  // snake_case column name
             updatedat: new Date().toISOString()
           })
           .eq('id', productId);
