@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
@@ -204,7 +205,7 @@ export async function deleteProduct(
  */
 export async function addProductToSupabase(productData: any) {
   try {
-    const supabase = getSupabaseClient();
+    // Using the imported supabase client instead of getSupabaseClient
     
     const { data, error } = await supabase
       .from('product_submissions')
