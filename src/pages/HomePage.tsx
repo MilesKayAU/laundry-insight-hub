@@ -1,55 +1,8 @@
-import React, { useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { useProductEditing } from '@/hooks/productEditing';
-import { extractProductInfoFromUrl } from '@/utils/productUtils';
 import { ArrowRight, Upload, Database, Shield, FlaskConical, Microscope, MoveRight, Info, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
-const addCoffeeDescaler = async (handleAddProduct: any) => {
-  const amazonUrl = "https://www.amazon.com.au/Concentrated-Descaler-Powder-Breville-Universal/dp/B0CW2W85RR/";
-  const productInfo = extractProductInfoFromUrl(amazonUrl);
-  
-  const productDetails = {
-    ...productInfo,
-    imageUrl: "https://m.media-amazon.com/images/I/71N7VowpzQL._AC_SL1500_.jpg",
-    videoUrl: "",
-    pvaPercentage: "0",
-    country: "Australia",
-    ingredients: "Citric acid, sulfamic acid, sodium carbonate",
-    pvaStatus: "verified-free"
-  };
-  
-  return await handleAddProduct(productDetails);
-};
-
 const HomePage = () => {
-  const { toast } = useToast();
-  const { handleAddProduct } = useProductEditing(() => {
-    console.log("Product added successfully");
-  });
-
-  useEffect(() => {
-    const addProduct = async () => {
-      const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      const alreadyAdded = existingProducts.some(p => 
-        p.name === "Concentrated Descaler Powder" && p.brand === "Breville"
-      );
-      
-      if (!alreadyAdded) {
-        const success = await addCoffeeDescaler(handleAddProduct);
-        if (success) {
-          toast({
-            title: "New Product Added",
-            description: "Coffee machine descaler has been added to the database",
-          });
-        }
-      }
-    };
-    
-    addProduct();
-  }, []);
-
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}

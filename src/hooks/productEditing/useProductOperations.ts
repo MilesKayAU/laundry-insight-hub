@@ -1,5 +1,6 @@
+
 import { useToast } from '@/hooks/use-toast';
-import { updateProductInSupabase, updateProductInLocalStorage, deleteProduct, addProductToSupabase } from '@/lib/dataService';
+import { updateProductInSupabase, updateProductInLocalStorage, deleteProduct } from '@/lib/dataService';
 import { prepareProductDataForUpdate, mapProductToDetails } from './utils';
 import { ProductDetails, ProductEditingActions } from './types';
 
@@ -175,49 +176,10 @@ export function useProductOperations({
     }
   };
 
-  const handleAddProduct = async (details: ProductDetails): Promise<boolean> => {
-    console.log("Adding new product:", details);
-    
-    try {
-      const productData = prepareProductDataForUpdate(details);
-      const result = await addProductToSupabase(productData);
-      
-      if (result.success) {
-        toast({
-          title: "Product Added",
-          description: `${details.brand} ${details.name} has been added to the database`,
-        });
-        
-        if (typeof onSuccess === 'function') {
-          onSuccess();
-        }
-        
-        window.dispatchEvent(new Event('reload-products'));
-        return true;
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to add the product",
-          variant: "destructive"
-        });
-        return false;
-      }
-    } catch (error) {
-      console.error("Error adding product:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while adding the product",
-        variant: "destructive"
-      });
-      return false;
-    }
-  };
-
   return {
     handleViewDetails,
     handleDetailsChange,
     handleSaveChanges,
-    handleDeleteProduct,
-    handleAddProduct
+    handleDeleteProduct
   };
 }
