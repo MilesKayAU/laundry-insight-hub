@@ -30,6 +30,7 @@ export interface ProductEditingActions {
   handleDetailsChange: (details: Partial<ProductDetails>) => void;
   handleSaveChanges: () => Promise<void>;
   handleDeleteProduct: (productId: string) => Promise<boolean>;
+  handleAddProduct: (details: ProductDetails) => Promise<boolean>;
 }
 
 export interface ProductEditingHookReturn extends EditingState, ProductEditingActions {}

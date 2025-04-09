@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ProductSubmission } from "@/lib/textExtractor";
 import { useToast } from "@/hooks/use-toast";
@@ -197,5 +196,59 @@ export async function deleteProduct(
       success: false,
       error: error instanceof Error ? error.message : "Unknown error"
     };
+  }
+}
+
+/**
+ * Adds a product to Supabase
+ */
+export async function addProductToSupabase(productData: any) {
+  try {
+    const supabase = getSupabaseClient();
+    
+    const { data, error } = await supabase
+      .from('product_submissions')
+      .insert([{
+        brand: productData.brand,
+        name: productData.name,
+        type: productData.type,
+        description: productData.description,
+        pvastatus: productData.pvaStatus,
+        pvapercentage: productData.pvaPercentage ? parseFloat(productData.pvaPercentage) : null,
+        country: productData.country,
+        websiteurl: productData.websiteUrl,
+        ingredients: productData.ingredients,
+        imageurl: productData.imageUrl,
+        videourl: productData.videoUrl,
+        approved: true, // Auto-approve for admin additions
+        createdat: new Date().toISOString(),
+        updatedat: new Date().toISOString()
+      }])
+      .select();
+    
+    if (error) {
+      console.error("Supabase error adding product:", error);
+      return { success: false, error: error.message };
+    }
+    
+    // Also add to local storage for immediate display
+    const localData = {
+      ...productData,
+      id: data[0].id,
+      approved: true,
+      timestamp: Date.now(),
+      submittedAt: new Date().toISOString(),
+      dateSubmitted: new Date().toISOString()
+    };
+    
+    // Add to local storage
+    const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
+    existingProducts.push(localData);
+    localStorage.setItem('products', JSON.stringify(existingProducts));
+    
+    return { success: true, data: data[0] };
+  } catch (error) {
+    console.error("Error adding product to Supabase:", error);
+    return { success: false, error: "Failed to add product to database" };
   }
 }
