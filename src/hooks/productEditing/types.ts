@@ -1,5 +1,4 @@
 
-// Let's check what types currently exist in this file
 export interface ProductDetails {
   brand: string;
   name: string;
@@ -10,7 +9,7 @@ export interface ProductDetails {
   pvaPercentage: string;
   country: string;
   ingredients: string;
-  pvaStatus: string;
+  pvaStatus: 'contains' | 'verified-free' | 'needs-verification' | 'inconclusive';
   type: string;
 }
 
@@ -32,4 +31,4 @@ export interface ProductEditingActions {
   handleDeleteProduct: (productId: string) => Promise<boolean>;
 }
 
-export interface ProductEditingHookReturn extends EditingState, ProductEditingActions {}
+export type ProductEditingHookReturn = Omit<EditingState, 'setSelectedProduct' | 'setProductDetails' | 'setIsSaving'> & ProductEditingActions;

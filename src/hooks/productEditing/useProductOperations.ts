@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { updateProductInSupabase, updateProductInLocalStorage, deleteProduct } from '@/lib/dataService';
 import { prepareProductDataForUpdate, mapProductToDetails } from './utils';

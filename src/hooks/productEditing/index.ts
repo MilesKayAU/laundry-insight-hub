@@ -35,9 +35,6 @@ export function useProductEditing(onSuccess?: () => void): ProductEditingHookRet
     isSaving,
     productDetails,
     setIsDialogOpen,
-    setSelectedProduct,
-    setProductDetails,
-    setIsSaving,
     // Actions
     ...operations
   };
