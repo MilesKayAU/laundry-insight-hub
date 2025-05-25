@@ -11,13 +11,13 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    // Only include componentTagger in development mode and when available
+    // Only include componentTagger in development mode
     ...(mode === 'development' ? (() => {
       try {
         const { componentTagger } = require("lovable-tagger");
         return [componentTagger()];
       } catch (e) {
-        console.warn("lovable-tagger not available, skipping...");
+        // Silently fail if lovable-tagger is not available
         return [];
       }
     })() : [])
@@ -25,6 +25,15 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    // Add build configuration to help with deployment
+    outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
     },
   },
 }));
