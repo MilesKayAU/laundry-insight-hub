@@ -1,12 +1,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import SupabaseConnectionCheck from "@/components/SupabaseConnectionCheck";
 
 const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-tech-50 to-science-100">
-      <div className="text-center max-w-3xl px-4 mb-8">
+      <div className="text-center max-w-3xl px-4">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 text-science-800">
           Community-Powered PVA Transparency
         </h1>
@@ -28,11 +27,6 @@ const Index = () => {
             <Link to="/admin">Admin Dashboard</Link>
           </Button>
         </div>
-      </div>
-      
-      {/* Supabase Connection Diagnostic */}
-      <div className="mt-8">
-        <SupabaseConnectionCheck />
       </div>
     </div>
   );
