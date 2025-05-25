@@ -55,19 +55,24 @@ jobs:
           pm2 flush laundryhub || echo "No logs to flush"
           
           echo "🏗️ Building the application..."
-          npm run build 2>&1 | tee build.log
-          
-          if [ $? -ne 0 ]; then
-            echo "❌ Build failed! Showing build log:"
-            cat build.log
-            echo "🔄 Retrying with clean install..."
-            rm -rf node_modules package-lock.json
-            npm install --no-optional --legacy-peer-deps --force
-            npm run build 2>&1 | tee build-retry.log
+          # Try npm run build first, fallback to npx vite build if that fails
+          if npm run build 2>&1 | tee build.log; then
+            echo "✅ Build with npm run build successful!"
+          else
+            echo "⚠️ npm run build failed, trying with npx vite build..."
+            npx vite build 2>&1 | tee build.log
             if [ $? -ne 0 ]; then
-              echo "❌ Build failed again! Showing retry log:"
-              cat build-retry.log
-              exit 1
+              echo "❌ Build failed! Showing build log:"
+              cat build.log
+              echo "🔄 Retrying with clean install..."
+              rm -rf node_modules package-lock.json
+              npm install --no-optional --legacy-peer-deps --force
+              npx vite build 2>&1 | tee build-retry.log
+              if [ $? -ne 0 ]; then
+                echo "❌ Build failed again! Showing retry log:"
+                cat build-retry.log
+                exit 1
+              fi
             fi
           fi
 
@@ -76,7 +81,14 @@ jobs:
           
           echo "♻️ Starting app with PM2..."
           pm2 delete laundryhub || echo "No existing process to delete"
-          pm2 start npm --name "laundryhub" -- start
+          
+          # Try npm start first, fallback to npx vite preview if that fails
+          if npm run start 2>/dev/null; then
+            pm2 start npm --name "laundryhub" -- start
+          else
+            echo "⚠️ npm start not available, using npx vite preview..."
+            pm2 start "npx vite preview --host --port 8080" --name "laundryhub"
+          fi
           
           echo "📊 PM2 status:"
           pm2 status
