@@ -31,12 +31,21 @@ jobs:
           echo "🔄 Pulling latest code..."
           git pull origin main --force
           
-          echo "🧹 Cleaning npm cache and dependencies..."
+          echo "🧹 Cleaning npm cache and dependencies thoroughly..."
           rm -rf node_modules package-lock.json
           npm cache clean --force
           
+          echo "🔧 Setting npm configuration for rollup compatibility..."
+          npm config set target_platform linux
+          npm config set target_arch x64
+          npm config set cache /tmp/.npm
+          
           echo "📦 Installing dependencies with legacy peer deps..."
-          npm install --legacy-peer-deps --no-audit --no-fund --no-optional
+          npm install --legacy-peer-deps --no-audit --no-fund --no-optional --force
+          
+          echo "🔧 Force reinstall rollup with correct architecture..."
+          npm uninstall rollup
+          npm install rollup --force --no-optional
           
           echo "🧹 Clearing build cache thoroughly..."
           rm -rf .cache dist build .next node_modules/.cache
