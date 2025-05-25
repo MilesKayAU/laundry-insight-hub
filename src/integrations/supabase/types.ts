@@ -9,6 +9,102 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      amazon_products: {
+        Row: {
+          asin: string
+          brand: string | null
+          category: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          features: Json | null
+          id: string
+          image_urls: Json | null
+          local_product_id: string | null
+          price: number | null
+          product_url: string | null
+          specifications: Json | null
+          status: string | null
+          sync_status: string | null
+          synced_at: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          asin: string
+          brand?: string | null
+          category?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          image_urls?: Json | null
+          local_product_id?: string | null
+          price?: number | null
+          product_url?: string | null
+          specifications?: Json | null
+          status?: string | null
+          sync_status?: string | null
+          synced_at?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          asin?: string
+          brand?: string | null
+          category?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          image_urls?: Json | null
+          local_product_id?: string | null
+          price?: number | null
+          product_url?: string | null
+          specifications?: Json | null
+          status?: string | null
+          sync_status?: string | null
+          synced_at?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      amazon_sync_logs: {
+        Row: {
+          created_by: string | null
+          details: string | null
+          end_time: string | null
+          errors: Json | null
+          id: string
+          products_synced: number | null
+          start_time: string | null
+          status: string | null
+        }
+        Insert: {
+          created_by?: string | null
+          details?: string | null
+          end_time?: string | null
+          errors?: Json | null
+          id?: string
+          products_synced?: number | null
+          start_time?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_by?: string | null
+          details?: string | null
+          end_time?: string | null
+          errors?: Json | null
+          id?: string
+          products_synced?: number | null
+          start_time?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           author_id: string
@@ -122,6 +218,93 @@ export type Database = {
           updated_at?: string | null
           verified?: boolean | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      contact_messages: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          message: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          message: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      distributor_inquiries: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          message: string | null
+          phone: string | null
+          region: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          message?: string | null
+          phone?: string | null
+          region?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          message?: string | null
+          phone?: string | null
+          region?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      newsletter_subscribers: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -357,7 +540,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      amazon_product_mapping: {
+        Row: {
+          amazon_id: string | null
+          amazon_images: Json | null
+          amazon_title: string | null
+          asin: string | null
+          local_description: string | null
+          local_id: string | null
+          local_title: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       extract_youtube_id: {
@@ -375,6 +569,10 @@ export type Database = {
       is_primary_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      now: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
     }
     Enums: {
