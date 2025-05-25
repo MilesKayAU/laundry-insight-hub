@@ -31,8 +31,12 @@ jobs:
           echo "🔄 Pulling latest code..."
           git pull origin main --force
           
-          echo "📦 Installing dependencies..."
-          npm i --no-audit --no-fund --no-optional
+          echo "🧹 Cleaning npm cache and dependencies..."
+          rm -rf node_modules package-lock.json
+          npm cache clean --force
+          
+          echo "📦 Installing dependencies with legacy peer deps..."
+          npm install --legacy-peer-deps --no-audit --no-fund --no-optional
           
           echo "🧹 Clearing build cache thoroughly..."
           rm -rf .cache dist build .next node_modules/.cache
