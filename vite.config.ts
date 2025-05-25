@@ -28,15 +28,14 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Add build configuration to help with deployment and avoid rollup issues
+    // Simplified build configuration to avoid rollup issues
     outDir: 'dist',
     target: 'es2015',
+    minify: false, // Disable minification to avoid terser issues
     rollupOptions: {
       output: {
         manualChunks: undefined,
       },
-      // Force use of JS version instead of native binaries
-      external: [],
     },
   },
   // Optimize dependencies to avoid native module issues

@@ -29,7 +29,7 @@ jobs:
           cd /root/laundry-insight-hub
 
           echo "🔄 Handling local changes and pulling latest code..."
-          git stash push -m "Deployment stash $(date)"
+          git stash push -m "Deployment stash $(date)" || echo "No changes to stash"
           git pull origin main --force
           
           echo "🧹 Completely cleaning environment..."
@@ -37,16 +37,13 @@ jobs:
           npm cache clean --force
           
           echo "🔧 Setting up Node environment for compatibility..."
-          export NODE_ENV=development
+          export NODE_ENV=production
           export npm_config_target_platform=linux
           export npm_config_target_arch=x64
           export npm_config_build_from_source=true
           
           echo "📦 Installing dependencies with maximum compatibility..."
           npm install --no-optional --legacy-peer-deps --force --verbose
-          
-          echo "📦 Installing terser explicitly for build optimization..."
-          npm install terser --save-dev --no-optional --legacy-peer-deps --force --verbose
           
           echo "🧹 Clearing all build caches..."
           rm -rf .cache dist build .next node_modules/.cache .vite
@@ -57,16 +54,16 @@ jobs:
           echo "🗑️ Clearing PM2 logs..."
           pm2 flush laundryhub || echo "No logs to flush"
           
-          echo "🏗️ Building the application with development mode..."
-          npm run build:dev 2>&1 | tee build.log
+          echo "🏗️ Building the application..."
+          npm run build 2>&1 | tee build.log
           
           if [ $? -ne 0 ]; then
             echo "❌ Build failed! Showing build log:"
             cat build.log
-            echo "📦 Trying to install missing dependencies..."
-            npm install @rollup/rollup-linux-x64-gnu terser --save-dev --no-optional --legacy-peer-deps --force
-            echo "🔄 Retrying build..."
-            npm run build:dev 2>&1 | tee build-retry.log
+            echo "🔄 Retrying with clean install..."
+            rm -rf node_modules package-lock.json
+            npm install --no-optional --legacy-peer-deps --force
+            npm run build 2>&1 | tee build-retry.log
             if [ $? -ne 0 ]; then
               echo "❌ Build failed again! Showing retry log:"
               cat build-retry.log
@@ -74,6 +71,9 @@ jobs:
             fi
           fi
 
+          echo "✅ Build successful! Checking dist folder..."
+          ls -la dist/
+          
           echo "♻️ Starting app with PM2..."
           pm2 delete laundryhub || echo "No existing process to delete"
           pm2 start npm --name "laundryhub" -- start
@@ -83,6 +83,10 @@ jobs:
           
           echo "📜 Recent PM2 logs:"
           pm2 logs laundryhub --lines 10 || echo "No logs available yet"
+          
+          echo "🔍 Checking if app is responding..."
+          sleep 5
+          curl -f http://localhost:8080 || echo "App not responding on port 8080"
 
           echo "✅ Deploy complete."
         EOF
