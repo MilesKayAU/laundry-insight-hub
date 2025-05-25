@@ -31,7 +31,6 @@ export default defineConfig(({ mode }) => ({
     // Add build configuration to help with deployment and avoid rollup issues
     outDir: 'dist',
     target: 'es2015',
-    minify: 'terser',
     rollupOptions: {
       output: {
         manualChunks: undefined,

@@ -44,6 +44,9 @@ jobs:
           echo "📦 Installing dependencies with maximum compatibility..."
           npm install --no-optional --legacy-peer-deps --force --verbose
           
+          echo "📦 Installing terser for build optimization..."
+          npm install terser --save-dev --no-optional --legacy-peer-deps --force
+          
           echo "🧹 Clearing all build caches..."
           rm -rf .cache dist build .next node_modules/.cache .vite
 
