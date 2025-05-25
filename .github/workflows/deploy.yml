@@ -31,47 +31,46 @@ jobs:
           echo "🔄 Pulling latest code..."
           git pull origin main --force
           
-          echo "🧹 Cleaning npm cache and dependencies thoroughly..."
-          rm -rf node_modules package-lock.json
+          echo "🧹 Completely cleaning environment..."
+          rm -rf node_modules package-lock.json .npm /tmp/.npm-*
           npm cache clean --force
           
-          echo "🔧 Setting npm configuration for rollup compatibility..."
-          npm config set target_platform linux
-          npm config set target_arch x64
-          npm config set cache /tmp/.npm
+          echo "🔧 Setting up Node environment for compatibility..."
+          export NODE_ENV=production
+          export npm_config_target_platform=linux
+          export npm_config_target_arch=x64
+          export npm_config_build_from_source=true
           
-          echo "📦 Installing dependencies with legacy peer deps..."
-          npm install --legacy-peer-deps --no-audit --no-fund --no-optional --force
+          echo "📦 Installing dependencies with maximum compatibility..."
+          npm install --no-optional --legacy-peer-deps --force --verbose
           
-          echo "🔧 Force reinstall rollup with correct architecture..."
-          npm uninstall rollup
-          npm install rollup --force --no-optional
-          
-          echo "🧹 Clearing build cache thoroughly..."
-          rm -rf .cache dist build .next node_modules/.cache
+          echo "🧹 Clearing all build caches..."
+          rm -rf .cache dist build .next node_modules/.cache .vite
 
           echo "🗑️ Stopping PM2 process..."
           pm2 stop laundryhub || echo "Process was not running"
           
           echo "🗑️ Clearing PM2 logs..."
-          pm2 flush laundryhub
+          pm2 flush laundryhub || echo "No logs to flush"
           
-          echo "🏗️ Building the application with detailed output..."
-          NODE_ENV=production npm run build
+          echo "🏗️ Building the application..."
+          npm run build 2>&1 | tee build.log
           
           if [ $? -ne 0 ]; then
-            echo "❌ Build failed! Exiting deployment."
+            echo "❌ Build failed! Showing build log:"
+            cat build.log
             exit 1
           fi
 
           echo "♻️ Starting app with PM2..."
-          pm2 start laundryhub --update-env || pm2 start npm --name "laundryhub" -- start
+          pm2 delete laundryhub || echo "No existing process to delete"
+          pm2 start npm --name "laundryhub" -- start
           
           echo "📊 PM2 status:"
-          pm2 status laundryhub
+          pm2 status
           
           echo "📜 Recent PM2 logs:"
-          pm2 logs laundryhub --lines 20 || echo "No logs available"
+          pm2 logs laundryhub --lines 10 || echo "No logs available yet"
 
           echo "✅ Deploy complete."
         EOF

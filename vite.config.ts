@@ -28,12 +28,25 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Add build configuration to help with deployment
+    // Add build configuration to help with deployment and avoid rollup issues
     outDir: 'dist',
+    target: 'es2015',
+    minify: 'terser',
     rollupOptions: {
       output: {
         manualChunks: undefined,
       },
+      // Force use of JS version instead of native binaries
+      external: [],
     },
+  },
+  // Optimize dependencies to avoid native module issues
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+    exclude: ['@rollup/rollup-linux-x64-gnu']
+  },
+  // Define to avoid potential issues with process.env
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(mode),
   },
 }));
